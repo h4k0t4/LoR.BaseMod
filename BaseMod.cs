@@ -8722,7 +8722,7 @@ namespace BaseMod
                         object obj15 = dictionary13["name"];
                         throw new Exception(str2 + (obj15?.ToString()));
                     }
-                    Event @event = new Event((float)dictionary13["time"], eventData)
+                    Spine.Event @event = new Spine.Event((float)dictionary13["time"], eventData)
                     {
                         Int = GetInt(dictionary13, "int", eventData.Int),
                         Float = GetFloat(dictionary13, "float", eventData.Float),
@@ -9184,7 +9184,7 @@ namespace BaseMod
                         object obj15 = dictionary13["name"];
                         throw new Exception(str2 + (obj15?.ToString()));
                     }
-                    Event @event = new Event(GetFloat(dictionary13, "time", 0f), eventData)
+                    Spine.Event @event = new Spine.Event(GetFloat(dictionary13, "time", 0f), eventData)
                     {
                         Int = GetInt(dictionary13, "int", eventData.Int),
                         Float = GetFloat(dictionary13, "float", eventData.Float),
