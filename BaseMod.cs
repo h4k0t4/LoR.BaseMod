@@ -944,6 +944,10 @@ namespace BaseMod
         {
             try
             {
+                if (buf == null || ____self == null)
+                {
+                    return;
+                }
                 typeof(BattleUnitBuf).GetField("_owner", AccessTools.all).SetValue(buf, ____self);
             }
             catch { }
@@ -5392,7 +5396,7 @@ namespace BaseMod
                     baseCost = battleDiceCardBuf.GetCost(baseCost);
                 }
                 int abilityCostAdder = 0;
-                if (__instance.owner != null)
+                if (__instance.owner != null && !__instance.XmlData.IsPersonal())
                 {
                     abilityCostAdder += __instance.owner.emotionDetail.GetCardCostAdder(__instance);
                     abilityCostAdder += __instance.owner.bufListDetail.GetCardCostAdder(__instance);
