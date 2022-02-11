@@ -791,7 +791,8 @@ namespace SummonLiberation
                         }
                         else if (SkinType == 2)
                         {
-                            WorkshopSkinData workshopBookSkinData = Singleton<CustomizingBookSkinLoader>.Instance.GetWorkshopBookSkinData(unit.CustomBookItem.BookId.packageId, unit.CustomBookItem.ClassInfo.GetCharacterSkin());
+                            string skinName = unit.CustomBookItem.ClassInfo.GetCharacterSkin();
+                            WorkshopSkinData workshopBookSkinData = Singleton<CustomizingBookSkinLoader>.Instance.GetWorkshopBookSkinData(unit.CustomBookItem.BookId.packageId,skinName ) ?? Singleton<CustomizingResourceLoader>.Instance.GetWorkshopSkinData(skinName);
                             GameObject original2 = (GameObject)Resources.Load("Prefabs/Characters/[Prefab]Appearance_Custom");
                             uicharacter.unitModel = unit;
                             uicharacter.unitAppearance = UnityEngine.Object.Instantiate(original2, __instance.characterRoot).GetComponent<CharacterAppearance>();
