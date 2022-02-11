@@ -366,6 +366,9 @@ namespace BaseMod
                 Patching(harmony, new HarmonyMethod(method), typeof(SaveManager).GetMethod("SavePlayData", AccessTools.all), PatchType.prefix);
                 method = typeof(Harmony_Patch).GetMethod("GameOpeningController_StopOpening_Post", AccessTools.all);
                 Patching(harmony, new HarmonyMethod(method), typeof(GameOpeningController).GetMethod("StopOpening", AccessTools.all), PatchType.postfix);
+                //地图不受ego影响 87
+                method = typeof(Harmony_Patch).GetMethod("StageController_CanChangeMap_Post", AccessTools.all);
+                Patching(harmony, new HarmonyMethod(method), typeof(StageController).GetMethod("CanChangeMap", AccessTools.all), PatchType.postfix);
                 //加载Mod
                 LoadModFiles();
                 LoadAssemblyFiles();
@@ -374,6 +377,14 @@ namespace BaseMod
                 ExcuteBufFix();
                 ExcuteCardScriptFix();
                 ExcuteSummonLiberation();
+                if (!(TextDataModel.CurrentLanguage == "cn"))
+                    return;
+                TextDataModel.textDic["ui_invitation_customtoggle"] = "创意工坊";
+                TextDataModel.textDic["ui_invitation_customtitle"] = "可选接待";
+                TextDataModel.textDic["ui_alarm_loadinvaliderror"] = "存档中包含来自未激活的Mod的战斗书页，核心书页或书籍，您希望删除这些书籍吗？";
+                LOR_XML.BattleCardAbilityDesc data = Singleton<BattleCardAbilityDescXmlList>.Instance.GetData("forbidReuseDice");
+                if (data != null)
+                    data.desc = new List<string>() { "使目标当前骰子无法再次投掷" };
             }
             catch (Exception ex)
             {
@@ -4758,7 +4769,7 @@ namespace BaseMod
                     ModPid = new List<string>();
                     foreach (ModContentInfo modContentInfo in Singleton<ModContentManager>.Instance.GetAllMods())
                     {
-                        if (!modContentInfo.invInfo.workshopInfo.uniqueId.ToLower().EndsWith("@origin") && !ModPid.Contains(modContentInfo.invInfo.workshopInfo.uniqueId))
+                        if (!modContentInfo.invInfo.workshopInfo.uniqueId.ToLower().EndsWith("@origin") && !ModPid.Contains(modContentInfo.invInfo.workshopInfo.uniqueId) && modContentInfo.activated)
                         {
                             ModPid.Add(modContentInfo.invInfo.workshopInfo.uniqueId);
                         }
@@ -5461,6 +5472,11 @@ namespace BaseMod
                 File.WriteAllText(Application.dataPath + "/Mods/SaveFailed.log", ex.Message + Environment.NewLine + ex.StackTrace);
             }
         }
+        private static void StageController_CanChangeMap_Post(ref bool __result)
+        {
+            if (BattleSceneRoot.Instance.currentMapObject is CustomMapManager customMap)
+                __result = customMap.IsMapChangable();
+        }
         public static void DeepCopyGameObject(Transform original, Transform copyed)
         {
             copyed.localPosition = original.localPosition;
@@ -6148,6 +6164,7 @@ namespace BaseMod
 {
     public class CustomMapManager : CreatureMapManager
     {
+        public virtual bool IsMapChangable()=>true;
         public virtual void CustomInit()
         {
         }
