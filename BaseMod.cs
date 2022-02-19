@@ -365,6 +365,9 @@ namespace BaseMod
                 Patching(harmony, new HarmonyMethod(method), typeof(SaveManager).GetMethod("SavePlayData", AccessTools.all), PatchType.prefix);
                 method = typeof(Harmony_Patch).GetMethod("GameOpeningController_StopOpening_Post", AccessTools.all);
                 Patching(harmony, new HarmonyMethod(method), typeof(GameOpeningController).GetMethod("StopOpening", AccessTools.all), PatchType.postfix);
+                //地图不受ego影响 87
+                method = typeof(Harmony_Patch).GetMethod("StageController_CanChangeMap_Post", AccessTools.all);
+                Patching(harmony, new HarmonyMethod(method), typeof(StageController).GetMethod("CanChangeMap", AccessTools.all), PatchType.postfix);
                 //加载Mod
                 LoadModFiles();
                 LoadAssemblyFiles();
@@ -4761,7 +4764,7 @@ namespace BaseMod
                     ModPid = new List<string>();
                     foreach (ModContentInfo modContentInfo in Singleton<ModContentManager>.Instance.GetAllMods())
                     {
-                        if (!modContentInfo.invInfo.workshopInfo.uniqueId.ToLower().EndsWith("@origin") && !ModPid.Contains(modContentInfo.invInfo.workshopInfo.uniqueId))
+                        if (!modContentInfo.invInfo.workshopInfo.uniqueId.ToLower().EndsWith("@origin") && !ModPid.Contains(modContentInfo.invInfo.workshopInfo.uniqueId) && modContentInfo.activated)
                         {
                             ModPid.Add(modContentInfo.invInfo.workshopInfo.uniqueId);
                         }
@@ -5442,6 +5445,17 @@ namespace BaseMod
             }
             return true;
         }
+        private static void SaveManager_SavePlayData_Pre()
+        {
+            try
+            {
+                ModSettingTool.ModSaveTool.SaveModSaveData();
+            }
+            catch (Exception ex)
+            {
+                File.WriteAllText(Application.dataPath + "/Mods/SaveFailed.log", ex.Message + Environment.NewLine + ex.StackTrace);
+            }
+        }
         private static void GameOpeningController_StopOpening_Post()
         {
             try
@@ -5453,15 +5467,11 @@ namespace BaseMod
                 File.WriteAllText(Application.dataPath + "/Mods/LoadFromModSaveDataerror.txt", ex.Message + Environment.NewLine + ex.StackTrace);
             }
         }
-        private static void SaveManager_SavePlayData_Pre()
+        private static void StageController_CanChangeMap_Post(ref bool __result)
         {
-            try
+            if (BattleSceneRoot.Instance.currentMapObject is CustomMapManager customMap)
             {
-                ModSettingTool.ModSaveTool.SaveModSaveData();
-            }
-            catch (Exception ex)
-            {
-                File.WriteAllText(Application.dataPath + "/Mods/SaveFailed.log", ex.Message + Environment.NewLine + ex.StackTrace);
+                __result = customMap.IsMapChangable();
             }
         }
         public static void DeepCopyGameObject(Transform original, Transform copyed)
@@ -6149,6 +6159,7 @@ namespace BaseMod
 {
     public class CustomMapManager : CreatureMapManager
     {
+        public virtual bool IsMapChangable() => true;
         public virtual void CustomInit()
         {
         }
