@@ -132,7 +132,6 @@ namespace BaseMod
                 CustomEmotionCardAbility = new Dictionary<string, Type>();
                 ModStoryCG = new Dictionary<LorId, ModStroyCG>();
                 ModWorkShopId = new Dictionary<Assembly, string>();
-                _bufIcon = typeof(BattleUnitBuf).GetField("_bufIcon", AccessTools.all);
                 IsModStorySelected = false;
                 Language = TextDataModel.CurrentLanguage;
                 Harmony harmony = new Harmony("BaseMod");
@@ -880,7 +879,7 @@ namespace BaseMod
                     if (!ReadyBuf.IsDestroyed())
                     {
                         BattleUnitBuf buf = ____bufList.Find((BattleUnitBuf x) => x.GetType() == ReadyBuf.GetType() && !x.IsDestroyed());
-                        if (buf != null && !ReadyBuf.independentBufIcon && ((Sprite)_bufIcon.GetValue(ReadyBuf)) != null)
+                        if (buf != null && !ReadyBuf.independentBufIcon && buf.GetBufIcon() != null)
                         {
                             buf.stack += ReadyBuf.stack;
                             buf.OnAddBuf(ReadyBuf.stack);
@@ -898,7 +897,7 @@ namespace BaseMod
                     if (!ReadyReadyBuf.IsDestroyed())
                     {
                         BattleUnitBuf rbuf = ____readyBufList.Find((BattleUnitBuf x) => x.GetType() == ReadyReadyBuf.GetType() && !x.IsDestroyed());
-                        if (rbuf != null && !ReadyReadyBuf.independentBufIcon)
+                        if (rbuf != null && !ReadyReadyBuf.independentBufIcon && rbuf.GetBufIcon() != null)
                         {
                             rbuf.stack += ReadyReadyBuf.stack;
                             rbuf.OnAddBuf(ReadyReadyBuf.stack);
@@ -5201,7 +5200,7 @@ namespace BaseMod
                 }
                 try
                 {
-                    if (!string.IsNullOrEmpty(keywordIconId) && ArtWorks.TryGetValue(keywordIconId, out Sprite sprite) && sprite != null)
+                    if (!string.IsNullOrEmpty(keywordIconId) && ArtWorks.TryGetValue("CardBuf_" + keywordIconId, out Sprite sprite) && sprite != null)
                     {
                         ____iconInit = true;
                         ____bufIcon = sprite;
@@ -5551,8 +5550,6 @@ namespace BaseMod
         private static string Storylocalizepath;
 
         private static string Localizepath;
-
-        public static FieldInfo _bufIcon;
 
         private static List<Assembly> AssemList;
 
