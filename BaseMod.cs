@@ -132,7 +132,6 @@ namespace BaseMod
                 CustomEmotionCardAbility = new Dictionary<string, Type>();
                 ModStoryCG = new Dictionary<LorId, ModStroyCG>();
                 ModWorkShopId = new Dictionary<Assembly, string>();
-                _bufIcon = typeof(BattleUnitBuf).GetField("_bufIcon", AccessTools.all);
                 IsModStorySelected = false;
                 Language = TextDataModel.CurrentLanguage;
                 Harmony harmony = new Harmony("BaseMod");
@@ -366,6 +365,9 @@ namespace BaseMod
                 Patching(harmony, new HarmonyMethod(method), typeof(SaveManager).GetMethod("SavePlayData", AccessTools.all), PatchType.prefix);
                 method = typeof(Harmony_Patch).GetMethod("GameOpeningController_StopOpening_Post", AccessTools.all);
                 Patching(harmony, new HarmonyMethod(method), typeof(GameOpeningController).GetMethod("StopOpening", AccessTools.all), PatchType.postfix);
+                //地图不受ego影响 87
+                method = typeof(Harmony_Patch).GetMethod("StageController_CanChangeMap_Post", AccessTools.all);
+                Patching(harmony, new HarmonyMethod(method), typeof(StageController).GetMethod("CanChangeMap", AccessTools.all), PatchType.postfix);
                 //加载Mod
                 LoadModFiles();
                 LoadAssemblyFiles();
@@ -880,7 +882,7 @@ namespace BaseMod
                     if (!ReadyBuf.IsDestroyed())
                     {
                         BattleUnitBuf buf = ____bufList.Find((BattleUnitBuf x) => x.GetType() == ReadyBuf.GetType() && !x.IsDestroyed());
-                        if (buf != null && !ReadyBuf.independentBufIcon && ((Sprite)_bufIcon.GetValue(ReadyBuf)) != null)
+                        if (buf != null && !ReadyBuf.independentBufIcon && buf.GetBufIcon() != null)
                         {
                             buf.stack += ReadyBuf.stack;
                             buf.OnAddBuf(ReadyBuf.stack);
@@ -898,7 +900,7 @@ namespace BaseMod
                     if (!ReadyReadyBuf.IsDestroyed())
                     {
                         BattleUnitBuf rbuf = ____readyBufList.Find((BattleUnitBuf x) => x.GetType() == ReadyReadyBuf.GetType() && !x.IsDestroyed());
-                        if (rbuf != null && !ReadyReadyBuf.independentBufIcon)
+                        if (rbuf != null && !ReadyReadyBuf.independentBufIcon && rbuf.GetBufIcon() != null)
                         {
                             rbuf.stack += ReadyReadyBuf.stack;
                             rbuf.OnAddBuf(ReadyReadyBuf.stack);
@@ -944,6 +946,10 @@ namespace BaseMod
         {
             try
             {
+                if (buf == null || ____self == null)
+                {
+                    return;
+                }
                 typeof(BattleUnitBuf).GetField("_owner", AccessTools.all).SetValue(buf, ____self);
             }
             catch { }
@@ -4758,7 +4764,7 @@ namespace BaseMod
                     ModPid = new List<string>();
                     foreach (ModContentInfo modContentInfo in Singleton<ModContentManager>.Instance.GetAllMods())
                     {
-                        if (!modContentInfo.invInfo.workshopInfo.uniqueId.ToLower().EndsWith("@origin") && !ModPid.Contains(modContentInfo.invInfo.workshopInfo.uniqueId))
+                        if (!modContentInfo.invInfo.workshopInfo.uniqueId.ToLower().EndsWith("@origin") && !ModPid.Contains(modContentInfo.invInfo.workshopInfo.uniqueId) && modContentInfo.activated)
                         {
                             ModPid.Add(modContentInfo.invInfo.workshopInfo.uniqueId);
                         }
@@ -5197,7 +5203,7 @@ namespace BaseMod
                 }
                 try
                 {
-                    if (!string.IsNullOrEmpty(keywordIconId) && ArtWorks.TryGetValue(keywordIconId, out Sprite sprite) && sprite != null)
+                    if (!string.IsNullOrEmpty(keywordIconId) && ArtWorks.TryGetValue("CardBuf_" + keywordIconId, out Sprite sprite) && sprite != null)
                     {
                         ____iconInit = true;
                         ____bufIcon = sprite;
@@ -5392,7 +5398,7 @@ namespace BaseMod
                     baseCost = battleDiceCardBuf.GetCost(baseCost);
                 }
                 int abilityCostAdder = 0;
-                if (__instance.owner != null)
+                if (__instance.owner != null && !__instance.XmlData.IsPersonal())
                 {
                     abilityCostAdder += __instance.owner.emotionDetail.GetCardCostAdder(__instance);
                     abilityCostAdder += __instance.owner.bufListDetail.GetCardCostAdder(__instance);
@@ -5439,6 +5445,17 @@ namespace BaseMod
             }
             return true;
         }
+        private static void SaveManager_SavePlayData_Pre()
+        {
+            try
+            {
+                ModSettingTool.ModSaveTool.SaveModSaveData();
+            }
+            catch (Exception ex)
+            {
+                File.WriteAllText(Application.dataPath + "/Mods/SaveFailed.log", ex.Message + Environment.NewLine + ex.StackTrace);
+            }
+        }
         private static void GameOpeningController_StopOpening_Post()
         {
             try
@@ -5450,15 +5467,11 @@ namespace BaseMod
                 File.WriteAllText(Application.dataPath + "/Mods/LoadFromModSaveDataerror.txt", ex.Message + Environment.NewLine + ex.StackTrace);
             }
         }
-        private static void SaveManager_SavePlayData_Pre()
+        private static void StageController_CanChangeMap_Post(ref bool __result)
         {
-            try
+            if (BattleSceneRoot.Instance.currentMapObject is CustomMapManager customMap)
             {
-                ModSettingTool.ModSaveTool.SaveModSaveData();
-            }
-            catch (Exception ex)
-            {
-                File.WriteAllText(Application.dataPath + "/Mods/SaveFailed.log", ex.Message + Environment.NewLine + ex.StackTrace);
+                __result = customMap.IsMapChangable();
             }
         }
         public static void DeepCopyGameObject(Transform original, Transform copyed)
@@ -5547,8 +5560,6 @@ namespace BaseMod
         private static string Storylocalizepath;
 
         private static string Localizepath;
-
-        public static FieldInfo _bufIcon;
 
         private static List<Assembly> AssemList;
 
@@ -6148,6 +6159,7 @@ namespace BaseMod
 {
     public class CustomMapManager : CreatureMapManager
     {
+        public virtual bool IsMapChangable() => true;
         public virtual void CustomInit()
         {
         }
