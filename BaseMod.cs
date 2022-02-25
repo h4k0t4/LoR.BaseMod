@@ -132,7 +132,6 @@ namespace BaseMod
                 CustomEmotionCardAbility = new Dictionary<string, Type>();
                 ModStoryCG = new Dictionary<LorId, ModStroyCG>();
                 ModWorkShopId = new Dictionary<Assembly, string>();
-                _bufIcon = typeof(BattleUnitBuf).GetField("_bufIcon", AccessTools.all);
                 IsModStorySelected = false;
                 Language = TextDataModel.CurrentLanguage;
                 Harmony harmony = new Harmony("BaseMod");
@@ -377,14 +376,6 @@ namespace BaseMod
                 ExcuteBufFix();
                 ExcuteCardScriptFix();
                 ExcuteSummonLiberation();
-                if (!(TextDataModel.CurrentLanguage == "cn"))
-                    return;
-                TextDataModel.textDic["ui_invitation_customtoggle"] = "创意工坊";
-                TextDataModel.textDic["ui_invitation_customtitle"] = "可选接待";
-                TextDataModel.textDic["ui_alarm_loadinvaliderror"] = "存档中包含来自未激活的Mod的战斗书页，核心书页或书籍，您希望删除这些书籍吗？";
-                LOR_XML.BattleCardAbilityDesc data = Singleton<BattleCardAbilityDescXmlList>.Instance.GetData("forbidReuseDice");
-                if (data != null)
-                    data.desc = new List<string>() { "使目标当前骰子无法再次投掷" };
             }
             catch (Exception ex)
             {
@@ -891,7 +882,7 @@ namespace BaseMod
                     if (!ReadyBuf.IsDestroyed())
                     {
                         BattleUnitBuf buf = ____bufList.Find((BattleUnitBuf x) => x.GetType() == ReadyBuf.GetType() && !x.IsDestroyed());
-                        if (buf != null && !ReadyBuf.independentBufIcon && ((Sprite)_bufIcon.GetValue(ReadyBuf)) != null)
+                        if (buf != null && !ReadyBuf.independentBufIcon && buf.GetBufIcon() != null)
                         {
                             buf.stack += ReadyBuf.stack;
                             buf.OnAddBuf(ReadyBuf.stack);
@@ -909,7 +900,7 @@ namespace BaseMod
                     if (!ReadyReadyBuf.IsDestroyed())
                     {
                         BattleUnitBuf rbuf = ____readyBufList.Find((BattleUnitBuf x) => x.GetType() == ReadyReadyBuf.GetType() && !x.IsDestroyed());
-                        if (rbuf != null && !ReadyReadyBuf.independentBufIcon)
+                        if (rbuf != null && !ReadyReadyBuf.independentBufIcon && rbuf.GetBufIcon() != null)
                         {
                             rbuf.stack += ReadyReadyBuf.stack;
                             rbuf.OnAddBuf(ReadyReadyBuf.stack);
@@ -955,6 +946,10 @@ namespace BaseMod
         {
             try
             {
+                if (buf == null || ____self == null)
+                {
+                    return;
+                }
                 typeof(BattleUnitBuf).GetField("_owner", AccessTools.all).SetValue(buf, ____self);
             }
             catch { }
@@ -1093,7 +1088,7 @@ namespace BaseMod
                     return true;
                 }
                 string skinName = unit.CustomBookItem.GetOriginalCharcterName();
-                Workshop.WorkshopSkinData skinData = Singleton<CustomizingBookSkinLoader>.Instance.GetWorkshopBookSkinData(unit.CustomBookItem.BookId.packageId, skinName) ?? Singleton<CustomizingResourceLoader>.Instance.GetWorkshopSkinData(skinName);   
+                Workshop.WorkshopSkinData skinData = Singleton<CustomizingBookSkinLoader>.Instance.GetWorkshopBookSkinData(unit.CustomBookItem.BookId.packageId, skinName) ?? Singleton<CustomizingResourceLoader>.Instance.GetWorkshopSkinData(skinName);
                 if (skinData != null && unit.CustomBookItem.ClassInfo.skinType == "Custom")
                 {
                     UnitCustomizingData customizeData = unit.customizeData;
@@ -5209,7 +5204,7 @@ namespace BaseMod
                 }
                 try
                 {
-                    if (!string.IsNullOrEmpty(keywordIconId) && ArtWorks.TryGetValue(keywordIconId, out Sprite sprite) && sprite != null)
+                    if (!string.IsNullOrEmpty(keywordIconId) && ArtWorks.TryGetValue("CardBuf_" + keywordIconId, out Sprite sprite) && sprite != null)
                     {
                         ____iconInit = true;
                         ____bufIcon = sprite;
@@ -5404,7 +5399,7 @@ namespace BaseMod
                     baseCost = battleDiceCardBuf.GetCost(baseCost);
                 }
                 int abilityCostAdder = 0;
-                if (__instance.owner != null)
+                if (__instance.owner != null && !__instance.XmlData.IsPersonal())
                 {
                     abilityCostAdder += __instance.owner.emotionDetail.GetCardCostAdder(__instance);
                     abilityCostAdder += __instance.owner.bufListDetail.GetCardCostAdder(__instance);
@@ -5451,17 +5446,6 @@ namespace BaseMod
             }
             return true;
         }
-        private static void GameOpeningController_StopOpening_Post()
-        {
-            try
-            {
-                ModSettingTool.ModSaveTool.RemoveUnknownSaves();
-            }
-            catch (Exception ex)
-            {
-                File.WriteAllText(Application.dataPath + "/Mods/LoadFromModSaveDataerror.txt", ex.Message + Environment.NewLine + ex.StackTrace);
-            }
-        }
         private static void SaveManager_SavePlayData_Pre()
         {
             try
@@ -5473,10 +5457,23 @@ namespace BaseMod
                 File.WriteAllText(Application.dataPath + "/Mods/SaveFailed.log", ex.Message + Environment.NewLine + ex.StackTrace);
             }
         }
+        private static void GameOpeningController_StopOpening_Post()
+        {
+            try
+            {
+                ModSettingTool.ModSaveTool.RemoveUnknownSaves();
+            }
+            catch (Exception ex)
+            {
+                File.WriteAllText(Application.dataPath + "/Mods/LoadFromModSaveDataerror.txt", ex.Message + Environment.NewLine + ex.StackTrace);
+            }
+        }
         private static void StageController_CanChangeMap_Post(ref bool __result)
         {
             if (BattleSceneRoot.Instance.currentMapObject is CustomMapManager customMap)
+            {
                 __result = customMap.IsMapChangable();
+            }
         }
         public static void DeepCopyGameObject(Transform original, Transform copyed)
         {
@@ -5564,8 +5561,6 @@ namespace BaseMod
         private static string Storylocalizepath;
 
         private static string Localizepath;
-
-        public static FieldInfo _bufIcon;
 
         private static List<Assembly> AssemList;
 
@@ -6165,7 +6160,7 @@ namespace BaseMod
 {
     public class CustomMapManager : CreatureMapManager
     {
-        public virtual bool IsMapChangable()=>true;
+        public virtual bool IsMapChangable() => true;
         public virtual void CustomInit()
         {
         }
@@ -8740,7 +8735,7 @@ namespace BaseMod
                         object obj15 = dictionary13["name"];
                         throw new Exception(str2 + (obj15?.ToString()));
                     }
-                    Spine.Event @event = new Spine.Event((float)dictionary13["time"], eventData)
+                    Event @event = new Event((float)dictionary13["time"], eventData)
                     {
                         Int = GetInt(dictionary13, "int", eventData.Int),
                         Float = GetFloat(dictionary13, "float", eventData.Float),
@@ -9202,7 +9197,7 @@ namespace BaseMod
                         object obj15 = dictionary13["name"];
                         throw new Exception(str2 + (obj15?.ToString()));
                     }
-                    Spine.Event @event = new Spine.Event(GetFloat(dictionary13, "time", 0f), eventData)
+                    Event @event = new Event(GetFloat(dictionary13, "time", 0f), eventData)
                     {
                         Int = GetInt(dictionary13, "int", eventData.Int),
                         Float = GetFloat(dictionary13, "float", eventData.Float),

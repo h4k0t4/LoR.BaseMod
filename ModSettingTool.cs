@@ -1,4 +1,4 @@
-﻿using BaseMod;
+using BaseMod;
 using GameSave;
 using HarmonyLib;
 using System;
