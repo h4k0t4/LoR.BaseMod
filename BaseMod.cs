@@ -1092,7 +1092,8 @@ namespace BaseMod
                 {
                     return true;
                 }
-                Workshop.WorkshopSkinData skinData = Singleton<CustomizingBookSkinLoader>.Instance.GetWorkshopBookSkinData(unit.CustomBookItem.BookId.packageId, unit.CustomBookItem.GetOriginalCharcterName());
+                string skinName = unit.CustomBookItem.GetOriginalCharcterName();
+                Workshop.WorkshopSkinData skinData = Singleton<CustomizingBookSkinLoader>.Instance.GetWorkshopBookSkinData(unit.CustomBookItem.BookId.packageId, skinName) ?? Singleton<CustomizingResourceLoader>.Instance.GetWorkshopSkinData(skinName);   
                 if (skinData != null && unit.CustomBookItem.ClassInfo.skinType == "Custom")
                 {
                     UnitCustomizingData customizeData = unit.customizeData;
