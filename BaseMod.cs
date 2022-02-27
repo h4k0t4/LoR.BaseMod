@@ -162,12 +162,12 @@ namespace BaseMod
                 Patching(harmony, new HarmonyMethod(method), typeof(DiceEffectManager).GetMethod("CreateBehaviourEffect", AccessTools.all), PatchType.prefix);
                 method = typeof(Harmony_Patch).GetMethod("UnitDataModel_InitBattleDialogByDefaultBook_Pre", AccessTools.all);
                 Patching(harmony, new HarmonyMethod(method), typeof(UnitDataModel).GetMethod("InitBattleDialogByDefaultBook", AccessTools.all), PatchType.prefix);
-                method = typeof(Harmony_Patch).GetMethod("BattleEmotionCardModel_ctor_Pre", AccessTools.all);
+                method = typeof(Harmony_Patch).GetMethod("BattleEmotionCardModel_ctor_Post", AccessTools.all);
                 Patching(harmony, new HarmonyMethod(method), typeof(BattleEmotionCardModel).GetConstructor(new Type[]
                 {
                     typeof(EmotionCardXmlInfo),
                     typeof(BattleUnitModel)
-                }), PatchType.prefix);
+                }), PatchType.postfix);
                 method = typeof(Harmony_Patch).GetMethod("UIBattleSettingWaveList_SetData_Pre", AccessTools.all);
                 Patching(harmony, new HarmonyMethod(method), typeof(UIBattleSettingWaveList).GetMethod("SetData", AccessTools.all), PatchType.prefix);
                 method = typeof(Harmony_Patch).GetMethod("UIOriginEquipPageList_UpdateEquipPageList_Pre", AccessTools.all);
@@ -368,6 +368,11 @@ namespace BaseMod
                 //地图不受ego影响 87
                 method = typeof(Harmony_Patch).GetMethod("StageController_CanChangeMap_Post", AccessTools.all);
                 Patching(harmony, new HarmonyMethod(method), typeof(StageController).GetMethod("CanChangeMap", AccessTools.all), PatchType.postfix);
+                //Mod核心书页投影存档读档 88
+                method = typeof(Harmony_Patch).GetMethod("UnitDataModel_GetSaveData_Post", AccessTools.all);
+                Patching(harmony, new HarmonyMethod(method), typeof(UnitDataModel).GetMethod("GetSaveData", AccessTools.all), PatchType.postfix);
+                method = typeof(Harmony_Patch).GetMethod("UnitDataModel_LoadFromSaveData_Post", AccessTools.all);
+                Patching(harmony, new HarmonyMethod(method), typeof(UnitDataModel).GetMethod("LoadFromSaveData", AccessTools.all), PatchType.postfix);
                 //加载Mod
                 LoadModFiles();
                 LoadAssemblyFiles();
@@ -622,7 +627,6 @@ namespace BaseMod
                                 XmlNode xmlNode5 = xmlNode3.SelectSingleNode(text);
                                 if (xmlNode5 == null)
                                 {
-                                    Debug.Log("Workshop :: " + text + "keyword null!");
                                     text = "Penetrate";
                                     xmlNode5 = xmlNode3.SelectSingleNode(text);
                                 }
@@ -1573,33 +1577,42 @@ namespace BaseMod
             }
             return null;
         }
-        private static bool BattleEmotionCardModel_ctor_Pre(BattleEmotionCardModel __instance, EmotionCardXmlInfo xmlInfo, BattleUnitModel owner, ref EmotionCardXmlInfo ____xmlInfo, ref BattleUnitModel ____owner, ref List<EmotionCardAbilityBase> ____abilityList)
+        private static void BattleEmotionCardModel_ctor_Post(BattleEmotionCardModel __instance, EmotionCardXmlInfo xmlInfo, BattleUnitModel owner, ref EmotionCardXmlInfo ____xmlInfo, ref BattleUnitModel ____owner, ref List<EmotionCardAbilityBase> ____abilityList)
         {
             try
             {
-                ____xmlInfo = xmlInfo;
-                ____owner = owner;
-                ____abilityList = new List<EmotionCardAbilityBase>();
-                try
+                if (____xmlInfo == null)
                 {
-                    foreach (string text in xmlInfo.Script)
+                    ____xmlInfo = xmlInfo;
+                }
+                if (____owner == null)
+                {
+                    ____owner = owner;
+                }
+                if (____abilityList == null)
+                {
+                    ____abilityList = new List<EmotionCardAbilityBase>();
+                }
+                List<string> list = new List<string>();
+                list.AddRange(xmlInfo.Script);
+                foreach (EmotionCardAbilityBase emotionCardAbility in ____abilityList)
+                {
+                    list.Remove(emotionCardAbility.GetType().Name.Substring("EmotionCardAbility_".Length).Trim());
+                }
+                foreach (string text in list)
+                {
+                    EmotionCardAbilityBase emotionCardAbilityBase = FindEmotionCardAbility(text.Trim());
+                    if (emotionCardAbilityBase != null)
                     {
-                        EmotionCardAbilityBase emotionCardAbilityBase = FindEmotionCardAbility(text.Trim());
                         emotionCardAbilityBase.SetEmotionCard(__instance);
                         ____abilityList.Add(emotionCardAbilityBase);
                     }
                 }
-                catch (Exception message)
-                {
-                    Debug.LogError(message);
-                }
-                return false;
             }
             catch (Exception ex)
             {
                 File.WriteAllText(Application.dataPath + "/Mods/SetEmotionAbilityerror.log", ex.Message + Environment.NewLine + ex.StackTrace);
             }
-            return true;
         }
         public static EmotionCardAbilityBase FindEmotionCardAbility(string name)
         {
@@ -4648,7 +4661,7 @@ namespace BaseMod
                 return false;
             }
             string modPath = Singleton<ModContentManager>.Instance.GetModPath(stageClassInfo.GetStartStory().packageId);
-            if (string.IsNullOrEmpty(modPath)|| string.IsNullOrEmpty(stageClassInfo.GetStartStory().story))
+            if (string.IsNullOrEmpty(modPath) || string.IsNullOrEmpty(stageClassInfo.GetStartStory().story))
             {
                 return false;
             }
@@ -5450,6 +5463,14 @@ namespace BaseMod
             try
             {
                 ModSettingTool.ModSaveTool.SaveModSaveData();
+                if (File.Exists(SaveManager.savePath + "/Player.log"))
+                {
+                    if (File.Exists(Application.dataPath + "/Mods/Player.log"))
+                    {
+                        File.Delete(Application.dataPath + "/Mods/Player.log");
+                    }
+                    File.Copy(SaveManager.savePath + "/Player.log", Application.dataPath + "/Mods/Player.log");
+                }
             }
             catch (Exception ex)
             {
@@ -5472,6 +5493,80 @@ namespace BaseMod
             if (BattleSceneRoot.Instance.currentMapObject is CustomMapManager customMap)
             {
                 __result = customMap.IsMapChangable();
+            }
+        }
+        private static void UnitDataModel_GetSaveData_Post(UnitDataModel __instance, SaveData __result, BookModel ____CustomBookItem)
+        {
+            try
+            {
+                if (____CustomBookItem != null)
+                {
+                    LorId bookClassInfoId = ____CustomBookItem.GetBookClassInfoId();
+                    SaveData customcorebook = new SaveData(SaveDataType.Dictionary);
+                    customcorebook.AddData("_pid", new SaveData(bookClassInfoId.packageId));
+                    customcorebook.AddData("_id", new SaveData(bookClassInfoId.id));
+                    __result.GetDictionarySelf()["customcorebookInstanceId"] = customcorebook;
+                }
+
+            }
+            catch (Exception ex)
+            {
+                File.WriteAllText(Application.dataPath + "/Mods/SaveCustomBookerror.txt", ex.Message + Environment.NewLine + ex.StackTrace);
+            }
+        }
+        private static void UnitDataModel_LoadFromSaveData_Post(UnitDataModel __instance, SaveData data)
+        {
+            try
+            {
+                SaveData customcorebook = data.GetData("customcorebookInstanceId");
+                if (customcorebook == null)
+                {
+                    return;
+                }
+                if (customcorebook.GetData("_pid") == null)
+                {
+                    return;
+                }
+                LorId id = new LorId(customcorebook.GetString("_pid"), customcorebook.GetInt("_id"));
+                if (!Singleton<BookXmlList>.Instance.GetData(id).isError)
+                {
+                    BookModel bookModel = new BookModel(Singleton<BookXmlList>.Instance.GetData(id));
+                    if (bookModel != null)
+                    {
+                        if (bookModel.ClassInfo.optionList.Contains(BookOption.Basic))
+                        {
+                            LorId bookClassInfoId = bookModel.GetBookClassInfoId();
+                            if (bookClassInfoId.id > 10)
+                            {
+                                __instance.EquipCustomCoreBook(bookModel);
+                            }
+                            else if (__instance.OwnerSephirah != (SephirahType)bookClassInfoId.id)
+                            {
+                                __instance.EquipCustomCoreBook(null);
+                            }
+                            else if (__instance.isSephirah)
+                            {
+                                __instance.EquipCustomCoreBook(bookModel);
+                            }
+                            else
+                            {
+                                __instance.EquipCustomCoreBook(null);
+                            }
+                        }
+                        else
+                        {
+                            __instance.EquipCustomCoreBook(bookModel);
+                        }
+                        if (Singleton<SaveManager>.Instance.iver <= 13 && bookModel.GetBookClassInfoId() == __instance.bookItem.GetBookClassInfoId())
+                        {
+                            __instance.EquipCustomCoreBook(null);
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                File.WriteAllText(Application.dataPath + "/Mods/LoadCustomBookerror.txt", ex.Message + Environment.NewLine + ex.StackTrace);
             }
         }
         public static void DeepCopyGameObject(Transform original, Transform copyed)
