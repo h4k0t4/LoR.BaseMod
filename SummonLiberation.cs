@@ -1,4 +1,6 @@
+using BaseMod;
 using BattleCharacterProfile;
+using ExtendedLoader;
 using HarmonyLib;
 using Opening;
 using System;
@@ -767,6 +769,18 @@ namespace SummonLiberation
                     try
                     {
                         string s = string.Empty;
+                        switch (unit.appearanceType)
+                        {
+                            case Gender.F:
+                                s = "_F";
+                                break;
+                            case Gender.M:
+                                s = "_M";
+                                break;
+                            case Gender.N:
+                                s = "_N";
+                                break;
+                        }
                         bool flag = false;
                         int SkinType = 0;
                         if (!string.IsNullOrEmpty(unit.workshopSkin))
@@ -780,7 +794,7 @@ namespace SummonLiberation
                         if (SkinType == 1)
                         {
                             WorkshopSkinData workshopSkinData = Singleton<CustomizingResourceLoader>.Instance.GetWorkshopSkinData(unit.workshopSkin);
-                            GameObject original = (GameObject)Resources.Load("Prefabs/Characters/[Prefab]Appearance_Custom");
+                            GameObject original = XLRoot.CustomAppearancePrefab;
                             uicharacter.unitModel = unit;
                             uicharacter.unitAppearance = UnityEngine.Object.Instantiate<GameObject>(original, __instance.characterRoot).GetComponent<CharacterAppearance>();
                             uicharacter.unitAppearance.transform.localPosition = new Vector3(num, -2f, 10f);
@@ -792,15 +806,16 @@ namespace SummonLiberation
                         else if (SkinType == 2)
                         {
                             string skinName = unit.CustomBookItem.ClassInfo.GetCharacterSkin();
-                            WorkshopSkinData workshopBookSkinData = Singleton<CustomizingBookSkinLoader>.Instance.GetWorkshopBookSkinData(unit.CustomBookItem.BookId.packageId, skinName) ?? Singleton<CustomizingResourceLoader>.Instance.GetWorkshopSkinData(skinName);
-                            GameObject original2 = (GameObject)Resources.Load("Prefabs/Characters/[Prefab]Appearance_Custom");
+                            WorkshopSkinData workshopBookSkinData = Singleton<CustomizingBookSkinLoader>.Instance.GetWorkshopBookSkinData(unit.CustomBookItem.BookId.packageId, skinName, s) ?? Singleton<CustomizingResourceLoader>.Instance.GetWorkshopSkinData(skinName);
+                            GameObject original2 = XLRoot.UICustomAppearancePrefab;
                             uicharacter.unitModel = unit;
                             uicharacter.unitAppearance = UnityEngine.Object.Instantiate(original2, __instance.characterRoot).GetComponent<CharacterAppearance>();
                             uicharacter.unitAppearance.transform.localPosition = new Vector3(num, -2f, 10f);
                             WorkshopSkinDataSetter component = uicharacter.unitAppearance.GetComponent<WorkshopSkinDataSetter>();
-                            if (component != null && workshopBookSkinData != null)
+                            if (workshopBookSkinData != null)
                             {
                                 component.SetData(workshopBookSkinData);
+                                flag = true;
                             }
                             uicharacter.resName = workshopBookSkinData.dataName;
                             resName = workshopBookSkinData.dataName;
@@ -820,24 +835,12 @@ namespace SummonLiberation
                             }
                             else
                             {
-                                switch (unit.appearanceType)
-                                {
-                                    case Gender.F:
-                                        s = "_F";
-                                        break;
-                                    case Gender.M:
-                                        s = "_M";
-                                        break;
-                                    case Gender.N:
-                                        s = "_N";
-                                        break;
-                                }
                                 gameObject = Singleton<AssetBundleManagerRemake>.Instance.LoadCharacterPrefab_DefaultMotion(characterName, s, out resName);
                             }
                             if (gameObject != null)
                             {
                                 uicharacter.unitModel = unit;
-                                uicharacter.unitAppearance = UnityEngine.Object.Instantiate<GameObject>(gameObject, __instance.characterRoot).GetComponent<CharacterAppearance>();
+                                uicharacter.unitAppearance = UnityEngine.Object.Instantiate(gameObject, __instance.characterRoot).GetComponent<CharacterAppearance>();
                                 uicharacter.unitAppearance.transform.localPosition = new Vector3(num, -2f, 10f);
                                 uicharacter.resName = resName;
                             }
@@ -848,38 +851,10 @@ namespace SummonLiberation
                             if (unitAppearance != null)
                             {
                                 unitAppearance.Initialize("");
-                            }
-                        }
-                        if (uicharacter != null)
-                        {
-                            CharacterAppearance unitAppearance2 = uicharacter.unitAppearance;
-                            if (unitAppearance2 != null)
-                            {
-                                unitAppearance2.InitCustomData(unit.customizeData, unit.defaultBook.GetBookClassInfoId());
-                            }
-                        }
-                        if (uicharacter != null)
-                        {
-                            CharacterAppearance unitAppearance3 = uicharacter.unitAppearance;
-                            if (unitAppearance3 != null)
-                            {
-                                unitAppearance3.InitGiftDataAll(unit.giftInventory.GetEquippedList());
-                            }
-                        }
-                        if (uicharacter != null)
-                        {
-                            CharacterAppearance unitAppearance4 = uicharacter.unitAppearance;
-                            if (unitAppearance4 != null)
-                            {
-                                unitAppearance4.ChangeMotion(ActionDetail.Standing);
-                            }
-                        }
-                        if (uicharacter != null)
-                        {
-                            CharacterAppearance unitAppearance5 = uicharacter.unitAppearance;
-                            if (unitAppearance5 != null)
-                            {
-                                unitAppearance5.ChangeLayer("CharacterAppearance_UI");
+                                unitAppearance.InitCustomData(unit.customizeData, unit.defaultBook.GetBookClassInfoId());
+                                unitAppearance.InitGiftDataAll(unit.giftInventory.GetEquippedList());
+                                unitAppearance.ChangeMotion(ActionDetail.Standing);
+                                unitAppearance.ChangeLayer("CharacterAppearance_UI");
                             }
                         }
                         if (flag)
@@ -894,10 +869,10 @@ namespace SummonLiberation
                         }
                         if (unit != null && unit.EnemyUnitId != -1)
                         {
-                            Transform transform = (uicharacter != null) ? uicharacter.unitAppearance.cameraPivot : null;
+                            Transform transform = uicharacter?.unitAppearance.cameraPivot;
                             if (transform != null)
                             {
-                                CharacterMotion characterMotion = (uicharacter != null) ? uicharacter.unitAppearance.GetCharacterMotion(ActionDetail.Standing) : null;
+                                CharacterMotion characterMotion = uicharacter?.unitAppearance.GetCharacterMotion(ActionDetail.Standing);
                                 if (characterMotion != null)
                                 {
                                     Vector3 b = characterMotion.transform.position - transform.position;
