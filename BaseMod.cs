@@ -2,6 +2,7 @@
 using GameSave;
 using GTMDProjectMoon;
 using HarmonyLib;
+using ExtendedLoader;
 using LOR_DiceSystem;
 using LOR_XML;
 using Mod;
@@ -23,6 +24,10 @@ using UnityEngine;
 using UnityEngine.Networking;
 using UnityEngine.UI;
 using Opening;
+using Workshop;
+using FileInfo = System.IO.FileInfo;
+using BookSoundInfo = CustomInvitation.BookSoundInfo;
+using System.Globalization;
 
 namespace BaseMod
 {
@@ -368,6 +373,11 @@ namespace BaseMod
                 //地图不受ego影响 87
                 method = typeof(Harmony_Patch).GetMethod("StageController_CanChangeMap_Post", AccessTools.all);
                 Patching(harmony, new HarmonyMethod(method), typeof(StageController).GetMethod("CanChangeMap", AccessTools.all), PatchType.postfix);
+                //Cyaminthe扩展
+                method = typeof(Harmony_Patch).GetMethod("ClothCustomizeData_LoadSprite_Pre", AccessTools.all);
+                Patching(harmony, new HarmonyMethod(method), typeof(ClothCustomizeData).GetMethod("LoadSprite", AccessTools.all), PatchType.prefix);
+                method = typeof(Harmony_Patch).GetMethod("ClothCustomizeData_LoadFrontSprite_Pre", AccessTools.all);
+                Patching(harmony, new HarmonyMethod(method), typeof(ClothCustomizeData).GetMethod("LoadFrontSprite", AccessTools.all), PatchType.prefix);
                 //加载Mod
                 LoadModFiles();
                 LoadAssemblyFiles();
@@ -394,6 +404,24 @@ namespace BaseMod
             {
                 File.WriteAllText(Application.dataPath + "/Mods/InjectForRepairerror.log", ex.Message + Environment.NewLine + ex.StackTrace);
             }*/
+        }
+        private static void LoadCoreThumbs()
+        {
+            var dic = new Dictionary<string, int>();
+            var list = Singleton<BookXmlList>.Instance._list;
+            foreach (BookXmlInfo info in list)
+            {
+                if (!string.IsNullOrEmpty(info.workshopID))
+                    continue;
+                foreach (string skinName in info.CharacterSkin)
+                {
+                    if (!dic.ContainsKey(skinName))
+                    {
+                        dic.Add(skinName, info._id);
+                    }
+                }
+            }
+            CoreThumbDic = dic;
         }
         private static void LoadAssemblyFiles()
         {
@@ -462,8 +490,9 @@ namespace BaseMod
         }
         private static void LoadModFiles()
         {
-            Dictionary<string, List<Workshop.WorkshopSkinData>> _bookSkinData = Singleton<CustomizingBookSkinLoader>.Instance.GetType().GetField("_bookSkinData", AccessTools.all).GetValue(Singleton<CustomizingBookSkinLoader>.Instance) as Dictionary<string, List<Workshop.WorkshopSkinData>>;
+            Dictionary<string, List<Workshop.WorkshopSkinData>> _bookSkinData = Singleton<CustomizingBookSkinLoader>.Instance._bookSkinData;
             StaticDataLoader_New.ExportOriginalFiles();
+            LoadCoreThumbs();
             StaticDataLoader_New.LoadModFiles(LoadedModContents);
             LocalizedTextLoader_New.ExportOriginalFiles();
             LocalizedTextLoader_New.LoadModFiles(LoadedModContents);
@@ -507,59 +536,159 @@ namespace BaseMod
             OrcTools.DropItemDic.Clear();
             OrcTools.DialogDic.Clear();
         }
-        private static void LoadBookSkins(Dictionary<string, List<Workshop.WorkshopSkinData>> _bookSkinData)
+        private static void LoadBookSkins(Dictionary<string, List<WorkshopSkinData>> _bookSkinData)
         {
             foreach (ModContent modContent in LoadedModContents)
             {
-                DirectoryInfo _dirInfo = modContent.GetType().GetField("_dirInfo", AccessTools.all).GetValue(modContent) as DirectoryInfo;
-                string _itemUniqueId = modContent.GetType().GetField("_itemUniqueId", AccessTools.all).GetValue(modContent) as string;
-                string path = _dirInfo.FullName + "\\Char";
-                string modid = "";
-                if (!_itemUniqueId.ToLower().EndsWith("@origin"))
+                string modDirectory = modContent._dirInfo.FullName;
+                string modName = modContent._itemUniqueId;
+                string modId = "";
+                if (!modName.ToLower().EndsWith("@origin"))
                 {
-                    modid = _itemUniqueId;
+                    modId = modName;
                 }
-                List<Workshop.WorkshopSkinData> list = new List<Workshop.WorkshopSkinData>();
-                if (Directory.Exists(path))
+                int oldSkins = 0;
+                if (Singleton<CustomizingBookSkinLoader>.Instance._bookSkinData.TryGetValue(modName, out List<WorkshopSkinData> skinlist))
                 {
-                    string[] directories = Directory.GetDirectories(path);
+                    oldSkins = skinlist.Count;
+                    string defaultCharDirectory = Path.Combine(modDirectory, "Resource\\CharacterSkin");
+                    if (Directory.Exists(defaultCharDirectory))
+                    {
+                        string[] directories = Directory.GetDirectories(defaultCharDirectory);
+                        for (int i = 0; i < directories.Length; i++)
+                        {
+                            WorkshopAppearanceInfo workshopAppearanceInfo = LoadCustomAppearance(directories[i]);
+                            if (workshopAppearanceInfo != null && workshopAppearanceInfo is ExtendedWorkshopAppearanceInfo extendedAppearanceInfo)
+                            {
+                                string[] array = directories[i].Split(new char[]
+                                {
+                                '\\'
+                                });
+                                string str = array[array.Length - 1];
+                                extendedAppearanceInfo.path = directories[i];
+                                extendedAppearanceInfo.uniqueId = modId;
+                                extendedAppearanceInfo.bookName = str;
+                                bool isClothCustom = extendedAppearanceInfo.isClothCustom;
+                                if (isClothCustom)
+                                {
+                                    var extendedData = new ExtendedWorkshopSkinData
+                                    {
+                                        dic = extendedAppearanceInfo.clothCustomInfo,
+                                        dataName = extendedAppearanceInfo.bookName,
+                                        contentFolderIdx = extendedAppearanceInfo.uniqueId,
+                                        atkEffectPivotDic = extendedAppearanceInfo.atkEffectPivotDic,
+                                        specialMotionPivotDic = extendedAppearanceInfo.specialMotionPivotDic,
+                                        motionSoundList = extendedAppearanceInfo.motionSoundList,
+                                        id = i
+                                    };
+                                    var oldData = skinlist.Find((WorkshopSkinData data) => data.id == i);
+                                    if (oldData != null)
+                                    {
+                                        skinlist.Remove(oldData);
+                                    }
+                                    skinlist.Add(extendedData);
+                                }
+                            }
+                        }
+                    }
+                }
+                string charDirectory = Path.Combine(modDirectory, "Char");
+                List<WorkshopSkinData> list = new List<WorkshopSkinData>();
+                if (Directory.Exists(charDirectory))
+                {
+                    string[] directories = Directory.GetDirectories(charDirectory);
                     for (int i = 0; i < directories.Length; i++)
                     {
-                        Workshop.WorkshopAppearanceInfo workshopAppearanceInfo = LoadCustomAppearance(directories[i]);
+                        WorkshopAppearanceInfo workshopAppearanceInfo = LoadCustomAppearance(directories[i]);
                         if (workshopAppearanceInfo != null)
                         {
                             string[] array = directories[i].Split(new char[]
                             {
                                 '\\'
                             });
-                            string bookName = array[array.Length - 1];
+                            string str = array[array.Length - 1];
                             workshopAppearanceInfo.path = directories[i];
-                            workshopAppearanceInfo.uniqueId = modid;
-                            workshopAppearanceInfo.bookName = "Custom_" + bookName;
-                            if (workshopAppearanceInfo.isClothCustom)
+                            workshopAppearanceInfo.uniqueId = modId;
+                            workshopAppearanceInfo.bookName = "Custom_" + str;
+                            bool isClothCustom = workshopAppearanceInfo.isClothCustom;
+                            if (isClothCustom)
                             {
-                                list.Add(new Workshop.WorkshopSkinData
+                                if (workshopAppearanceInfo is ExtendedWorkshopAppearanceInfo extendedAppearanceInfo)
                                 {
-                                    dic = workshopAppearanceInfo.clothCustomInfo,
-                                    dataName = workshopAppearanceInfo.bookName,
-                                    contentFolderIdx = workshopAppearanceInfo.uniqueId,
-                                    id = i
-                                });
+                                    list.Add(new ExtendedWorkshopSkinData
+                                    {
+                                        dic = extendedAppearanceInfo.clothCustomInfo,
+                                        dataName = extendedAppearanceInfo.bookName,
+                                        contentFolderIdx = extendedAppearanceInfo.uniqueId,
+                                        atkEffectPivotDic = extendedAppearanceInfo.atkEffectPivotDic,
+                                        specialMotionPivotDic = extendedAppearanceInfo.specialMotionPivotDic,
+                                        motionSoundList = extendedAppearanceInfo.motionSoundList,
+                                        id = oldSkins + i
+                                    });
+                                }
+                                else
+                                {
+                                    list.Add(new WorkshopSkinData
+                                    {
+                                        dic = workshopAppearanceInfo.clothCustomInfo,
+                                        dataName = workshopAppearanceInfo.bookName,
+                                        contentFolderIdx = workshopAppearanceInfo.uniqueId,
+                                        id = oldSkins + i
+                                    });
+                                }
                             }
                         }
                     }
-                    if (_bookSkinData.ContainsKey(modid))
+                    if (_bookSkinData.ContainsKey(modId))
                     {
-                        _bookSkinData[modid].AddRange(list);
+                        _bookSkinData[modId].AddRange(list);
                     }
                     else
                     {
-                        _bookSkinData[modid] = list;
+                        _bookSkinData[modId] = list;
                     }
                 }
             }
+            var loader = Singleton<CustomizingResourceLoader>.Instance;
+            var list2 = LoadWorkshopExtendedCustomAppearance();
+            foreach (WorkshopAppearanceInfo workshopAppearanceInfo in list2)
+            {
+                if (workshopAppearanceInfo.isClothCustom)
+                {
+                    WorkshopSkinData workshopSkinData;
+                    if (workshopAppearanceInfo is ExtendedWorkshopAppearanceInfo extendedAppearanceInfo)
+                    {
+                        workshopSkinData = new ExtendedWorkshopSkinData
+                        {
+                            dic = extendedAppearanceInfo.clothCustomInfo,
+                            dataName = extendedAppearanceInfo.bookName,
+                            contentFolderIdx = extendedAppearanceInfo.uniqueId,
+                            atkEffectPivotDic = extendedAppearanceInfo.atkEffectPivotDic,
+                            specialMotionPivotDic = extendedAppearanceInfo.specialMotionPivotDic,
+                            motionSoundList = extendedAppearanceInfo.motionSoundList
+                        };
+                    }
+                    else
+                    {
+                        workshopSkinData = new WorkshopSkinData
+                        {
+                            dic = workshopAppearanceInfo.clothCustomInfo,
+                            dataName = workshopAppearanceInfo.bookName,
+                            contentFolderIdx = workshopAppearanceInfo.uniqueId
+                        };
+                    }
+                    int num = loader._skinData.Count;
+                    if (loader._skinData.TryGetValue(workshopAppearanceInfo.uniqueId, out WorkshopSkinData workshopSkinData1))
+                    {
+                        num = workshopSkinData1.id;
+                        loader._skinData.Remove(workshopAppearanceInfo.uniqueId);
+                    }
+                    workshopSkinData.id = num;
+                    loader._skinData.Add(workshopAppearanceInfo.uniqueId, workshopSkinData);
+                }
+            }
         }
-        public static Workshop.WorkshopAppearanceInfo LoadCustomAppearance(string path)
+        public static WorkshopAppearanceInfo LoadCustomAppearance(string path)
         {
             string text = path + "/ModInfo.xml";
             if (File.Exists(text))
@@ -568,218 +697,416 @@ namespace BaseMod
             }
             return null;
         }
-        private static Workshop.WorkshopAppearanceInfo LoadCustomAppearanceInfo(string rootPath, string xml)
+        private static WorkshopAppearanceInfo LoadCustomAppearanceInfo(string rootPath, string xml)
+		{
+			if (string.IsNullOrEmpty(xml))
+			{
+				return null;
+			}
+
+			WorkshopAppearanceInfo workshopAppearanceInfo = null;
+			StreamReader streamReader = new StreamReader(xml);
+			XmlDocument xmlDocument = new XmlDocument();
+			try
+			{
+				xmlDocument.LoadXml(streamReader.ReadToEnd());
+				XmlNode xmlNode = xmlDocument.SelectSingleNode("ModInfo");
+				bool isExtended = false;
+				XmlNode extendedXml = xmlNode.Attributes.GetNamedItem("extended");
+				if (extendedXml != null)
+				{
+					bool.TryParse(extendedXml.InnerText, out isExtended);
+				}
+				if (isExtended)
+				{
+					workshopAppearanceInfo = new ExtendedWorkshopAppearanceInfo();
+				}
+				else
+				{
+					workshopAppearanceInfo = new WorkshopAppearanceInfo();
+				}
+				XmlNode xmlNode2 = xmlNode.SelectSingleNode("FaceInfo");
+				XmlNode xmlNode3 = xmlNode.SelectSingleNode("ClothInfo");
+				if (xmlNode2 != null)
+				{
+					workshopAppearanceInfo.isFaceCustom = true;
+					for (int i = 0; i < 17; i++)
+					{
+						Workshop.FaceCustomType key = (Workshop.FaceCustomType)i;
+						string xpath = key.ToString();
+						XmlNode xmlNode4 = xmlNode2.SelectSingleNode(xpath);
+						if (xmlNode4 != null)
+						{
+							string innerText = xmlNode4.InnerText;
+							Sprite sprite = SpriteUtil.LoadSprite(rootPath + "/FaceCustom/" + innerText + ".png", new Vector2(0.5f, 0.5f));
+							if (sprite != null)
+							{
+								workshopAppearanceInfo.faceCustomInfo.Add(key, sprite);
+							}
+                            LoadFaceCustom(workshopAppearanceInfo.faceCustomInfo);
+						}
+					}
+				}
+				if (xmlNode3 != null)
+				{
+					workshopAppearanceInfo.isClothCustom = true;
+					string innerText2 = xmlNode3.SelectSingleNode("Name").InnerText;
+					if (!string.IsNullOrEmpty(innerText2))
+					{
+						workshopAppearanceInfo.bookName = innerText2;
+					}
+					for (int j = 0; j < 31; j++)
+					{
+						ActionDetail actionDetail = (ActionDetail)j;
+						if (actionDetail == ActionDetail.Standing || actionDetail == ActionDetail.NONE) continue;
+						string actionName = actionDetail.ToString();
+						try
+						{
+							XmlNode actionNode = xmlNode3.SelectSingleNode(actionName);
+							if (actionNode == null)
+							{
+								continue;
+							}
+
+							Vector2Int size = new Vector2Int(512, 512);
+							float res = 50f;
+							bool isCustomSize = false;
+							if (isExtended)
+							{
+								XmlNode sizeX = actionNode.Attributes.GetNamedItem("size_x");
+								if (sizeX != null)
+								{
+									size.x = int.Parse(sizeX.InnerText);
+								}
+								XmlNode sizeY = actionNode.Attributes.GetNamedItem("size_y");
+								if (sizeY != null)
+								{
+									size.y = int.Parse(sizeY.InnerText);
+								}
+								XmlNode resXml = actionNode.Attributes.GetNamedItem("quality");
+								if (resXml != null)
+								{
+									res = float.Parse(resXml.InnerText, CultureInfo.InvariantCulture);
+								}
+								isCustomSize = (size.x != 512 || size.y != 512 || res != 50f);
+							}
+
+							XmlNode spritePivotNode = actionNode.SelectSingleNode("Pivot");
+							XmlNode headNode = actionNode.SelectSingleNode("Head");
+							XmlNode spritePivotXXml = null;
+							XmlNode spritePivotYXml = null;
+							XmlNode headXXml = null;
+							XmlNode headYXml = null;
+							XmlNode headRXml = null;
+							if (isExtended)
+							{
+								spritePivotXXml = spritePivotNode.Attributes.GetNamedItem("pivot_x_custom");
+								spritePivotYXml = spritePivotNode.Attributes.GetNamedItem("pivot_y_custom");
+								headXXml = headNode.Attributes.GetNamedItem("head_x_custom");
+								headYXml = headNode.Attributes.GetNamedItem("head_y_custom");
+								headRXml = headNode.Attributes.GetNamedItem("rotation_custom");
+							}
+							if (spritePivotXXml == null) spritePivotXXml = spritePivotNode.Attributes.GetNamedItem("pivot_x");
+							if (spritePivotYXml == null) spritePivotYXml = spritePivotNode.Attributes.GetNamedItem("pivot_y");
+							float spritePivotX = float.Parse(spritePivotXXml.InnerText, CultureInfo.InvariantCulture);
+							float spritePivotY = float.Parse(spritePivotYXml.InnerText, CultureInfo.InvariantCulture);
+							Vector2 pivotPos = new Vector2(spritePivotX / (2 * size.x) + 0.5f, spritePivotY / (2 * size.y) + 0.5f);
+
+							if (headXXml == null) headXXml = headNode.Attributes.GetNamedItem("head_x");
+							if (headYXml == null) headYXml = headNode.Attributes.GetNamedItem("head_y");
+							float headX = float.Parse(headXXml.InnerText, CultureInfo.InvariantCulture);
+							float headY = float.Parse(headYXml.InnerText, CultureInfo.InvariantCulture);
+							Vector2 headPos = new Vector2(headX / 100f, headY / 100f);
+							if (headRXml == null) headRXml = headNode.Attributes.GetNamedItem("rotation");
+							float headRotation = float.Parse(headRXml.InnerText, CultureInfo.InvariantCulture);
+							XmlNode headEnabledXml = headNode.Attributes.GetNamedItem("head_enable");
+							bool headEnabled = true;
+							if (headEnabledXml != null)
+							{
+								bool.TryParse(headEnabledXml.InnerText, out headEnabled);
+							}
+							XmlNode directionNode = actionNode.SelectSingleNode("Direction");
+							CharacterMotion.MotionDirection direction = CharacterMotion.MotionDirection.FrontView;
+							if (directionNode.InnerText == "Side")
+							{
+								direction = CharacterMotion.MotionDirection.SideView;
+							}
+							List<Vector3> additionalPivotCoords = null;
+							if (isExtended)
+							{
+								XmlNodeList additionalPivotNodes = actionNode.SelectNodes("AdditionalPivot");
+								if (additionalPivotNodes != null)
+								{
+									additionalPivotCoords = new List<Vector3>();
+									foreach (XmlNode additionalPivot in additionalPivotNodes)
+									{
+										XmlNode addPivotX = additionalPivot.Attributes.GetNamedItem("pivot_x");
+										XmlNode addPivotY = additionalPivot.Attributes.GetNamedItem("pivot_y");
+										XmlNode addPivotR = additionalPivot.Attributes.GetNamedItem("rotation");
+										additionalPivotCoords.Add(new Vector3(float.Parse(addPivotX.InnerText, CultureInfo.InvariantCulture) / 100f,
+											float.Parse(addPivotY.InnerText, CultureInfo.InvariantCulture) / 100f,
+											float.Parse(addPivotR?.InnerText ?? "0", CultureInfo.InvariantCulture)));
+									}
+								}
+							}
+							bool hasSpriteFile = false;
+							string spritePath = rootPath + "/ClothCustom/" + actionName + "_mid.png";
+							bool hasSkinSprite = false;
+							string skinSpritePath = null;
+							bool hasBackSprite = false;
+							string backSpritePath = rootPath + "/ClothCustom/" + actionName + "_back.png";
+							bool hasBackSkinSprite = false;
+							string backSkinSpritePath = rootPath + "/ClothCustom/" + actionName + "_back_skin.png";
+							if (isExtended && File.Exists(spritePath))
+							{
+								hasSpriteFile = true;
+								skinSpritePath = rootPath + "/ClothCustom/" + actionName + "_mid_skin.png";
+								if (File.Exists(skinSpritePath))
+								{
+									hasSkinSprite = true;
+								}
+								if (!File.Exists(backSpritePath))
+								{
+									backSpritePath = rootPath + "/ClothCustom/" + actionName + ".png";
+									backSkinSpritePath = rootPath + "/ClothCustom/" + actionName + "_skin.png";
+								}
+							}
+							else
+							{
+								spritePath = rootPath + "/ClothCustom/" + actionName + ".png";
+								skinSpritePath = rootPath + "/ClothCustom/" + actionName + "_skin.png";
+								if (File.Exists(spritePath))
+								{
+									hasSpriteFile = true;
+									if (isExtended)
+									{
+										if (File.Exists(skinSpritePath))
+										{
+											hasSkinSprite = true;
+										}
+										var largeSpritePath = rootPath + "/ClothCustom/" + actionName + "_large.png";
+										if (File.Exists(largeSpritePath))
+										{
+											spritePath = largeSpritePath;
+										}
+									}
+								}
+							}
+							if (isExtended && File.Exists(backSpritePath))
+							{
+								hasBackSprite = true;
+								if (File.Exists(backSkinSpritePath))
+								{
+									hasBackSkinSprite = true;
+								}
+							}
+							bool hasFrontSprite = false;
+							bool hasFrontSpriteFile = false;
+							string frontSpritePath = rootPath + "/ClothCustom/" + actionName + "_front.png";
+							bool hasFrontSkinSprite = false;
+							string frontSkinSpritePath = frontSkinSpritePath = rootPath + "/ClothCustom/" + actionName + "_front_skin.png";
+							if (File.Exists(frontSpritePath))
+							{
+								hasFrontSprite = true;
+								hasFrontSpriteFile = true;
+								if (isExtended)
+								{
+									var largeSpritePath = rootPath + "/ClothCustom/" + actionName + "_large.png";
+									if (File.Exists(largeSpritePath))
+									{
+										frontSpritePath = largeSpritePath;
+									}
+									if (File.Exists(frontSkinSpritePath))
+									{
+										hasFrontSkinSprite = true;
+									}
+								}
+							}
+							ClothCustomizeData value;
+							if (isExtended)
+							{
+								value = new ExtendedClothCustomizeData
+								{
+									hasSpriteFile = hasSpriteFile,
+									spritePath = spritePath,
+									hasFrontSprite = hasFrontSprite,
+									hasFrontSpriteFile = hasFrontSpriteFile,
+									frontSpritePath = frontSpritePath,
+									pivotPos = pivotPos,
+									headPos = headPos,
+									headRotation = headRotation,
+									direction = direction,
+									headEnabled = headEnabled,
+									isCustomSize = isCustomSize,
+									size = size,
+									resolution = res,
+									hasSkinSprite = hasSkinSprite,
+									skinSpritePath = skinSpritePath,
+									hasFrontSkinSprite = hasFrontSkinSprite,
+									frontSkinSpritePath = frontSkinSpritePath,
+									hasBackSprite = hasBackSprite,
+									backSpritePath = backSpritePath,
+									hasBackSkinSprite = hasBackSkinSprite,
+									backSkinSpritePath = backSkinSpritePath,
+									additionalPivots = additionalPivotCoords
+								};
+							}
+							else
+							{
+								value = new ClothCustomizeData
+								{
+									hasSpriteFile = hasSpriteFile,
+									spritePath = spritePath,
+									hasFrontSprite = hasFrontSprite,
+									hasFrontSpriteFile = hasFrontSpriteFile,
+									frontSpritePath = frontSpritePath,
+									pivotPos = pivotPos,
+									headPos = headPos,
+									headRotation = headRotation,
+									direction = direction,
+									headEnabled = headEnabled
+								};
+							}
+							if (spritePath != null)
+							{
+								workshopAppearanceInfo.clothCustomInfo.Add(actionDetail, value);
+							}
+						}
+						catch (Exception message)
+						{
+							Debug.LogError(message);
+						}
+					}
+					if (isExtended)
+					{
+						ExtendedWorkshopAppearanceInfo extendedInfo = (ExtendedWorkshopAppearanceInfo)workshopAppearanceInfo;
+						XmlNode soundNode = xmlNode.SelectSingleNode("SoundList");
+						if (soundNode != null)
+						{
+							List<BookSoundInfo> motionSoundList = new List<BookSoundInfo>();
+							XmlNodeList motionSoundsXml = soundNode.SelectNodes("SoundInfo");
+							if (motionSoundsXml != null)
+							{
+								foreach (XmlNode motionSound in motionSoundsXml)
+								{
+									XmlAttributeCollection attr = motionSound.Attributes;
+									XmlNode motion = attr.GetNamedItem("Motion");
+									XmlNode winExternal = attr.GetNamedItem("WinExternal");
+									XmlNode winPath = attr.GetNamedItem("Win");
+									XmlNode loseExternal = attr.GetNamedItem("LoseExternal");
+									XmlNode losePath = attr.GetNamedItem("Lose");
+									if (Enum.TryParse(motion.InnerText, true, out LOR_DiceSystem.MotionDetail motionDetail))
+									{
+										motionSoundList.Add(new BookSoundInfo()
+										{
+											motion = motionDetail,
+											isWinExternal = bool.Parse(winExternal.InnerText),
+											winSound = winPath.InnerText,
+											isLoseExternal = bool.Parse(loseExternal.InnerText),
+											loseSound = losePath.InnerText
+										});
+									}
+								}
+							}
+							extendedInfo.motionSoundList = motionSoundList;
+						}
+						XmlNode effectNode = xmlNode.SelectSingleNode("AtkEffectPivotInfo");
+						if (effectNode != null)
+						{
+							Dictionary<LOR_DiceSystem.MotionDetail, Vector3> atkEffectPivotDic = new Dictionary<LOR_DiceSystem.MotionDetail, Vector3>();
+							for (int j = 0; j < 8; j++)
+							{
+								LOR_DiceSystem.MotionDetail motionDetail = (LOR_DiceSystem.MotionDetail)j;
+								string text = motionDetail.ToString();
+								XmlNode specialPivotXml = effectNode.SelectSingleNode(text);
+								if (specialPivotXml != null)
+								{
+									XmlAttributeCollection attr = specialPivotXml.Attributes;
+									atkEffectPivotDic.Add(motionDetail, new Vector3(float.Parse(attr.GetNamedItem("pivot_x").InnerText, CultureInfo.InvariantCulture) / 100,
+										float.Parse(attr.GetNamedItem("pivot_y").InnerText, CultureInfo.InvariantCulture) / 100,
+										float.Parse(attr.GetNamedItem("rotation")?.InnerText ?? "0", CultureInfo.InvariantCulture)));
+								}
+							}
+							extendedInfo.atkEffectPivotDic = atkEffectPivotDic;
+						}
+						XmlNode specialNode = xmlNode.SelectSingleNode("SpecialMotionPivotInfo");
+						if (specialNode != null)
+						{
+							Dictionary<ActionDetail, Vector3> specialMotionPivotDic = new Dictionary<ActionDetail, Vector3>();
+							for (int j = 0; j < 31; j++)
+							{
+								ActionDetail actionDetail = (ActionDetail)j;
+								string text = actionDetail.ToString();
+								XmlNode specialPivotXml = specialNode.SelectSingleNode(text);
+								if (specialPivotXml != null)
+								{
+									XmlAttributeCollection attr = specialPivotXml.Attributes;
+									specialMotionPivotDic.Add(actionDetail, new Vector3(float.Parse(attr.GetNamedItem("pivot_x").InnerText, CultureInfo.InvariantCulture) / 100,
+										float.Parse(attr.GetNamedItem("pivot_y").InnerText, CultureInfo.InvariantCulture) / 100,
+										float.Parse(attr.GetNamedItem("rotation")?.InnerText ?? "0", CultureInfo.InvariantCulture)));
+								}
+							}
+							extendedInfo.specialMotionPivotDic = specialMotionPivotDic;
+						}
+					}
+				}
+			}
+			catch (Exception message2)
+			{
+				Debug.LogError(message2);
+			}
+			return workshopAppearanceInfo;
+		}
+        private static List<WorkshopAppearanceInfo> LoadWorkshopExtendedCustomAppearance()
         {
-            Workshop.WorkshopAppearanceInfo workshopAppearanceInfo = new Workshop.WorkshopAppearanceInfo();
-            if (string.IsNullOrEmpty(xml))
+            List<WorkshopAppearanceInfo> list = new List<WorkshopAppearanceInfo>();
+            string workshopDirPath = PlatformManager.Instance.GetWorkshopDirPath();
+            if (Directory.Exists(workshopDirPath))
             {
-                return null;
-            }
-            StreamReader streamReader = new StreamReader(xml);
-            XmlDocument xmlDocument = new XmlDocument();
-            try
-            {
-                xmlDocument.LoadXml(streamReader.ReadToEnd());
-                XmlNode xmlNode = xmlDocument.SelectSingleNode("ModInfo");
-                XmlNode xmlNode2 = xmlNode.SelectSingleNode("FaceInfo");
-                XmlNode xmlNode3 = xmlNode.SelectSingleNode("ClothInfo");
-                if (xmlNode2 != null)
+                foreach (string text in Directory.GetDirectories(workshopDirPath))
                 {
-                    Dictionary<Workshop.FaceCustomType, Sprite> faceCustomInfo = new Dictionary<Workshop.FaceCustomType, Sprite>();
-                    for (int i = 0; i < 17; i++)
+                    WorkshopAppearanceInfo workshopAppearanceInfo = LoadCustomAppearance(text);
+                    if (workshopAppearanceInfo != null && workshopAppearanceInfo is ExtendedWorkshopAppearanceInfo)
                     {
-                        Workshop.FaceCustomType key = (Workshop.FaceCustomType)i;
-                        string xpath = key.ToString();
-                        XmlNode xmlNode4 = xmlNode2.SelectSingleNode(xpath);
-                        if (xmlNode4 != null)
+                        list.Add(workshopAppearanceInfo);
+                        string[] array = text.Split(new char[]
                         {
-                            string innerText = xmlNode4.InnerText;
-                            Sprite sprite = SpriteUtil.LoadSprite(rootPath + "/FaceCustom/" + innerText + ".png", new Vector2(0.5f, 0.5f));
-                            if (sprite != null)
-                            {
-                                faceCustomInfo.Add(key, sprite);
-                            }
-                        }
-                    }
-                    LoadFaceCustom(faceCustomInfo);
-                }
-                if (xmlNode3 != null)
-                {
-                    workshopAppearanceInfo.isClothCustom = true;
-                    string innerText2 = xmlNode3.SelectSingleNode("Name").InnerText;
-                    if (!string.IsNullOrEmpty(innerText2))
-                    {
-                        workshopAppearanceInfo.bookName = innerText2;
-                    }
-                    for (int j = 0; j <= 11; j++)
-                    {
-                        ActionDetail actionDetail = (ActionDetail)j;
-                        if (actionDetail != ActionDetail.Standing && actionDetail != ActionDetail.NONE)
+                            '\\'
+                        });
+                        string text2 = array[array.Length - 1];
+                        workshopAppearanceInfo.path = text;
+                        workshopAppearanceInfo.uniqueId = text2;
+                        if (string.IsNullOrEmpty(workshopAppearanceInfo.bookName))
                         {
-                            string text = actionDetail.ToString();
-                            try
-                            {
-                                XmlNode xmlNode5 = xmlNode3.SelectSingleNode(text);
-                                if (xmlNode5 == null)
-                                {
-                                    Debug.Log("Workshop :: " + text + "keyword null!");
-                                    text = "Penetrate";
-                                    xmlNode5 = xmlNode3.SelectSingleNode(text);
-                                }
-                                if (xmlNode5 != null)
-                                {
-                                    string text2 = rootPath + "/ClothCustom/" + text + ".png";
-                                    string text3 = rootPath + "/ClothCustom/" + text + "_front.png";
-                                    XmlNode xmlNode6 = xmlNode5.SelectSingleNode("Pivot");
-                                    XmlNode namedItem = xmlNode6.Attributes.GetNamedItem("pivot_x");
-                                    XmlNode namedItem2 = xmlNode6.Attributes.GetNamedItem("pivot_y");
-                                    XmlNode xmlNode7 = xmlNode5.SelectSingleNode("Head");
-                                    XmlNode namedItem3 = xmlNode7.Attributes.GetNamedItem("head_x");
-                                    XmlNode namedItem4 = xmlNode7.Attributes.GetNamedItem("head_y");
-                                    XmlNode namedItem5 = xmlNode7.Attributes.GetNamedItem("rotation");
-                                    XmlNode xmlNode8 = xmlNode5.SelectSingleNode("Direction");
-                                    XmlNode namedItem6 = xmlNode7.Attributes.GetNamedItem("head_enable");
-                                    float num = float.Parse(namedItem.InnerText);
-                                    float num2 = float.Parse(namedItem2.InnerText);
-                                    float num3 = float.Parse(namedItem3.InnerText);
-                                    float num4 = float.Parse(namedItem4.InnerText);
-                                    float headRotation = float.Parse(namedItem5.InnerText);
-                                    bool headEnabled = true;
-                                    if (namedItem6 != null)
-                                    {
-                                        bool.TryParse(namedItem6.InnerText, out headEnabled);
-                                    }
-                                    Vector2 pivotPos = new Vector2((num + 512f) / 1024f, (num2 + 512f) / 1024f);
-                                    Vector2 headPos = new Vector2(num3 / 100f, num4 / 100f);
-                                    bool hasFrontSprite = false;
-                                    string text4 = text2;
-                                    string frontSpritePath = text3;
-                                    bool hasSpriteFile = false;
-                                    bool hasFrontSpriteFile = false;
-                                    if (File.Exists(text2))
-                                    {
-                                        hasSpriteFile = true;
-                                    }
-                                    if (File.Exists(text3))
-                                    {
-                                        hasFrontSprite = true;
-                                        hasFrontSpriteFile = true;
-                                    }
-                                    CharacterMotion.MotionDirection direction = CharacterMotion.MotionDirection.FrontView;
-                                    if (xmlNode8.InnerText == "Side")
-                                    {
-                                        direction = CharacterMotion.MotionDirection.SideView;
-                                    }
-                                    Workshop.ClothCustomizeData value = new Workshop.ClothCustomizeData
-                                    {
-                                        spritePath = text4,
-                                        frontSpritePath = frontSpritePath,
-                                        hasFrontSprite = hasFrontSprite,
-                                        pivotPos = pivotPos,
-                                        headPos = headPos,
-                                        headRotation = headRotation,
-                                        direction = direction,
-                                        headEnabled = headEnabled,
-                                        hasFrontSpriteFile = hasFrontSpriteFile,
-                                        hasSpriteFile = hasSpriteFile
-                                    };
-                                    if (text4 != null)
-                                    {
-                                        workshopAppearanceInfo.clothCustomInfo.Add(actionDetail, value);
-                                    }
-                                }
-                            }
-                            catch (Exception message)
-                            {
-                                Debug.LogError(message);
-                            }
-                        }
-                    }
-                    for (int k = 12; k < 31; k++)
-                    {
-                        ActionDetail actionDetail2 = (ActionDetail)k;
-                        if (actionDetail2 != ActionDetail.Standing && actionDetail2 != ActionDetail.NONE)
-                        {
-                            string text5 = actionDetail2.ToString();
-                            try
-                            {
-                                XmlNode xmlNode10 = xmlNode3.SelectSingleNode(text5);
-                                if (xmlNode10 != null)
-                                {
-                                    string text6 = rootPath + "/ClothCustom/" + text5 + ".png";
-                                    string text7 = rootPath + "/ClothCustom/" + text5 + "_front.png";
-                                    XmlNode xmlNode11 = xmlNode10.SelectSingleNode("Pivot");
-                                    XmlNode namedItem7 = xmlNode11.Attributes.GetNamedItem("pivot_x");
-                                    XmlNode namedItem8 = xmlNode11.Attributes.GetNamedItem("pivot_y");
-                                    XmlNode xmlNode12 = xmlNode10.SelectSingleNode("Head");
-                                    XmlNode namedItem9 = xmlNode12.Attributes.GetNamedItem("head_x");
-                                    XmlNode namedItem10 = xmlNode12.Attributes.GetNamedItem("head_y");
-                                    XmlNode namedItem11 = xmlNode12.Attributes.GetNamedItem("rotation");
-                                    XmlNode xmlNode13 = xmlNode10.SelectSingleNode("Direction");
-                                    XmlNode namedItem12 = xmlNode12.Attributes.GetNamedItem("head_enable");
-                                    float num5 = float.Parse(namedItem7.InnerText);
-                                    float num6 = float.Parse(namedItem8.InnerText);
-                                    float num7 = float.Parse(namedItem9.InnerText);
-                                    float num8 = float.Parse(namedItem10.InnerText);
-                                    float headRotation2 = float.Parse(namedItem11.InnerText);
-                                    bool headEnabled2 = true;
-                                    if (namedItem12 != null)
-                                    {
-                                        bool.TryParse(namedItem12.InnerText, out headEnabled2);
-                                    }
-                                    Vector2 pivotPos2 = new Vector2((num5 + 512f) / 1024f, (num6 + 512f) / 1024f);
-                                    Vector2 headPos2 = new Vector2(num7 / 100f, num8 / 100f);
-                                    bool hasFrontSprite2 = false;
-                                    string text8 = text6;
-                                    string frontSpritePath2 = text7;
-                                    bool hasSpriteFile2 = false;
-                                    bool hasFrontSpriteFile2 = false;
-                                    if (File.Exists(text6))
-                                    {
-                                        hasSpriteFile2 = true;
-                                    }
-                                    if (File.Exists(text7))
-                                    {
-                                        hasFrontSprite2 = true;
-                                        hasFrontSpriteFile2 = true;
-                                    }
-                                    CharacterMotion.MotionDirection direction2 = CharacterMotion.MotionDirection.FrontView;
-                                    if (xmlNode13.InnerText == "Side")
-                                    {
-                                        direction2 = CharacterMotion.MotionDirection.SideView;
-                                    }
-                                    Workshop.ClothCustomizeData value2 = new Workshop.ClothCustomizeData
-                                    {
-                                        spritePath = text8,
-                                        frontSpritePath = frontSpritePath2,
-                                        hasFrontSprite = hasFrontSprite2,
-                                        pivotPos = pivotPos2,
-                                        headPos = headPos2,
-                                        headRotation = headRotation2,
-                                        direction = direction2,
-                                        headEnabled = headEnabled2,
-                                        hasFrontSpriteFile = hasFrontSpriteFile2,
-                                        hasSpriteFile = hasSpriteFile2
-                                    };
-                                    if (text8 != null)
-                                    {
-                                        workshopAppearanceInfo.clothCustomInfo.Add(actionDetail2, value2);
-                                    }
-                                }
-                            }
-                            catch (Exception message2)
-                            {
-                                Debug.LogError(message2);
-                            }
+                            workshopAppearanceInfo.bookName = text2;
                         }
                     }
                 }
             }
-            catch (Exception message2)
+            string localDirPath = Path.Combine(Application.dataPath, "Mods");
+            if (Directory.Exists(localDirPath))
             {
-                Debug.LogError(message2);
+                foreach (string text in Directory.GetDirectories(localDirPath))
+                {
+                    WorkshopAppearanceInfo workshopAppearanceInfo = LoadCustomAppearance(text);
+                    if (workshopAppearanceInfo != null)
+                    {
+                        list.Add(workshopAppearanceInfo);
+                        string[] array = text.Split(new char[]
+                        {
+                            '\\'
+                        });
+                        string text2 = array[array.Length - 1];
+                        workshopAppearanceInfo.path = text;
+                        workshopAppearanceInfo.uniqueId = text2;
+                        if (string.IsNullOrEmpty(workshopAppearanceInfo.bookName))
+                        {
+                            workshopAppearanceInfo.bookName = text2;
+                        }
+                    }
+                }
             }
-            return workshopAppearanceInfo;
+            return list;
         }
         private static void LoadFaceCustom(Dictionary<Workshop.FaceCustomType, Sprite> faceCustomInfo)
         {
@@ -1088,7 +1415,7 @@ namespace BaseMod
                     return true;
                 }
                 string skinName = unit.CustomBookItem.GetOriginalCharcterName();
-                Workshop.WorkshopSkinData skinData = Singleton<CustomizingBookSkinLoader>.Instance.GetWorkshopBookSkinData(unit.CustomBookItem.BookId.packageId, skinName) ?? Singleton<CustomizingResourceLoader>.Instance.GetWorkshopSkinData(skinName);
+                Workshop.WorkshopSkinData skinData = Singleton<CustomizingBookSkinLoader>.Instance.GetWorkshopBookSkinData(unit.CustomBookItem.BookId.packageId, unit.CustomBookItem.GetOriginalCharcterName(), "_" + unit.appearanceType) ?? Singleton<CustomizingResourceLoader>.Instance.GetWorkshopSkinData(skinName);
                 if (skinData != null && unit.CustomBookItem.ClassInfo.skinType == "Custom")
                 {
                     UnitCustomizingData customizeData = unit.customizeData;
@@ -1171,7 +1498,7 @@ namespace BaseMod
             {
                 if (workshopSkinData != null)
                 {
-                    GameObject gameObject = (GameObject)Resources.Load("Prefabs/Characters/[Prefab]Appearance_Custom");
+                    GameObject gameObject = XLRoot.CustomAppearancePrefab;
                     if (characterRotationCenter != null)
                     {
                         result = UnityEngine.Object.Instantiate(gameObject, characterRotationCenter);
@@ -3198,17 +3525,23 @@ namespace BaseMod
         {
             try
             {
-
-                Workshop.WorkshopSkinData workshopBookSkinData = Singleton<CustomizingBookSkinLoader>.Instance.GetWorkshopBookSkinData(__instance.BookId.packageId, __instance.ClassInfo.GetCharacterSkin());
+                WorkshopSkinData workshopBookSkinData = Singleton<CustomizingBookSkinLoader>.Instance.GetWorkshopBookSkinData(__instance.BookId.packageId, __instance.ClassInfo.GetCharacterSkin(), "_" + __instance.ClassInfo.gender);
                 if (workshopBookSkinData != null)
                 {
                     string path = workshopBookSkinData.dic[ActionDetail.Default].spritePath;
                     DirectoryInfo dir = new DirectoryInfo(path);
                     path = dir.Parent.Parent.FullName + "/Thumb.png";
-                    Sprite result = GetBookThumb(__instance.BookId, path);
-                    if (result != null)
+                    Sprite bookThumb = GetBookThumb(__instance.BookId, path);
+                    if (bookThumb != null)
                     {
-                        __result = result;
+                        __result = bookThumb;
+                        return false;
+                    }
+                    bookThumb = XLRoot.MakeThumbnail(workshopBookSkinData.dic[ActionDetail.Default]);
+                    if (bookThumb != null)
+                    {
+                        BookThumb.Add(__instance.BookId, bookThumb);
+                        __result = bookThumb;
                         return false;
                     }
                 }
@@ -3216,6 +3549,13 @@ namespace BaseMod
             catch (Exception ex)
             {
                 File.WriteAllText(Application.dataPath + "/Mods/Book_Thumberror.log", ex.Message + Environment.NewLine + ex.StackTrace);
+            }
+            if (__instance.ClassInfo.skinType != "Custom")
+            {
+                CoreThumbDic.TryGetValue(__instance.ClassInfo.GetCharacterSkin(), out int index);
+                if (index == 0) index++;
+                __result = Resources.Load<Sprite>("Sprites/Books/Thumb/" + index);
+                return false;
             }
             return true;
         }
@@ -3736,7 +4076,12 @@ namespace BaseMod
         {
             try
             {
-                Workshop.WorkshopSkinData skinData = Singleton<CustomizingBookSkinLoader>.Instance.GetWorkshopBookSkinData(__instance.model.UnitData.unitData.bookItem.ClassInfo.workshopID, egoName);
+                if (LorName.IsCompressed(egoName))
+                {
+                    __instance.ChangeEgoSkin(new LorName(egoName), bookNameChange);
+                    return false;
+                }
+                WorkshopSkinData skinData = Singleton<CustomizingBookSkinLoader>.Instance.GetWorkshopBookSkinData(__instance.model.UnitData.unitData.bookItem.ClassInfo.workshopID, egoName);
                 if (skinData == null)
                 {
                     return true;
@@ -3748,7 +4093,6 @@ namespace BaseMod
                 ActionDetail currentMotionDetail = __instance.charAppearance.GetCurrentMotionDetail();
                 __instance.DestroySkin();
                 GameObject gameObject = CreateCustomCharacter_new(skinData, out string resourceName, __instance.characterRotationCenter);
-                gameObject.GetComponent<Workshop.WorkshopSkinDataSetter>().SetData(skinData);
                 List<CustomInvitation.BookSoundInfo> motionSoundList = __instance.model.UnitData.unitData.bookItem.ClassInfo.motionSoundList;
                 if (motionSoundList != null && motionSoundList.Count > 0)
                 {
@@ -3759,6 +4103,7 @@ namespace BaseMod
                         component2.SetMotionSounds(motionSoundList, motionSoundPath);
                     }
                 }
+                gameObject.GetComponent<Workshop.WorkshopSkinDataSetter>().SetData(skinData);
                 __instance.charAppearance = gameObject.GetComponent<CharacterAppearance>();
                 __instance.charAppearance.GetType().GetField("_initialized", AccessTools.all).SetValue(__instance.charAppearance, false);
                 __instance.charAppearance.Initialize(resourceName);
@@ -3787,6 +4132,11 @@ namespace BaseMod
         {
             try
             {
+                if (LorName.IsCompressed(charName))
+                {
+                    __instance.ChangeSkin(new LorName(charName));
+                    return false;
+                }
                 Workshop.WorkshopSkinData skinData = Singleton<CustomizingBookSkinLoader>.Instance.GetWorkshopBookSkinData(__instance.model.UnitData.unitData.bookItem.ClassInfo.workshopID, charName);
                 if (skinData == null)
                 {
@@ -3798,20 +4148,16 @@ namespace BaseMod
                 GiftInventory giftInventory = __instance.model.UnitData.unitData.giftInventory;
                 ActionDetail currentMotionDetail = __instance.charAppearance.GetCurrentMotionDetail();
                 __instance.DestroySkin();
-                GameObject gameObject = CreateCustomCharacter_new(skinData, out string resourceName, __instance.characterRotationCenter);
-                gameObject.GetComponent<Workshop.WorkshopSkinDataSetter>().SetData(skinData);
-                List<CustomInvitation.BookSoundInfo> motionSoundList = __instance.model.UnitData.unitData.bookItem.ClassInfo.motionSoundList;
+                GameObject gameObject = CreateCustomCharacter_new(skinData, out string resourceName, __instance.characterRotationCenter);            
+                List<BookSoundInfo> motionSoundList = __instance.model.UnitData.unitData.bookItem.ClassInfo.motionSoundList;
                 if (motionSoundList != null && motionSoundList.Count > 0)
                 {
                     string motionSoundPath = ModUtil.GetMotionSoundPath(Singleton<ModContentManager>.Instance.GetModPath(__instance.model.UnitData.unitData.bookItem.ClassInfo.id.packageId));
-                    CharacterSound component2 = gameObject.GetComponent<CharacterSound>();
-                    if (component2 != null)
-                    {
-                        component2.SetMotionSounds(motionSoundList, motionSoundPath);
-                    }
+                    gameObject.GetComponent<CharacterSound>()?.SetMotionSounds(motionSoundList, motionSoundPath);
                 }
+                gameObject.GetComponent<WorkshopSkinDataSetter>().SetData(skinData);
                 __instance.charAppearance = gameObject.GetComponent<CharacterAppearance>();
-                __instance.charAppearance.GetType().GetField("_initialized", AccessTools.all).SetValue(__instance.charAppearance, false);
+                __instance.charAppearance._initialized = false;
                 __instance.charAppearance.Initialize(resourceName);
                 __instance.charAppearance.InitCustomData(customizeData, __instance.model.UnitData.unitData.defaultBook.GetBookClassInfoId());
                 __instance.charAppearance.InitGiftDataAll(giftInventory.GetEquippedList());
@@ -5475,6 +5821,26 @@ namespace BaseMod
                 __result = customMap.IsMapChangable();
             }
         }
+        private static bool ClothCustomizeData_LoadSprite_Pre(Workshop.ClothCustomizeData __instance, ref Sprite ____sprite)
+        {
+            if (!(__instance is ExtendedClothCustomizeData instance)) return true;
+            if (instance.isCustomSize && instance.hasSpriteFile)
+            {
+                ____sprite = SpriteUtilExtension.LoadCustomSizedPivotSprite(instance.spritePath, instance.pivotPos, instance.size, instance.resolution);
+                return false;
+            }
+            return true;
+        }
+        private static bool ClothCustomizeData_LoadFrontSprite_Pre(Workshop.ClothCustomizeData __instance, ref Sprite ____frontSprite)
+        {
+            if (!(__instance is ExtendedClothCustomizeData instance)) return true;
+            if (instance.isCustomSize && instance.hasFrontSpriteFile)
+            {
+                ____frontSprite = SpriteUtilExtension.LoadCustomSizedPivotSprite(instance.frontSpritePath, instance.pivotPos, instance.size, instance.resolution);
+                return false;
+            }
+            return true;
+        }
         public static void DeepCopyGameObject(Transform original, Transform copyed)
         {
             copyed.localPosition = original.localPosition;
@@ -5606,6 +5972,7 @@ namespace BaseMod
 
         private static FieldInfo _CardDescdictionary;
 
+        public static Dictionary<string, int> CoreThumbDic = new Dictionary<string, int>();
     }
 }
 

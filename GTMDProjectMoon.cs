@@ -719,7 +719,8 @@ namespace GTMDProjectMoon
                     List<int> list = new List<int>();
                     foreach (LorId lorId in Singleton<BookInventoryModel>.Instance.GetIdList_noDuplicate())
                     {
-                        if (lorId.IsWorkshop())
+                        BookXmlInfo info = Singleton<BookXmlList>.Instance.GetData(lorId);
+                        if (lorId.IsWorkshop() && !info.isError && !info.canNotEquip)
                         {
                             BaseMod.Harmony_Patch.ModWorkshopBookIndex.Add(num, lorId);
                             list.Add(num);
