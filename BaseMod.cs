@@ -1,4 +1,4 @@
-﻿using Battle.DiceAttackEffect;
+using Battle.DiceAttackEffect;
 using GameSave;
 using GTMDProjectMoon;
 using HarmonyLib;
@@ -167,12 +167,12 @@ namespace BaseMod
                 Patching(harmony, new HarmonyMethod(method), typeof(DiceEffectManager).GetMethod("CreateBehaviourEffect", AccessTools.all), PatchType.prefix);
                 method = typeof(Harmony_Patch).GetMethod("UnitDataModel_InitBattleDialogByDefaultBook_Pre", AccessTools.all);
                 Patching(harmony, new HarmonyMethod(method), typeof(UnitDataModel).GetMethod("InitBattleDialogByDefaultBook", AccessTools.all), PatchType.prefix);
-                method = typeof(Harmony_Patch).GetMethod("BattleEmotionCardModel_ctor_Pre", AccessTools.all);
+                method = typeof(Harmony_Patch).GetMethod("BattleEmotionCardModel_ctor_Post", AccessTools.all);
                 Patching(harmony, new HarmonyMethod(method), typeof(BattleEmotionCardModel).GetConstructor(new Type[]
                 {
                     typeof(EmotionCardXmlInfo),
                     typeof(BattleUnitModel)
-                }), PatchType.prefix);
+                }), PatchType.postfix);
                 method = typeof(Harmony_Patch).GetMethod("UIBattleSettingWaveList_SetData_Pre", AccessTools.all);
                 Patching(harmony, new HarmonyMethod(method), typeof(UIBattleSettingWaveList).GetMethod("SetData", AccessTools.all), PatchType.prefix);
                 method = typeof(Harmony_Patch).GetMethod("UIOriginEquipPageList_UpdateEquipPageList_Pre", AccessTools.all);
@@ -1896,33 +1896,57 @@ namespace BaseMod
             }
             return null;
         }
-        private static bool BattleEmotionCardModel_ctor_Pre(BattleEmotionCardModel __instance, EmotionCardXmlInfo xmlInfo, BattleUnitModel owner, ref EmotionCardXmlInfo ____xmlInfo, ref BattleUnitModel ____owner, ref List<EmotionCardAbilityBase> ____abilityList)
+        private static void BattleEmotionCardModel_ctor_Post(BattleEmotionCardModel __instance, EmotionCardXmlInfo xmlInfo, BattleUnitModel owner, ref EmotionCardXmlInfo ____xmlInfo, ref BattleUnitModel ____owner, ref List<EmotionCardAbilityBase> ____abilityList)
         {
             try
             {
-                ____xmlInfo = xmlInfo;
-                ____owner = owner;
-                ____abilityList = new List<EmotionCardAbilityBase>();
-                try
+                if (____xmlInfo == null)
                 {
-                    foreach (string text in xmlInfo.Script)
+                    ____xmlInfo = xmlInfo;
+                }
+                if (____owner == null)
+                {
+                    ____owner = owner;
+                }
+                if (____abilityList == null)
+                {
+                    ____abilityList = new List<EmotionCardAbilityBase>();
+                }
+                List<string> list = new List<string>();
+                list.AddRange(xmlInfo.Script);
+                foreach (EmotionCardAbilityBase emotionCardAbility in ____abilityList)
+                {
+                    list.Remove(emotionCardAbility.GetType().Name.Substring("EmotionCardAbility_".Length).Trim());
+                }
+                foreach (string text in list)
+                {
+                    EmotionCardAbilityBase emotionCardAbilityBase = FindEmotionCardAbility(text.Trim());
+                    if (emotionCardAbilityBase != null)
                     {
-                        EmotionCardAbilityBase emotionCardAbilityBase = FindEmotionCardAbility(text.Trim());
                         emotionCardAbilityBase.SetEmotionCard(__instance);
                         ____abilityList.Add(emotionCardAbilityBase);
                     }
                 }
-                catch (Exception message)
-                {
-                    Debug.LogError(message);
-                }
-                return false;
             }
             catch (Exception ex)
             {
                 File.WriteAllText(Application.dataPath + "/Mods/SetEmotionAbilityerror.log", ex.Message + Environment.NewLine + ex.StackTrace);
             }
-            return true;
+        }
+        public static EmotionCardAbilityBase FindEmotionCardAbility(string name)
+        {
+            if (!string.IsNullOrEmpty(name) && CustomEmotionCardAbility.TryGetValue(name, out Type type))
+            {
+                return Activator.CreateInstance(type) as EmotionCardAbilityBase;
+            }
+            foreach (Type type2 in Assembly.LoadFile(Application.dataPath + "/Managed/Assembly-CSharp.dll").GetTypes())
+            {
+                if (type2.Name == "EmotionCardAbility_" + name.Trim())
+                {
+                    return Activator.CreateInstance(type2) as EmotionCardAbilityBase;
+                }
+            }
+            return null;
         }
         public static EmotionCardAbilityBase FindEmotionCardAbility(string name)
         {
