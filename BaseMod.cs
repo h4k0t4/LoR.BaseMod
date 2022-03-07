@@ -1948,21 +1948,6 @@ namespace BaseMod
             }
             return null;
         }
-        public static EmotionCardAbilityBase FindEmotionCardAbility(string name)
-        {
-            if (!string.IsNullOrEmpty(name) && CustomEmotionCardAbility.TryGetValue(name, out Type type))
-            {
-                return Activator.CreateInstance(type) as EmotionCardAbilityBase;
-            }
-            foreach (Type type2 in Assembly.LoadFile(Application.dataPath + "/Managed/Assembly-CSharp.dll").GetTypes())
-            {
-                if (type2.Name == "EmotionCardAbility_" + name.Trim())
-                {
-                    return Activator.CreateInstance(type2) as EmotionCardAbilityBase;
-                }
-            }
-            return null;
-        }
         //更多波次的接待
         private static bool UIBattleSettingWaveList_SetData_Pre(UIBattleSettingWaveList __instance, StageModel stage)
         {
@@ -7702,12 +7687,21 @@ namespace BaseMod
                 }
             }
         }
-        private static DiceCardXmlRoot LoadNewCard(string str)
+        static LOR_DiceSystem.DiceCardXmlRoot LoadNewCard(string str)
         {
-            DiceCardXmlRoot result;
+            LOR_DiceSystem.DiceCardXmlRoot result = new LOR_DiceSystem.DiceCardXmlRoot()
+            {
+                cardXmlList = new List<LOR_DiceSystem.DiceCardXmlInfo>()
+            };
+            GTMDProjectMoon.DiceCardXmlRoot root;
             using (StringReader stringReader = new StringReader(str))
             {
-                result = (DiceCardXmlRoot)new XmlSerializer(typeof(DiceCardXmlRoot)).Deserialize(stringReader);
+                root = (GTMDProjectMoon.DiceCardXmlRoot)new XmlSerializer(typeof(GTMDProjectMoon.DiceCardXmlRoot)).Deserialize(stringReader);
+            }
+            foreach (DiceCardXmlInfo_New cardInfo_new in root.cardXmlList)
+            {
+                DiceCardXmlInfo cardInfo = new DiceCardXmlInfo().CopyDiceCardXmlInfo(cardInfo_new);
+                result.cardXmlList.Add(cardInfo);
             }
             return result;
         }

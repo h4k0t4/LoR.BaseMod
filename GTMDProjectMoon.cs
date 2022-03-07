@@ -1,12 +1,17 @@
-﻿using LOR_XML;
+﻿using BookSoundInfo = CustomInvitation.BookSoundInfo;
+using LOR_DiceSystem;
+using LOR_XML;
 using System.Collections.Generic;
 using System.Xml.Serialization;
 using UnityEngine;
+using System;
 
 namespace GTMDProjectMoon
 {
     public static class OrcTools
     {
+        public static Dictionary<string, int> BookCategoryDic = LoadDefaultBookCategories();
+        public static int maxBookCategory = 0;
         public static Dictionary<LorId, List<LorId>> OnlyCardDic = new Dictionary<LorId, List<LorId>>();
 
         public static Dictionary<LorId, List<BookSoulCardInfo_New>> SoulCardDic = new Dictionary<LorId, List<BookSoulCardInfo_New>>();
@@ -40,6 +45,33 @@ namespace GTMDProjectMoon
             }
             catch { }
         }*/
+        public static DiceCardXmlInfo CopyDiceCardXmlInfo(this DiceCardXmlInfo info, DiceCardXmlInfo_New newinfo)
+        {
+            info.Artwork = newinfo.Artwork;
+            info.category = string.IsNullOrWhiteSpace(newinfo.customCategory) ? newinfo.category : GetBookCategory(newinfo.customCategory);
+            info.Chapter = newinfo.Chapter;
+            info.DiceBehaviourList = newinfo.DiceBehaviourList;
+            info.EgoMaxCooltimeValue = newinfo.EgoMaxCooltimeValue;
+            info.Keywords = newinfo.Keywords;
+            info.MapChange = newinfo.MapChange;
+            info.MaxNum = newinfo.MaxNum;
+            info.optionList = newinfo.optionList;
+            info.Priority = newinfo.Priority;
+            info.PriorityScript = newinfo.PriorityScript;
+            info.Rarity = newinfo.Rarity;
+            info.Script = newinfo.Script;
+            info.ScriptDesc = newinfo.ScriptDesc;
+            info.SkinChange = newinfo.SkinChange;
+            info.SkinChangeType = newinfo.SkinChangeType;
+            info.SkinHeight = newinfo.SkinHeight;
+            info.Spec = newinfo.Spec;
+            info.SpecialEffect = newinfo.SpecialEffect;
+            info.workshopName = newinfo.workshopName;
+            info._id = newinfo._id;
+            info._textId = newinfo._textId;
+
+            return info;
+        }
         public static StageClassInfo CopyStageClassInfo(this StageClassInfo stageClassInfo, StageClassInfo_New newinfo, string uniqueId = "")
         {
             List<int> needClearStageList = new List<int>();
@@ -73,27 +105,29 @@ namespace GTMDProjectMoon
         }
         public static BookXmlInfo CopyBookXmlInfo(this BookXmlInfo bookXml, BookXmlInfo_New newinfo, string uniqueId = "")
         {
-            List<int> onlycard = new List<int>();
-            List<BookSoulCardInfo> soulcard = new List<BookSoulCardInfo>();
-            foreach (LorIdXml xml in newinfo.EquipEffect.OnlyCard)
+            List<int> list = new List<int>();
+            List<BookSoulCardInfo> list2 = new List<BookSoulCardInfo>();
+            foreach (LorIdXml lorIdXml in newinfo.EquipEffect.OnlyCard)
             {
-                onlycard.Add(xml.xmlId);
+                list.Add(lorIdXml.xmlId);
             }
-            foreach (BookSoulCardInfo_New soulCardInfo in newinfo.EquipEffect.CardList)
+            foreach (BookSoulCardInfo_New bookSoulCardInfo_New in newinfo.EquipEffect.CardList)
             {
-                if (soulCardInfo.WorkshopId == "")
+                bool flag = bookSoulCardInfo_New.WorkshopId == "";
+                if (flag)
                 {
-                    soulCardInfo.WorkshopId = uniqueId;
+                    bookSoulCardInfo_New.WorkshopId = uniqueId;
                 }
-                if (soulCardInfo.WorkshopId.ToLower() == "@origin")
+                bool flag2 = bookSoulCardInfo_New.WorkshopId.ToLower() == "@origin";
+                if (flag2)
                 {
-                    soulCardInfo.WorkshopId = "";
+                    bookSoulCardInfo_New.WorkshopId = "";
                 }
-                soulcard.Add(new BookSoulCardInfo()
+                list2.Add(new BookSoulCardInfo
                 {
-                    cardId = soulCardInfo.cardId,
-                    requireLevel = soulCardInfo.requireLevel,
-                    emotionLevel = soulCardInfo.emotionLevel,
+                    cardId = bookSoulCardInfo_New.cardId,
+                    requireLevel = bookSoulCardInfo_New.requireLevel,
+                    emotionLevel = bookSoulCardInfo_New.emotionLevel
                 });
             }
             bookXml._id = newinfo._id;
@@ -104,7 +138,12 @@ namespace GTMDProjectMoon
             bookXml._bookIcon = newinfo._bookIcon;
             bookXml.optionList = newinfo.optionList;
             bookXml.categoryList = newinfo.categoryList;
-            bookXml.EquipEffect = new BookEquipEffect()
+            foreach (string category in newinfo.customCategoryList)
+            {
+                bookXml.categoryList.Add(GetBookCategory(category));
+            }
+            newinfo.customCategoryList.Clear();
+            bookXml.EquipEffect = new BookEquipEffect
             {
                 HpReduction = newinfo.EquipEffect.HpReduction,
                 Hp = newinfo.EquipEffect.Hp,
@@ -123,10 +162,10 @@ namespace GTMDProjectMoon
                 StartPlayPoint = newinfo.EquipEffect.StartPlayPoint,
                 AddedStartDraw = newinfo.EquipEffect.AddedStartDraw,
                 PassiveCost = newinfo.EquipEffect.PassiveCost,
-                OnlyCard = onlycard,
-                CardList = soulcard,
+                OnlyCard = list,
+                CardList = list2,
                 _PassiveList = newinfo.EquipEffect._PassiveList,
-                PassiveList = newinfo.EquipEffect.PassiveList,
+                PassiveList = newinfo.EquipEffect.PassiveList
             };
             bookXml.Rarity = newinfo.Rarity;
             bookXml.CharacterSkin = newinfo.CharacterSkin;
@@ -245,6 +284,34 @@ namespace GTMDProjectMoon
             }
             return BattleDialogRelation;
         }
+        public static bool ContainsCategory(this BookModel book, string category)
+        {
+            return book.ContainsCategory(GetBookCategory(category));
+        }
+
+        public static BookCategory GetBookCategory(string category)
+        {
+            if (!BookCategoryDic.ContainsKey(category))
+            {
+                maxBookCategory++;
+                BookCategoryDic[category] = maxBookCategory;
+            }
+            return (BookCategory)BookCategoryDic[category];
+        }
+
+        static Dictionary<string, int> LoadDefaultBookCategories()
+        {
+            var dic = new Dictionary<string, int>();
+            foreach (BookCategory cat in Enum.GetValues(typeof(BookCategory)))
+            {
+                dic.Add(cat.ToString(), (int)cat);
+                if ((int)cat > maxBookCategory)
+                {
+                    maxBookCategory = (int)cat;
+                }
+            }
+            return dic;
+        }
     }
 }
 
@@ -279,16 +346,19 @@ namespace GTMDProjectMoon
         public string _bookIcon = "";
 
         [XmlElement("Option")]
-        public List<BookOption> optionList = new List<BookOption>();
+        public List<global::BookOption> optionList = new List<global::BookOption>();
 
         [XmlElement("Category")]
-        public List<BookCategory> categoryList = new List<BookCategory>();
+        public List<global::BookCategory> categoryList = new List<global::BookCategory>();
+
+        [XmlElement("CustomCategory")]
+        public List<string> customCategoryList = new List<string>();
 
         [XmlElement]
         public BookEquipEffect_New EquipEffect = new BookEquipEffect_New();
 
         [XmlElement("Rarity")]
-        public Rarity Rarity;
+        public global::Rarity Rarity;
 
         [XmlElement("CharacterSkin")]
         public List<string> CharacterSkin = new List<string>();
@@ -297,7 +367,7 @@ namespace GTMDProjectMoon
         public string skinType = "";
 
         [XmlElement("SkinGender")]
-        public Gender gender = Gender.N;
+        public global::Gender gender = global::Gender.N;
 
         [XmlElement("Chapter")]
         public int Chapter = 1;
@@ -306,7 +376,7 @@ namespace GTMDProjectMoon
         public LorIdXml episode = new LorIdXml("", -2);
 
         [XmlElement("RangeType")]
-        public EquipRangeType RangeType;
+        public global::EquipRangeType RangeType;
 
         [XmlElement("NotEquip")]
         public bool canNotEquip;
@@ -321,7 +391,7 @@ namespace GTMDProjectMoon
         public int SuccessionPossibleNumber = 9;
 
         [XmlElement("SoundInfo")]
-        public List<CustomInvitation.BookSoundInfo> motionSoundList;
+        public List<BookSoundInfo> motionSoundList;
 
         [XmlIgnore]
         public int remainRewardValue;
@@ -391,7 +461,22 @@ namespace GTMDProjectMoon
         public List<LorId> PassiveList = new List<LorId>();
     }
 }
-
+namespace GTMDProjectMoon
+{
+    public class DiceCardXmlRoot
+    {
+        [XmlElement("Card")]
+        public List<DiceCardXmlInfo_New> cardXmlList;
+    }
+}
+namespace GTMDProjectMoon
+{
+    public class DiceCardXmlInfo_New : DiceCardXmlInfo
+    {
+        [XmlElement("CustomCategory")]
+        public string customCategory = "";
+    }
+}
 namespace GTMDProjectMoon
 {
     public class BookSoulCardInfo_New
