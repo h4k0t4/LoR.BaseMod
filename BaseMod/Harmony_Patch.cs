@@ -1141,7 +1141,7 @@ namespace BaseMod
                 File.WriteAllText(Application.dataPath + "/Mods/ChangeSkinerror.log", ex.Message + Environment.NewLine + ex.StackTrace);
             }
             return true;
-        }
+        }/*
         //Clone special motion characterMotion
         [HarmonyPatch(typeof(Workshop.WorkshopSkinDataSetter), "SetMotionData")]
         [HarmonyPrefix]
@@ -1177,7 +1177,7 @@ namespace BaseMod
             {
                 File.WriteAllText(Application.dataPath + "/Mods/SetMotionDataerror.log", ex.Message + Environment.NewLine + ex.StackTrace);
             }
-        }
+        }*/
         public static GameObject CreateCustomCharacter_new(Workshop.WorkshopSkinData workshopSkinData, out string resourceName, Transform characterRotationCenter = null)
         {
             GameObject result = null;
@@ -1304,6 +1304,23 @@ namespace BaseMod
                 soundName = null;
                 path1 = null;
                 externalSound = null;
+            }
+        }
+        [HarmonyPatch(typeof(FaceEditor), "Init")]
+        [HarmonyPostfix]
+        private static void FaceEditor_Init_Post(FaceEditor __instance)
+        {
+            try
+            {
+                __instance.face.gameObject.GetComponent<RectTransform>().sizeDelta = __instance.face.sprite.pivot;
+                __instance.frontHair.gameObject.GetComponent<RectTransform>().sizeDelta = __instance.frontHair.sprite.pivot;
+                __instance.backHair.gameObject.GetComponent<RectTransform>().sizeDelta = __instance.backHair.sprite.pivot;
+                __instance.mouth.gameObject.GetComponent<RectTransform>().sizeDelta = __instance.mouth.sprite.pivot;
+                __instance.brow.gameObject.GetComponent<RectTransform>().sizeDelta = __instance.brow.sprite.pivot;
+            }
+            catch (Exception ex)
+            {
+                File.WriteAllText(Application.dataPath + "/Mods/FaceEditorIniterror.log", ex.Message + Environment.NewLine + ex.StackTrace);
             }
         }
         //CustomProjection
