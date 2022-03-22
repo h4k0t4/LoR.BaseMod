@@ -137,8 +137,12 @@ namespace ExtendedLoader
             Transform masterTransform = masterMotion.transform.parent;
             for (int i = 0; i < 12; i++)
             {
-                ActionDetail action = (ActionDetail)i;
-                CharacterMotion oldMotion = appearance._motionList.Find((CharacterMotion motion) => motion.actionDetail == action);
+                if (i == 9)
+                {
+                    i++;
+                }
+                ActionDetail actionDetail = (ActionDetail)i;
+                CharacterMotion oldMotion = appearance._motionList.Find((CharacterMotion motion) => motion.actionDetail == actionDetail);
                 foreach (object obj in oldMotion.transform)
                 {
                     Transform transform = (Transform)obj;
@@ -148,10 +152,18 @@ namespace ExtendedLoader
                     }
                 }
             }
+            ActionDetail action = (ActionDetail)9;
+            CharacterMotion addedMotion = UnityEngine.Object.Instantiate(masterMotion, masterTransform);
+            addedMotion.transform.position = masterMotion.transform.position;
+            addedMotion.transform.localPosition = masterMotion.transform.localPosition;
+            addedMotion.transform.localScale = masterMotion.transform.localScale;
+            addedMotion.actionDetail = action;
+            addedMotion.transform.name = "Custom_" + action.ToString();
+            appearance._motionList.Add(addedMotion);
             for (int i = 12; i < 31; i++)
             {
-                ActionDetail action = (ActionDetail)i;
-                CharacterMotion addedMotion = UnityEngine.Object.Instantiate(masterMotion, masterTransform);
+                action = (ActionDetail)i;
+                addedMotion = UnityEngine.Object.Instantiate(masterMotion, masterTransform);
                 addedMotion.transform.position = masterMotion.transform.position;
                 addedMotion.transform.localPosition = masterMotion.transform.localPosition;
                 addedMotion.transform.localScale = masterMotion.transform.localScale;

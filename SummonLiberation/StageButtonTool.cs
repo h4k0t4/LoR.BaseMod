@@ -42,6 +42,8 @@ namespace SummonLiberation
     {
         static StageButtonTool()
         {
+            currentEnemyUnitIndex = 0;
+            currentLibrarianUnitIndex = 0;
             Sprite sprite = BaseMod.UIPanelTool.GetEnemyCharacterListPanel().transform.GetChild(0).GetChild(3).GetChild(1).GetChild(0).GetComponent<Image>().sprite;
             ButtonColor.OnEnterColor = new Color(0.13333334f, 1f, 0.89411765f);
             EnemyUP = BaseMod.UtilTools.CreateButton(BaseMod.UIPanelTool.GetEnemyCharacterListPanel().transform.GetChild(0).transform, sprite, new Vector2(0.07f, 0.07f), new Vector2(550f, -105f));

@@ -2,6 +2,7 @@
 using BattleCharacterProfile;
 using ExtendedLoader;
 using HarmonyLib;
+using Opening;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -15,13 +16,14 @@ namespace SummonLiberation
 {
     public class Harmony_Patch
     {
-        public void Init()
+        public static void Init()
         {
             //初始化侧边栏信息槽
             enemyProfileArray2 = new List<BattleCharacterProfileUI>();
             allyProfileArray2 = new List<BattleCharacterProfileUI>();
             enermy2 = new List<BattleEmotionCoinUI.BattleEmotionCoinData>();
             librarian2 = new List<BattleEmotionCoinUI.BattleEmotionCoinData>();
+            EnemyListCache = new Dictionary<LorId, List<List<UnitDataModel>>>();
         }
         //Enlarge Librarian's formation
         [HarmonyPatch(typeof(LibraryFloorModel), "Init")]
@@ -561,9 +563,9 @@ namespace SummonLiberation
                 File.WriteAllText(Application.dataPath + "/Mods/UICR_GTBIASerror.txt", ex.Message + Environment.NewLine + ex.StackTrace);
             }
             return true;
-        }
+        }/*
         //StageTurnPageButton
-        [HarmonyPatch(typeof(BattleUnitView), "StopOpening")]
+        [HarmonyPatch(typeof(GameOpeningController), "StopOpening")]
         [HarmonyPostfix]
         private static void GameOpeningController_StopOpening_Post()
         {
@@ -576,7 +578,7 @@ namespace SummonLiberation
             {
                 File.WriteAllText(Application.dataPath + "/Mods/StageTurnPage.txt", ex.Message + Environment.NewLine + ex.StackTrace);
             }
-        }
+        }*/
         //StageTurnPageButton
         [HarmonyPatch(typeof(UIBattleSettingPanel), "OnOpen")]
         [HarmonyPrefix]

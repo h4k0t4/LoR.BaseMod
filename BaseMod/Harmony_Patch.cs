@@ -739,7 +739,7 @@ namespace BaseMod
                     if (isExtended)
                     {
                         ExtendedWorkshopAppearanceInfo extendedInfo = (ExtendedWorkshopAppearanceInfo)workshopAppearanceInfo;
-                        XmlNode soundNode = xmlNode.SelectSingleNode("SoundList");
+                        XmlNode soundNode = xmlNode3.SelectSingleNode("SoundList");
                         if (soundNode != null)
                         {
                             List<CustomInvitation.BookSoundInfo> motionSoundList = new List<CustomInvitation.BookSoundInfo>();
@@ -769,7 +769,7 @@ namespace BaseMod
                             }
                             extendedInfo.motionSoundList = motionSoundList;
                         }
-                        XmlNode effectNode = xmlNode.SelectSingleNode("AtkEffectPivotInfo");
+                        XmlNode effectNode = xmlNode3.SelectSingleNode("AtkEffectPivotInfo");
                         if (effectNode != null)
                         {
                             Dictionary<string, EffectPivot> atkEffectPivotDic = new Dictionary<string, EffectPivot>();
@@ -783,7 +783,7 @@ namespace BaseMod
                             AddPivot(atkEffectPivotDic, effectNode, "atkEffectPivot_F");
                             extendedInfo.atkEffectPivotDic = atkEffectPivotDic;
                         }
-                        XmlNode specialNode = xmlNode.SelectSingleNode("SpecialMotionPivotInfo");
+                        XmlNode specialNode = xmlNode3.SelectSingleNode("SpecialMotionPivotInfo");
                         if (specialNode != null)
                         {
                             Dictionary<ActionDetail, EffectPivot> specialMotionPivotDic = new Dictionary<ActionDetail, EffectPivot>();
@@ -2619,7 +2619,7 @@ namespace BaseMod
             }
         }
         //EmotionCard DiceAction Artwork
-        [HarmonyPatch(typeof(BattleUnitDiceActionUI), "EmotionCard_Init")]
+        [HarmonyPatch(typeof(BattleUnitDiceActionUI_EmotionCard), "Init")]
         [HarmonyPostfix]
         private static void BattleUnitDiceActionUI_EmotionCard_Init_Post(BattleUnitDiceActionUI_EmotionCard __instance, BattleEmotionCardModel card)
         {
@@ -3634,7 +3634,7 @@ namespace BaseMod
             return true;
         }
         //UISettingInvenEquipPageListSlot
-        [HarmonyPatch(typeof(UISettingInvenEquipPageListSlot), "SetData")]
+        [HarmonyPatch(typeof(UISettingInvenEquipPageListSlot), "SetBooksData")]
         [HarmonyPrefix]
         private static bool UISettingInvenEquipPageListSlot_SetBooksData_Pre(UISettingInvenEquipPageListSlot __instance, List<BookModel> books, UIStoryKeyData storyKey, ref Image ___img_IconGlow, ref Image ___img_Icon, ref TextMeshProUGUI ___txt_StoryName, UISettingEquipPageScrollList ___listRoot, ref List<UIOriginEquipPageSlot> ___equipPageSlotList)
         {
@@ -3702,7 +3702,7 @@ namespace BaseMod
             return true;
         }
         //UIInvenEquipPageListSlot
-        [HarmonyPatch(typeof(UIInvenEquipPageListSlot), "SetData")]
+        [HarmonyPatch(typeof(UIInvenEquipPageListSlot), "SetBooksData")]
         [HarmonyPrefix]
         private static bool UIInvenEquipPageListSlot_SetBooksData_Pre(UIInvenEquipPageListSlot __instance, List<BookModel> books, UIStoryKeyData storyKey, ref Image ___img_IconGlow, ref Image ___img_Icon, ref TextMeshProUGUI ___txt_StoryName, UISettingEquipPageScrollList ___listRoot, ref List<UIOriginEquipPageSlot> ___equipPageSlotList)
         {
@@ -4620,12 +4620,12 @@ namespace BaseMod
             {
                 File.WriteAllText(Application.dataPath + "/Mods/SaveFailed.log", ex.Message + Environment.NewLine + ex.StackTrace);
             }
-        }
+        }/*
         //RemoveUnknownSaves
         [HarmonyPatch(typeof(GameOpeningController), "StopOpening")]
         [HarmonyPostfix]
         private static void GameOpeningController_StopOpening_Post()
-        {/*
+        {
             try
             {
                 ModSaveTool.RemoveUnknownSaves();
@@ -4633,9 +4633,8 @@ namespace BaseMod
             catch (Exception ex)
             {
                 File.WriteAllText(Application.dataPath + "/Mods/LoadFromModSaveDataerror.txt", ex.Message + Environment.NewLine + ex.StackTrace);
-            }*/
-        }
-
+            }
+        }*/
         //CustomGift
         //CreateGiftData
         [HarmonyPatch(typeof(CharacterAppearance), "CreateGiftData")]

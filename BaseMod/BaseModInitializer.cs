@@ -19,11 +19,11 @@ namespace BaseMod
     {
         public override void OnInitializeMod()
         {
-            Harmony BaseMod = new Harmony("LOR.BaseMod");
+            Harmony baseMod = new Harmony("LOR.BaseMod");
             //Initialize
             Harmony_Patch.Init();
             //Patch
-            BaseMod.PatchAll(typeof(Harmony_Patch));
+            baseMod.PatchAll(typeof(Harmony_Patch));
             //Add BaseMod ver
             GlobalGameManager.Instance.ver = string.Concat(new string[]
             {
@@ -39,26 +39,28 @@ namespace BaseMod
             Harmony_Patch.LoadModFiles();
             Harmony_Patch.LoadAssemblyFiles();
             ModSaveTool.LoadFromSaveData();
-            Harmony SummonLiberation = new Harmony("LOR.SummonLiberation");
-            SummonLiberation.PatchAll(typeof(SummonLiberation.Harmony_Patch));
-            Harmony ExtendedLoader = new Harmony("LOR.BaseMod.Cyaminthe.ExtendedLoader");
-            ExtendedLoader.PatchAll(typeof(ExtendedLoader.AbCardSelectorSizePatch));
-            ExtendedLoader.PatchAll(typeof(ExtendedLoader.CharacterNameInputInjector));
-            ExtendedLoader.PatchAll(typeof(ExtendedLoader.CharacterNameOutputInjector));
-            ExtendedLoader.PatchAll(typeof(ExtendedLoader.CustomAppearancePrefabPatch));
-            ExtendedLoader.PatchAll(typeof(ExtendedLoader.CustomProjectionLoadPatch));
-            //ExtendedLoader.PatchAll(typeof(ExtendedLoader.GenderInjector));
-            ExtendedLoader.PatchAll(typeof(ExtendedLoader.GiftOrderPatch));
-            ExtendedLoader.PatchAll(typeof(ExtendedLoader.ThumbPatch));
-            ExtendedLoader.PatchAll(typeof(ExtendedLoader.VanillaSkinCopyPatch));
-            ExtendedLoader.PatchAll(typeof(ExtendedLoader.WorkshopSetterPatch));
+            Harmony summonLiberation = new Harmony("LOR.SummonLiberation");
+            SummonLiberation.Harmony_Patch.Init();
+            summonLiberation.PatchAll(typeof(SummonLiberation.Harmony_Patch));
+            Harmony extendedLoader = new Harmony("LOR.BaseMod.Cyaminthe.ExtendedLoader");
+            extendedLoader.PatchAll(typeof(ExtendedLoader.AbCardSelectorSizePatch));
+            extendedLoader.PatchAll(typeof(ExtendedLoader.CharacterNameInputInjector));
+            extendedLoader.PatchAll(typeof(ExtendedLoader.CharacterNameOutputInjector));
+            extendedLoader.PatchAll(typeof(ExtendedLoader.CustomAppearancePrefabPatch));
+            extendedLoader.PatchAll(typeof(ExtendedLoader.CustomProjectionLoadPatch));
+            extendedLoader.PatchAll(typeof(ExtendedLoader.ExtendedClothCustomizeData));
+            extendedLoader.PatchAll(typeof(ExtendedLoader.GenderInjector));
+            extendedLoader.PatchAll(typeof(ExtendedLoader.GiftOrderPatch));
+            extendedLoader.PatchAll(typeof(ExtendedLoader.ThumbPatch));
+            extendedLoader.PatchAll(typeof(ExtendedLoader.VanillaSkinCopyPatch));
+            extendedLoader.PatchAll(typeof(ExtendedLoader.WorkshopSetterPatch));
         }
         private static void RemoveWarnings()
         {
             List<string> list = new List<string>();
             foreach (string errorLog in Singleton<ModContentManager>.Instance.GetErrorLogs())
             {
-                if (errorLog.StartsWith("<color=yellow>") && errorLog.Contains("BaseMod"))
+                if (/*errorLog.StartsWith("<color=yellow>") &&*/  errorLog.Contains("BaseMod"))
                 {
                     list.Add(errorLog);
                 }

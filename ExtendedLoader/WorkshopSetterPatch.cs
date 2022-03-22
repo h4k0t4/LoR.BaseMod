@@ -26,24 +26,8 @@ namespace ExtendedLoader
                 return false;
             }
             CharacterAppearance characterAppearance = __instance.gameObject.GetComponent<CharacterAppearance>();
-            var disabledMotions = new List<CharacterMotion>();
-            foreach (CharacterMotion characterMotion in characterAppearance._motionList.ToList())
-            {
-                if (!data.dic.ContainsKey(characterMotion.actionDetail))
-                {
-                    disabledMotions.Add(characterMotion);
-                    characterAppearance._motionList.Remove(characterMotion);
-                }
-            }
-            foreach (ActionDetail actionDetail in characterAppearance._characterMotionDic.Keys.ToList())
-            {
-                if (!data.dic.ContainsKey(actionDetail))
-                {
-                    disabledMotions.Add(characterAppearance._characterMotionDic[actionDetail]);
-                    characterAppearance._characterMotionDic.Remove(actionDetail);
-                }
-            }
-            disabledMotions = disabledMotions.Distinct().ToList();
+            characterAppearance._resourceName = data.dataName;
+            List<CharacterMotion> disabledMotions = new List<CharacterMotion>();
             foreach (CharacterMotion characterMotion in characterAppearance._motionList)
             {
                 if (!characterAppearance._characterMotionDic.ContainsKey(characterMotion.actionDetail))
@@ -52,8 +36,35 @@ namespace ExtendedLoader
                     characterMotion.gameObject.SetActive(false);
                 }
             }
+            foreach (CharacterMotion characterMotion in characterAppearance._motionList)
+            {
+                if (characterMotion.actionDetail == ActionDetail.Standing)
+                {
+                    continue;
+                }
+                if (!data.dic.ContainsKey(characterMotion.actionDetail))
+                {
+                    disabledMotions.Add(characterMotion);
+                    //characterAppearance._motionList.Remove(characterMotion);
+                }
+            }
+            foreach (ActionDetail actionDetail in characterAppearance._characterMotionDic.Keys.ToList())
+            {
+                if (actionDetail == ActionDetail.Standing)
+                {
+                    continue;
+                }
+                if (!data.dic.ContainsKey(actionDetail))
+                {
+                    disabledMotions.Add(characterAppearance._characterMotionDic[actionDetail]);
+                    //characterAppearance._characterMotionDic.Remove(actionDetail);
+                }
+            }
+            disabledMotions = disabledMotions.Distinct().ToList();
             foreach (CharacterMotion characterMotion in disabledMotions)
             {
+                characterAppearance._motionList.Remove(characterMotion);
+                characterAppearance._characterMotionDic.Remove(characterMotion.actionDetail);
                 if (characterMotion.gameObject != null)
                 {
                     characterMotion.gameObject.SetActive(false);
@@ -148,147 +159,160 @@ namespace ExtendedLoader
         [HarmonyPatch(nameof(WorkshopSkinDataSetter.SetMotionData))]
         static bool SetMotionDataPrefix(ActionDetail motion, ClothCustomizeData data, WorkshopSkinDataSetter __instance)
         {
-            CharacterMotion characterMotion = __instance.Appearance.GetCharacterMotion(motion);
-            Transform transformHead = null;
-            Transform transformMid = null;
-            Transform transformBack = null;
-            Transform transformFront = null;
-            Transform transformMidSkin = null;
-            Transform transformBackSkin = null;
-            Transform transformFrontSkin = null;
-            foreach (object obj in characterMotion.transform)
+            try
             {
-                Transform transform = (Transform)obj;
-                switch (transform.gameObject.name)
+                CharacterMotion characterMotion = __instance.Appearance.GetCharacterMotion(motion);
+                if (characterMotion == null)
                 {
-                    case "CustomizePivot":
-                        transformHead = transform;
-                        break;
-                    case "Customize_Renderer_Back":
-                        transformBack = transform;
-                        break;
-                    case "Customize_Renderer_Back_Skin":
-                        transformBackSkin = transform;
-                        break;
-                    case "Customize_Renderer":
-                        transformMid = transform;
-                        break;
-                    case "Customize_Renderer_Skin":
-                        transformMidSkin = transform;
-                        break;
-                    case "Customize_Renderer_Front":
-                        transformFront = transform;
-                        break;
-                    case "Customize_Renderer_Front_Skin":
-                        transformFrontSkin = transform;
-                        break;
+                    Debug.LogError("MotionNull!" + motion.ToString());
+                    return true;
                 }
-            }
-            ExtendedClothCustomizeData data1 = data as ExtendedClothCustomizeData;
-            WorkshopSkinDataSetter.PartRenderer partRenderer = (data1 == null) ? new WorkshopSkinDataSetter.PartRenderer { action = motion }
-                : new SkinPartRenderer { action = motion };
-            SpriteRenderer spriteRendererMid = transformMid?.gameObject.GetComponent<SpriteRenderer>();
-            if (spriteRendererMid)
-            {
-                spriteRendererMid.sprite = data.sprite;
-                partRenderer.rear = spriteRendererMid;
-            }
-            SpriteRenderer spriteRendererFront = transformFront?.gameObject.GetComponent<SpriteRenderer>();
-            if (spriteRendererFront)
-            {
-                spriteRendererFront.sprite = data.frontSprite;
-                if (data.frontSprite == null)
+                Transform transformHead = null;
+                Transform transformMid = null;
+                Transform transformBack = null;
+                Transform transformFront = null;
+                Transform transformMidSkin = null;
+                Transform transformBackSkin = null;
+                Transform transformFrontSkin = null;
+                foreach (object obj in characterMotion.transform)
                 {
-                    spriteRendererFront.gameObject.SetActive(false);
+                    Transform transform = (Transform)obj;
+                    switch (transform.gameObject.name)
+                    {
+                        case "CustomizePivot":
+                            transformHead = transform;
+                            break;
+                        case "Customize_Renderer_Back":
+                            transformBack = transform;
+                            break;
+                        case "Customize_Renderer_Back_Skin":
+                            transformBackSkin = transform;
+                            break;
+                        case "Customize_Renderer":
+                            transformMid = transform;
+                            break;
+                        case "Customize_Renderer_Skin":
+                            transformMidSkin = transform;
+                            break;
+                        case "Customize_Renderer_Front":
+                            transformFront = transform;
+                            break;
+                        case "Customize_Renderer_Front_Skin":
+                            transformFrontSkin = transform;
+                            break;
+                    }
                 }
-                partRenderer.front = spriteRendererFront;
-            }
-            if (transformHead)
-            {
-                transformHead.localPosition = data.headPos;
-                transformHead.localRotation = Quaternion.Euler(0f, 0f, data.headRotation);
-                transformHead.gameObject.SetActive(data.headEnabled);
-            }
-            if (data1 != null)
-            {
-                SkinPartRenderer partRenderer1 = (SkinPartRenderer)partRenderer;
-                SpriteRenderer spriteRendererBack = transformBack?.gameObject.GetComponent<SpriteRenderer>();
-                if (spriteRendererBack)
+                ExtendedClothCustomizeData data1 = data as ExtendedClothCustomizeData;
+                WorkshopSkinDataSetter.PartRenderer partRenderer = (data1 == null) ? new WorkshopSkinDataSetter.PartRenderer { action = motion }
+                    : new SkinPartRenderer { action = motion };
+                SpriteRenderer spriteRendererMid = transformMid?.gameObject.GetComponent<SpriteRenderer>();
+                if (spriteRendererMid)
                 {
-                    spriteRendererBack.sprite = data1.backSprite;
-                    if (data1.backSprite == null)
+                    spriteRendererMid.sprite = data.sprite;
+                    partRenderer.rear = spriteRendererMid;
+                }
+                SpriteRenderer spriteRendererFront = transformFront?.gameObject.GetComponent<SpriteRenderer>();
+                if (spriteRendererFront)
+                {
+                    spriteRendererFront.sprite = data.frontSprite;
+                    if (data.frontSprite == null)
+                    {
+                        spriteRendererFront.gameObject.SetActive(false);
+                    }
+                    partRenderer.front = spriteRendererFront;
+                }
+                if (transformHead)
+                {
+                    transformHead.localPosition = data.headPos;
+                    transformHead.localRotation = Quaternion.Euler(0f, 0f, data.headRotation);
+                    transformHead.gameObject.SetActive(data.headEnabled);
+                }
+                if (data1 != null)
+                {
+                    SkinPartRenderer partRenderer1 = (SkinPartRenderer)partRenderer;
+                    SpriteRenderer spriteRendererBack = transformBack?.gameObject.GetComponent<SpriteRenderer>();
+                    if (spriteRendererBack)
+                    {
+                        spriteRendererBack.sprite = data1.backSprite;
+                        if (data1.backSprite == null)
+                        {
+                            spriteRendererBack.gameObject.SetActive(false);
+                        }
+                        partRenderer1.rearest = spriteRendererBack;
+                    }
+                    SpriteRenderer spriteRendererBackSkin = transformBackSkin?.gameObject.GetComponent<SpriteRenderer>();
+                    if (spriteRendererBackSkin)
+                    {
+                        spriteRendererBackSkin.sprite = data1.backSkinSprite;
+                        if (data1.backSkinSprite == null)
+                        {
+                            spriteRendererBackSkin.gameObject.SetActive(false);
+                        }
+                        partRenderer1.rearestSkin = spriteRendererBackSkin;
+                    }
+                    SpriteRenderer spriteRendererMidSkin = transformMidSkin?.gameObject.GetComponent<SpriteRenderer>();
+                    if (spriteRendererMidSkin)
+                    {
+                        spriteRendererMidSkin.sprite = data1.skinSprite;
+                        if (data1.skinSprite == null)
+                        {
+                            spriteRendererMidSkin.gameObject.SetActive(false);
+                        }
+                        partRenderer1.rearSkin = spriteRendererMidSkin;
+                    }
+                    SpriteRenderer spriteRendererFrontSkin = transformFrontSkin?.gameObject.GetComponent<SpriteRenderer>();
+                    if (spriteRendererFrontSkin)
+                    {
+                        spriteRendererFrontSkin.sprite = data1.frontSkinSprite;
+                        if (data1.frontSkinSprite == null)
+                        {
+                            spriteRendererFrontSkin.gameObject.SetActive(false);
+                        }
+                        partRenderer1.frontSkin = spriteRendererFrontSkin;
+                    }
+                    foreach (Vector3 pos in data1.additionalPivots)
+                    {
+                        GameObject gameObject = new GameObject("AdditionalPivot");
+                        Transform transform1 = gameObject.transform;
+                        transform1.parent = characterMotion.transform;
+                        transform1.localPosition = new Vector2(pos.x, pos.y);
+                        transform1.localScale = new Vector3(1, 1, 1);
+                        transform1.localRotation = Quaternion.Euler(0f, 0f, pos.z);
+                        characterMotion.additionalPivotList.Add(transform1);
+                    }
+                }
+                else
+                {
+                    SpriteRenderer spriteRendererBack = transformBack?.gameObject.GetComponent<SpriteRenderer>();
+                    if (spriteRendererBack)
                     {
                         spriteRendererBack.gameObject.SetActive(false);
                     }
-                    partRenderer1.rearest = spriteRendererBack;
-                }
-                SpriteRenderer spriteRendererBackSkin = transformBackSkin?.gameObject.GetComponent<SpriteRenderer>();
-                if (spriteRendererBackSkin)
-                {
-                    spriteRendererBackSkin.sprite = data1.backSkinSprite;
-                    if (data1.backSkinSprite == null)
+                    SpriteRenderer spriteRendererBackSkin = transformBackSkin?.gameObject.GetComponent<SpriteRenderer>();
+                    if (spriteRendererBackSkin)
                     {
                         spriteRendererBackSkin.gameObject.SetActive(false);
                     }
-                    partRenderer1.rearestSkin = spriteRendererBackSkin;
-                }
-                SpriteRenderer spriteRendererMidSkin = transformMidSkin?.gameObject.GetComponent<SpriteRenderer>();
-                if (spriteRendererMidSkin)
-                {
-                    spriteRendererMidSkin.sprite = data1.skinSprite;
-                    if (data1.skinSprite == null)
+                    SpriteRenderer spriteRendererMidSkin = transformMidSkin?.gameObject.GetComponent<SpriteRenderer>();
+                    if (spriteRendererMidSkin)
                     {
                         spriteRendererMidSkin.gameObject.SetActive(false);
                     }
-                    partRenderer1.rearSkin = spriteRendererMidSkin;
-                }
-                SpriteRenderer spriteRendererFrontSkin = transformFrontSkin?.gameObject.GetComponent<SpriteRenderer>();
-                if (spriteRendererFrontSkin)
-                {
-                    spriteRendererFrontSkin.sprite = data1.frontSkinSprite;
-                    if (data1.frontSkinSprite == null)
+                    SpriteRenderer spriteRendererFrontSkin = transformFrontSkin?.gameObject.GetComponent<SpriteRenderer>();
+                    if (spriteRendererFrontSkin)
                     {
                         spriteRendererFrontSkin.gameObject.SetActive(false);
                     }
-                    partRenderer1.frontSkin = spriteRendererFrontSkin;
                 }
-                foreach (Vector3 pos in data1.additionalPivots)
-                {
-                    GameObject gameObject = new GameObject("AdditionalPivot");
-                    Transform transform1 = gameObject.transform;
-                    transform1.parent = characterMotion.transform;
-                    transform1.localPosition = new Vector2(pos.x, pos.y);
-                    transform1.localScale = new Vector3(1, 1, 1);
-                    transform1.localRotation = Quaternion.Euler(0f, 0f, pos.z);
-                    characterMotion.additionalPivotList.Add(transform1);
-                }
+                __instance.parts.Add(motion, partRenderer);
+                characterMotion.motionDirection = data.direction;
+                return false;
             }
-            else
+            catch (Exception ex)
             {
-                SpriteRenderer spriteRendererBack = transformBack?.gameObject.GetComponent<SpriteRenderer>();
-                if (spriteRendererBack)
-                {
-                    spriteRendererBack.gameObject.SetActive(false);
-                }
-                SpriteRenderer spriteRendererBackSkin = transformBackSkin?.gameObject.GetComponent<SpriteRenderer>();
-                if (spriteRendererBackSkin)
-                {
-                    spriteRendererBackSkin.gameObject.SetActive(false);
-                }
-                SpriteRenderer spriteRendererMidSkin = transformMidSkin?.gameObject.GetComponent<SpriteRenderer>();
-                if (spriteRendererMidSkin)
-                {
-                    spriteRendererMidSkin.gameObject.SetActive(false);
-                }
-                SpriteRenderer spriteRendererFrontSkin = transformFrontSkin?.gameObject.GetComponent<SpriteRenderer>();
-                if (spriteRendererFrontSkin)
-                {
-                    spriteRendererFrontSkin.gameObject.SetActive(false);
-                }
+                File.WriteAllText(Application.dataPath + "/Mods/SetMotionDataPrefixerror.log", ex.Message + Environment.NewLine + ex.StackTrace);
             }
-            __instance.parts.Add(motion, partRenderer);
-            characterMotion.motionDirection = data.direction;
-            return false;
+            return true;
         }
 
         [HarmonyPrefix]
