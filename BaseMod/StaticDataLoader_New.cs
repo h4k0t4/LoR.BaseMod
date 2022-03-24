@@ -1328,12 +1328,14 @@ namespace BaseMod
                     stageClassInfo.invitationInfo.needsBooks.Reverse();
                     if (stageClassInfo.invitationInfo.combine == StageCombineType.BookRecipe)
                     {
+                        _recipeCondList.RemoveAll(x => x.id == stageClassInfo.id);
                         _recipeCondList.Add(stageClassInfo);
                     }
                     else if (stageClassInfo.invitationInfo.combine == StageCombineType.BookValue)
                     {
                         if (stageClassInfo.invitationInfo.bookNum >= 1 && stageClassInfo.invitationInfo.bookNum <= 3)
                         {
+                            _valueCondList[stageClassInfo.invitationInfo.bookNum].RemoveAll(x => x.id == stageClassInfo.id);
                             _valueCondList[stageClassInfo.invitationInfo.bookNum].Add(stageClassInfo);
                         }
                         else

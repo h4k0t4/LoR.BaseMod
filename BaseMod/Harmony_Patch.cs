@@ -7,7 +7,6 @@ using LOR_DiceSystem;
 using LOR_XML;
 using Mod;
 using ModSettingTool;
-using Opening;
 using Spine;
 using System;
 using System.Collections;
@@ -791,7 +790,11 @@ namespace BaseMod
                             {
                                 ActionDetail actionDetail = (ActionDetail)j;
                                 string text = actionDetail.ToString();
-                                specialMotionPivotDic[actionDetail] = GetEffectPivot(specialNode, text);
+                                XmlNode effectPivotNode = specialNode.SelectSingleNode(text);
+                                if (effectPivotNode != null)
+                                {
+                                    specialMotionPivotDic[actionDetail] = GetEffectPivot(effectPivotNode);
+                                }
                             }
                             extendedInfo.specialMotionPivotDic = specialMotionPivotDic;
                         }
@@ -806,11 +809,14 @@ namespace BaseMod
         }
         private static void AddPivot(Dictionary<string, EffectPivot> atkEffectPivotDic, XmlNode effectNode, string pivotNode)
         {
-            atkEffectPivotDic[pivotNode] = GetEffectPivot(effectNode, pivotNode);
-        }
-        private static EffectPivot GetEffectPivot(XmlNode effectNode, string pivotNode)
-        {
             XmlNode effectPivotNode = effectNode.SelectSingleNode(pivotNode);
+            if (effectPivotNode != null)
+            {
+                atkEffectPivotDic[pivotNode] = GetEffectPivot(effectPivotNode);
+            }
+        }
+        private static EffectPivot GetEffectPivot(XmlNode effectPivotNode)
+        {
             EffectPivot atkEffectRoot = new EffectPivot();
             if (effectPivotNode != null)
             {
@@ -2974,7 +2980,33 @@ namespace BaseMod
                 }
                 if (stageStoryInfo.IsMod)
                 {
-                    __result = File.Exists(Path.Combine(Singleton<ModContentManager>.Instance.GetModPath(stageStoryInfo.packageId), "Data", "StoryText", stageStoryInfo.story)) || File.Exists(Path.Combine(Singleton<ModContentManager>.Instance.GetModPath(stageStoryInfo.packageId), "Data", "StoryText", TextDataModel.CurrentLanguage, stageStoryInfo.story));
+                    string modPath = Singleton<ModContentManager>.Instance.GetModPath(stageStoryInfo.packageId);
+                    string storyFilePath = Path.Combine(modPath, "Data", "StoryText");
+                    string[] array = stageStoryInfo.story.Split(new char[]
+                    {
+                         '.'
+                    });
+                    if (Directory.Exists(storyFilePath))
+                    {
+                        foreach (FileInfo fileInfo in new DirectoryInfo(storyFilePath).GetFiles())
+                        {
+                            if (Path.GetFileNameWithoutExtension(fileInfo.FullName) == array[0])
+                            {
+                                __result = true;
+                            }
+                        }
+                    }
+                    storyFilePath = Path.Combine(modPath, "Data", "StoryText", TextDataModel.CurrentLanguage);
+                    if (Directory.Exists(storyFilePath))
+                    {
+                        foreach (FileInfo fileInfo in new DirectoryInfo(storyFilePath).GetFiles())
+                        {
+                            if (Path.GetFileNameWithoutExtension(fileInfo.FullName) == array[0])
+                            {
+                                __result = true;
+                            }
+                        }
+                    }
                     return false;
                 }
             }
@@ -2998,27 +3030,44 @@ namespace BaseMod
                 if (stageStoryInfo.IsMod)
                 {
                     string modPath = Singleton<ModContentManager>.Instance.GetModPath(stageStoryInfo.packageId);
+                    string storyFilePath = Path.Combine(modPath, "Data", "StoryText");
+                    string effectFilePath = Path.Combine(modPath, "Data", "StoryEffect");
                     string storyPath = Path.Combine(modPath, "Data", "StoryText", stageStoryInfo.story);
                     string effectPath = Path.Combine(modPath, "Data", "StoryEffect", stageStoryInfo.story);
                     string[] array = stageStoryInfo.story.Split(new char[]
                     {
                          '.'
                     });
-                    if (File.Exists(Path.Combine(modPath, "Data", "StoryEffect", array[0] + ".xml")))
+                    if (Directory.Exists(effectFilePath))
                     {
-                        effectPath = Path.Combine(modPath, "Data", "StoryEffect", array[0] + ".xml");
+                        foreach (FileInfo fileInfo in new DirectoryInfo(effectFilePath).GetFiles())
+                        {
+                            if (Path.GetFileNameWithoutExtension(fileInfo.FullName) == array[0])
+                            {
+                                effectPath = fileInfo.FullName;
+                            }
+                        }
                     }
-                    if (File.Exists(Path.Combine(modPath, "Data", "StoryEffect", array[0] + ".txt")))
+                    if (Directory.Exists(storyFilePath))
                     {
-                        effectPath = Path.Combine(modPath, "Data", "StoryEffect", array[0] + ".txt");
+                        foreach (FileInfo fileInfo in new DirectoryInfo(storyFilePath).GetFiles())
+                        {
+                            if (Path.GetFileNameWithoutExtension(fileInfo.FullName) == array[0])
+                            {
+                                storyPath = fileInfo.FullName;
+                            }
+                        }
                     }
-                    if (File.Exists(Path.Combine(modPath, "Data", "StoryText", TextDataModel.CurrentLanguage, array[0] + ".xml")))
+                    storyFilePath = Path.Combine(modPath, "Data", "StoryText", TextDataModel.CurrentLanguage);
+                    if (Directory.Exists(storyFilePath))
                     {
-                        storyPath = Path.Combine(modPath, "Data", "StoryText", TextDataModel.CurrentLanguage, array[0] + ".xml");
-                    }
-                    if (File.Exists(Path.Combine(modPath, "Data", "StoryText", TextDataModel.CurrentLanguage, array[0] + ".txt")))
-                    {
-                        storyPath = Path.Combine(modPath, "Data", "StoryText", TextDataModel.CurrentLanguage, array[0] + ".txt");
+                        foreach (FileInfo fileInfo in new DirectoryInfo(storyFilePath).GetFiles())
+                        {
+                            if (Path.GetFileNameWithoutExtension(fileInfo.FullName) == array[0])
+                            {
+                                storyPath = fileInfo.FullName;
+                            }
+                        }
                     }
                     __result = StorySerializer.LoadStoryFile(storyPath, effectPath, modPath);
                     return false;
@@ -3370,7 +3419,7 @@ namespace BaseMod
                 ___isActiveScrollBar = false;
                 ____originBookModelList.AddRange(books);
                 ___currentBookModelList.AddRange(books);
-                __instance.FilterBookModels(___currentBookModelList);
+                ___currentBookModelList = __instance.FilterBookModels(___currentBookModelList);
                 /*___currentBookModelList = (List<BookModel>)__instance.GetType().GetMethod("FilterBookModels", AccessTools.all).Invoke(__instance, new object[]
                                 {
                                     ___currentBookModelList
@@ -3511,7 +3560,7 @@ namespace BaseMod
                 ___isActiveScrollBar = false;
                 ____originBookModelList.AddRange(books);
                 ___currentBookModelList.AddRange(books);
-                __instance.FilterBookModels(___currentBookModelList);
+                ___currentBookModelList = __instance.FilterBookModels(___currentBookModelList);
                 /*___currentBookModelList = (List<BookModel>)__instance.GetType().GetMethod("FilterBookModels", AccessTools.all).Invoke(__instance, new object[]
                 {
                     ___currentBookModelList
@@ -5119,6 +5168,22 @@ namespace BaseMod
             }
             return true;
         }
+        //BehaviorAbilityData
+        [HarmonyPatch(typeof(BattleCardBehaviourResult), "GetAbilityDataAfterRoll")]
+        [HarmonyPostfix]
+        private static List<EffectTypoData> BattleCardBehaviourResult_GetAbilityDataAfterRoll_Post(List<EffectTypoData> list, BattleCardBehaviourResult __instance)
+        {
+            try
+            {
+                if (CustomEffectTypoData.TryGetValue(__instance, out List<EffectTypoData> addedlist))
+                {
+                    list.AddRange(addedlist);
+                    CustomEffectTypoData.Remove(__instance);
+                }
+            }
+            catch { }
+            return list;
+        }
 
         //Skeleton
         [HarmonyPatch(typeof(SkeletonJson), "ReadSkeletonData", new Type[] { typeof(TextReader) })]
@@ -6003,6 +6068,8 @@ namespace BaseMod
         public static Dictionary<string, Type> CustomEmotionCardAbility = new Dictionary<string, Type>();
 
         public static Dictionary<string, int> CoreThumbDic = new Dictionary<string, int>();
+
+        public static Dictionary<BattleCardBehaviourResult, List<EffectTypoData>> CustomEffectTypoData = new Dictionary<BattleCardBehaviourResult, List<EffectTypoData>>();
 
         public static Dictionary<string, Sprite> ArtWorks = null;
 

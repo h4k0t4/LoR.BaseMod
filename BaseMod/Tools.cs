@@ -1,4 +1,6 @@
-﻿using HarmonyLib;
+﻿using GTMDProjectMoon;
+using HarmonyLib;
+using LOR_DiceSystem;
 using MyJsonTool;
 using NAudio.Wave;
 using System;
@@ -99,6 +101,38 @@ namespace BaseMod
                 list.Add(item);
                 list.Sort((BattleDiceCardModel.CardIcon x, BattleDiceCardModel.CardIcon y) => y.Priority - x.Priority);
             }
+        }
+        public static bool ContainsCategory(this BookModel book, string category)
+        {
+            return book._classInfo.ContainsCategory(category);
+        }
+        public static bool ContainsCategory(this BookXmlInfo book, string category)
+        {
+            return book.categoryList.Contains(OrcTools.GetBookCategory(category));
+        }
+        public static bool ContainsCategory(this BattleDiceCardModel card, string category)
+        {
+            return card._xmlData.ContainsCategory(category);
+        }
+        public static bool ContainsCategory(this DiceCardXmlInfo card, string category)
+        {
+            return card.category == OrcTools.GetBookCategory(category);
+        }
+        public static void SetAbilityData(this BattleCardBehaviourResult battleCardBehaviourResult, EffectTypoData effectTypoData)
+        {
+            if (Harmony_Patch.CustomEffectTypoData == null)
+            {
+                Harmony_Patch.CustomEffectTypoData = new Dictionary<BattleCardBehaviourResult, List<EffectTypoData>>();
+            }
+            if (battleCardBehaviourResult == null || effectTypoData == null)
+            {
+                return;
+            }
+            if (!Harmony_Patch.CustomEffectTypoData.ContainsKey(battleCardBehaviourResult))
+            {
+                Harmony_Patch.CustomEffectTypoData[battleCardBehaviourResult] = new List<EffectTypoData>();
+            }
+            Harmony_Patch.CustomEffectTypoData[battleCardBehaviourResult].Add(effectTypoData);
         }
         public static void SetAlarmText(string alarmtype, UIAlarmButtonType btnType = UIAlarmButtonType.Default, ConfirmEvent confirmFunc = null, params object[] args)
         {

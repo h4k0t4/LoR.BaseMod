@@ -87,39 +87,43 @@ namespace ExtendedLoader
                 {
                     if (extendedData.atkEffectPivotDic.TryGetValue("atkEffectRoot", out Harmony_Patch.EffectPivot atkEffectRoot))
                     {
-                        __instance.Appearance.atkEffectRoot = CreateTransform(__instance.Appearance, "atkEffectRoot", atkEffectRoot.localPosition, atkEffectRoot.localScale, atkEffectRoot.localEulerAngles);
+                        __instance.Appearance.atkEffectRoot.position = Vector3.zero;
+                        __instance.Appearance.atkEffectRoot.localPosition = atkEffectRoot.localPosition;
+                        __instance.Appearance.atkEffectRoot.localScale = atkEffectRoot.localScale;
+                        __instance.Appearance.atkEffectRoot.localEulerAngles = atkEffectRoot.localEulerAngles;
                     }
                     if (extendedData.atkEffectPivotDic.TryGetValue("atkEffectPivot_H", out Harmony_Patch.EffectPivot atkEffectPivot_H))
                     {
-                        __instance.Appearance.atkEffectPivot_H = CreateTransform(__instance.Appearance, "atkEffectPivot_H", atkEffectPivot_H.localPosition, atkEffectPivot_H.localScale, atkEffectPivot_H.localEulerAngles);
+                        __instance.Appearance.atkEffectPivot_H = CreateTransform(__instance.Appearance.atkEffectRoot, "atkEffectPivot_H", atkEffectPivot_H.localPosition, atkEffectPivot_H.localScale, atkEffectPivot_H.localEulerAngles);
                     }
                     if (extendedData.atkEffectPivotDic.TryGetValue("atkEffectPivot_J", out Harmony_Patch.EffectPivot atkEffectPivot_J))
                     {
-                        __instance.Appearance.atkEffectPivot_J = CreateTransform(__instance.Appearance, "atkEffectPivot_J", atkEffectPivot_J.localPosition, atkEffectPivot_J.localScale, atkEffectPivot_J.localEulerAngles);
+                        __instance.Appearance.atkEffectPivot_J = CreateTransform(__instance.Appearance.atkEffectRoot, "atkEffectPivot_J", atkEffectPivot_J.localPosition, atkEffectPivot_J.localScale, atkEffectPivot_J.localEulerAngles);
                     }
                     if (extendedData.atkEffectPivotDic.TryGetValue("atkEffectPivot_Z", out Harmony_Patch.EffectPivot atkEffectPivot_Z))
                     {
-                        __instance.Appearance.atkEffectPivot_Z = CreateTransform(__instance.Appearance, "atkEffectPivot_Z", atkEffectPivot_Z.localPosition, atkEffectPivot_Z.localScale, atkEffectPivot_Z.localEulerAngles);
+                        __instance.Appearance.atkEffectPivot_Z = CreateTransform(__instance.Appearance.atkEffectRoot, "atkEffectPivot_Z", atkEffectPivot_Z.localPosition, atkEffectPivot_Z.localScale, atkEffectPivot_Z.localEulerAngles);
                     }
                     if (extendedData.atkEffectPivotDic.TryGetValue("atkEffectPivot_G", out Harmony_Patch.EffectPivot atkEffectPivot_G))
                     {
-                        __instance.Appearance.atkEffectPivot_G = CreateTransform(__instance.Appearance, "atkEffectPivot_G", atkEffectPivot_G.localPosition, atkEffectPivot_G.localScale, atkEffectPivot_G.localEulerAngles);
+                        __instance.Appearance.atkEffectPivot_G = CreateTransform(__instance.Appearance.atkEffectRoot, "atkEffectPivot_G", atkEffectPivot_G.localPosition, atkEffectPivot_G.localScale, atkEffectPivot_G.localEulerAngles);
                     }
                     if (extendedData.atkEffectPivotDic.TryGetValue("atkEffectPivot_E", out Harmony_Patch.EffectPivot atkEffectPivot_E))
                     {
-                        __instance.Appearance.atkEffectPivot_E = CreateTransform(__instance.Appearance, "atkEffectPivot_E", atkEffectPivot_E.localPosition, atkEffectPivot_E.localScale, atkEffectPivot_E.localEulerAngles);
+                        __instance.Appearance.atkEffectPivot_E = CreateTransform(__instance.Appearance.atkEffectRoot, "atkEffectPivot_E", atkEffectPivot_E.localPosition, atkEffectPivot_E.localScale, atkEffectPivot_E.localEulerAngles);
                     }
                     if (extendedData.atkEffectPivotDic.TryGetValue("atkEffectPivot_S", out Harmony_Patch.EffectPivot atkEffectPivot_S))
                     {
-                        __instance.Appearance.atkEffectPivot_S = CreateTransform(__instance.Appearance, "atkEffectPivot_S", atkEffectPivot_S.localPosition, atkEffectPivot_S.localScale, atkEffectPivot_S.localEulerAngles);
+                        __instance.Appearance.atkEffectPivot_S = CreateTransform(__instance.Appearance.atkEffectRoot, "atkEffectPivot_S", atkEffectPivot_S.localPosition, atkEffectPivot_S.localScale, atkEffectPivot_S.localEulerAngles);
                     }
                     if (extendedData.atkEffectPivotDic.TryGetValue("atkEffectPivot_F", out Harmony_Patch.EffectPivot atkEffectPivot_F))
                     {
-                        __instance.Appearance.atkEffectPivot_F = CreateTransform(__instance.Appearance, "atkEffectPivot_F", atkEffectPivot_F.localPosition, atkEffectPivot_F.localScale, atkEffectPivot_F.localEulerAngles);
+                        __instance.Appearance.atkEffectPivot_F = CreateTransform(__instance.Appearance.atkEffectRoot, "atkEffectPivot_F", atkEffectPivot_F.localPosition, atkEffectPivot_F.localScale, atkEffectPivot_F.localEulerAngles);
                     }
                 }
                 if (extendedData.specialMotionPivotDic != null && extendedData.specialMotionPivotDic.Count > 0)
                 {
+                    Transform SpecialPivot = CreateTransform(__instance.Appearance.transform, "SpecialPivot", Vector3.zero, new Vector3(1, 1, 1), Vector3.zero);
                     if (__instance.Appearance._specialMotionPivotList == null)
                     {
                         __instance.Appearance._specialMotionPivotList = new List<CharacterAppearance.MotionPivot>();
@@ -129,19 +133,19 @@ namespace ExtendedLoader
                         __instance.Appearance._specialMotionPivotList.Add(new CharacterAppearance.MotionPivot()
                         {
                             motion = keyValuePair.Key,
-                            pivot = CreateTransform(__instance.Appearance, "Special_" + keyValuePair.Key.ToString(), keyValuePair.Value.localPosition, keyValuePair.Value.localScale, keyValuePair.Value.localEulerAngles)
+                            pivot = CreateTransform(SpecialPivot, "Special_" + keyValuePair.Key.ToString(), keyValuePair.Value.localPosition, keyValuePair.Value.localScale, keyValuePair.Value.localEulerAngles)
                         });
                     }
                 }
             }
             return true;
         }
-        private static Transform CreateTransform(CharacterAppearance character, string name, Vector3 localPosition, Vector3 localScale, Vector3 localEulerAngles)
+        private static Transform CreateTransform(Transform parent, string name, Vector3 localPosition, Vector3 localScale, Vector3 localEulerAngles)
         {
             try
             {
                 GameObject gameObject = new GameObject(name);
-                gameObject.transform.SetParent(character.atkEffectRoot.transform);
+                gameObject.transform.SetParent(parent);
                 gameObject.transform.position = Vector3.zero;
                 gameObject.transform.localPosition = localPosition;
                 gameObject.transform.localScale = localScale;

@@ -2,7 +2,6 @@
 using BattleCharacterProfile;
 using ExtendedLoader;
 using HarmonyLib;
-using Opening;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -115,7 +114,7 @@ namespace SummonLiberation
                         else
                         {
                             allyProfileArray2.Add(UnityEngine.Object.Instantiate(allyProfileArray2[4], allyProfileArray2[4].transform.parent));
-                            allyProfileArray2[i].gameObject.transform.localPosition += new Vector3(0f, (i - 4) * 64f + 26f, 0f);
+                            allyProfileArray2[i].gameObject.transform.localPosition += new Vector3(0f, (i - 4) * 64f, 0f);
                         }
                     }
                 }
@@ -131,7 +130,7 @@ namespace SummonLiberation
                         else
                         {
                             enemyProfileArray2.Add(UnityEngine.Object.Instantiate(enemyProfileArray2[4], enemyProfileArray2[4].transform.parent));
-                            enemyProfileArray2[i].gameObject.transform.localPosition += new Vector3(0f, (i - 4) * 64f + 26f, 0f);
+                            enemyProfileArray2[i].gameObject.transform.localPosition += new Vector3(0f, (i - 4) * 64f, 0f);
                         }
                     }
                 }
@@ -235,7 +234,7 @@ namespace SummonLiberation
                                 sinFactor = 1f,
                                 target = UnityEngine.Object.Instantiate(__instance.librarian[4].target, __instance.librarian[4].target)
                             });
-                            librarian2[i].target.localPosition += new Vector3(0f, (i - 4) * 64f + 26f, 0f);
+                            librarian2[i].target.localPosition += new Vector3(0f, (i - 4) * 64f, 0f);
                         }
                     }
                 }
@@ -256,7 +255,7 @@ namespace SummonLiberation
                                 sinFactor = 1f,
                                 target = UnityEngine.Object.Instantiate(__instance.enermy[4].target, __instance.enermy[4].target)
                             });
-                            enermy2[i].target.localPosition += new Vector3(0f, (i - 4) * 64f + 26f, 0f);
+                            enermy2[i].target.localPosition += new Vector3(0f, (i - 4) * 64f, 0f);
                         }
                     }
                 }
@@ -1080,7 +1079,7 @@ namespace SummonLiberation
         {
             try
             {
-                while (units.Count > ___slots.Count && ___slots.Count < 8)
+                while (units.Count > ___slots.Count && ___slots.Count < 9)
                 {
                     BattleEmotionRewardSlotUI newUI = UnityEngine.Object.Instantiate(___slots[0]);
                     ___slots.Add(newUI);
@@ -1091,7 +1090,7 @@ namespace SummonLiberation
                 }
                 for (int i = 0; i < units.Count; i++)
                 {
-                    if (i > 7)
+                    if (i > 8)
                     {
                         break;
                     }

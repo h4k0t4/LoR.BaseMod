@@ -255,10 +255,6 @@ namespace GTMDProjectMoon
             }
             return BattleDialogRelation;
         }
-        public static bool ContainsCategory(this BookModel book, string category)
-        {
-            return book.ContainsCategory(GetBookCategory(category));
-        }
         public static BookCategory GetBookCategory(string category)
         {
             if (!BookCategoryDic.ContainsKey(category))
