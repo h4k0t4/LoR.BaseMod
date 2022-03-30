@@ -194,6 +194,10 @@ namespace BaseMod
         }
         public static AudioClip GetAudio(string path)
         {
+            if (!File.Exists(path))
+            {
+                return null;
+            }
             string Name = Path.GetFileNameWithoutExtension(path);
             return GetAudio(path, Name);
         }
@@ -206,6 +210,10 @@ namespace BaseMod
             if (!string.IsNullOrEmpty(Name) && Harmony_Patch.AudioClips.ContainsKey(Name))
             {
                 return Harmony_Patch.AudioClips[Name];
+            }
+            if (!File.Exists(path))
+            {
+                return null;
             }
             AudioType audioType;
             string fullname;
@@ -234,6 +242,10 @@ namespace BaseMod
             audioClip.SendWebRequest();
             while (!audioClip.isDone)
             {
+            }
+            if (audioClip.isHttpError || audioClip.isNetworkError)
+            {
+                return null;
             }
             AudioClip content = DownloadHandlerAudioClip.GetContent(audioClip);
             if (path.EndsWith(".mp3"))
@@ -319,5 +331,198 @@ namespace BaseMod
         {
             public T value;
         }
+    }
+}
+
+namespace BaseMod
+{
+    public static class PassiveAbilityExtension
+    {
+        public static T FindPassive<T>(this BattleUnitPassiveDetail passiveDetail) where T : PassiveAbilityBase
+        {
+            return (T)passiveDetail.PassiveList.Find(x => (x as T) != null);
+        }
+        public static List<T> FindPassives<T>(this BattleUnitPassiveDetail passiveDetail) where T : PassiveAbilityBase
+        {
+            List<T> list = new List<T>();
+            List<PassiveAbilityBase> sourcer = passiveDetail.PassiveList;
+            for (int i = 0; i < sourcer.Count; i++)
+            {
+                if (list[i] is T x)
+                {
+                    list.Add(x);
+                }
+            }
+            return list;
+        }
+    }
+}
+
+namespace BaseMod
+{
+    public static class BuffExtension
+    {
+        public static BattleUnitBuf AddBufByCard(this BattleUnitBufListDetail unitBufListDetail, BattleUnitBuf buf, int stack, BattleUnitModel actor = null, BufReadyType readyType = BufReadyType.ThisRound)
+        {
+            if (buf == null)
+            {
+                return buf;
+            }
+            if (actor == null)
+            {
+                actor = unitBufListDetail._self;
+            }
+            buf._owner = unitBufListDetail._self;
+            buf.stack = 0;
+            BattleUnitBuf battleUnitBuf = buf.FindMatch(readyType);
+            battleUnitBuf.Modify(stack, actor, true);
+            return battleUnitBuf;
+        }
+        public static BattleUnitBuf AddBufByCard<T>(this BattleUnitBufListDetail unitBufListDetail, int stack, BattleUnitModel actor = null, BufReadyType readyType = BufReadyType.ThisRound) where T : BattleUnitBuf
+        {
+            if (actor == null)
+            {
+                actor = unitBufListDetail._self;
+            }
+            BattleUnitBuf buf = Activator.CreateInstance<T>();
+            buf._owner = unitBufListDetail._self;
+            buf.stack = 0;
+            BattleUnitBuf battleUnitBuf = buf.FindMatch(readyType);
+            battleUnitBuf.Modify(stack, actor, true);
+            return battleUnitBuf;
+        }
+        public static BattleUnitBuf AddBufByEtc(this BattleUnitBufListDetail unitBufListDetail, BattleUnitBuf buf, int stack, BattleUnitModel actor = null, BufReadyType readyType = BufReadyType.ThisRound)
+        {
+            if (buf == null)
+            {
+                return buf;
+            }
+            if (actor == null)
+            {
+                actor = unitBufListDetail._self;
+            }
+            buf._owner = unitBufListDetail._self;
+            buf.stack = 0;
+            BattleUnitBuf battleUnitBuf = buf.FindMatch(readyType);
+            battleUnitBuf.Modify(stack, actor, false);
+            return battleUnitBuf;
+        }
+        public static BattleUnitBuf AddBufByEtc<T>(this BattleUnitBufListDetail unitBufListDetail, int stack, BattleUnitModel actor = null, BufReadyType readyType = BufReadyType.ThisRound) where T : BattleUnitBuf
+        {
+            if (actor == null)
+            {
+                actor = unitBufListDetail._self;
+            }
+            BattleUnitBuf buf = Activator.CreateInstance<T>();
+            buf._owner = unitBufListDetail._self;
+            buf.stack = 0;
+            BattleUnitBuf battleUnitBuf = buf.FindMatch(readyType);
+            battleUnitBuf.Modify(stack, actor, false);
+            return battleUnitBuf;
+        }
+        public static TResult FindBuf<TResult>(this BattleUnitBufListDetail unitBufListDetail, BufReadyType readyType = BufReadyType.ThisRound) where TResult : BattleUnitBuf
+        {
+            List<BattleUnitBuf> list = unitBufListDetail.FindList(readyType);
+            for (int i = 0; i < list.Count; i++)
+            {
+                if (list[i] is TResult x && !list[i].IsDestroyed())
+                {
+                    return x;
+                }
+            }
+            return null;
+        }
+        public static List<TResult> FindAllBuf<TResult>(this BattleUnitBufListDetail unitBufListDetail, BufReadyType readyType = BufReadyType.ThisRound) where TResult : BattleUnitBuf
+        {
+            List<TResult> list = new List<TResult>();
+            List<BattleUnitBuf> sourcer = unitBufListDetail.FindList(readyType);
+            for (int i = 0; i < sourcer.Count; i++)
+            {
+                if (list[i] is TResult x && !list[i].IsDestroyed())
+                {
+                    list.Add(x);
+                }
+            }
+            return list;
+        }
+        public static int AddBufStack(this BattleUnitBuf buf, int stack, BattleUnitModel actor = null, bool byCard = true)
+        {
+            buf.Modify(stack, actor, byCard);
+            return buf.stack;
+        }
+        public static int SetBufStack<TResult>(this BattleUnitBufListDetail unitBufListDetail, int stack, BufReadyType readyType = BufReadyType.ThisRound) where TResult : BattleUnitBuf
+        {
+            BattleUnitBuf buf = unitBufListDetail.FindBuf<TResult>(readyType);
+            if (buf != null)
+            {
+                buf.stack = stack;
+                buf.OnAddBuf(stack);
+                return buf.stack;
+            }
+            return 0;
+        }
+        public static BattleUnitBuf FindMatch(this BattleUnitBuf buf, BufReadyType readyType)
+        {
+            if (buf._owner == null || !buf._owner.bufListDetail.CanAddBuf(buf))
+            {
+                return null;
+            }
+            List<BattleUnitBuf> bufList = buf._owner.bufListDetail.FindList(readyType);
+            BattleUnitBuf battleUnitBuf = bufList.Find((BattleUnitBuf targetBuf) => targetBuf.GetType() == buf.GetType() && !targetBuf.IsDestroyed());
+            if (battleUnitBuf == null || battleUnitBuf.independentBufIcon)
+            {
+                buf.Init(buf._owner);
+                battleUnitBuf = buf;
+                bufList.Add(battleUnitBuf);
+            }
+            return battleUnitBuf;
+        }
+        private static BattleUnitBuf Modify(this BattleUnitBuf buf, int stack, BattleUnitModel actor, bool byCard = true)
+        {
+            if (byCard)
+            {
+                int num = 0;
+                num += actor.OnGiveKeywordBufByCard(buf, stack, buf._owner);
+                num += buf._owner.OnAddKeywordBufByCard(buf, stack);
+                stack += num;
+                stack *= actor.GetMultiplierOnGiveKeywordBufByCard(buf, buf._owner);
+            }
+            buf._owner.bufListDetail.ModifyStack(buf, stack);
+            int stack2 = buf.stack;
+            buf.stack += stack;
+            buf.OnAddBuf(stack);
+            if (byCard)
+            {
+                buf._owner.OnAddKeywordBufByCardForEvent(buf.bufType, stack, BufReadyType.NextRound);
+            }
+            if (buf.bufType == KeywordBuf.WarpCharge && buf.stack > stack2)
+            {
+                buf._owner.OnGainChargeStack();
+            }
+            buf._owner.bufListDetail.CheckGift(buf.bufType, stack, actor);
+            return buf;
+        }
+        public static List<BattleUnitBuf> FindList(this BattleUnitBufListDetail unitBufListDetail, BufReadyType readyType = BufReadyType.ThisRound)
+        {
+            List<BattleUnitBuf> result = unitBufListDetail.GetActivatedBufList();
+            switch (readyType)
+            {
+                case BufReadyType.NextRound:
+                    result = unitBufListDetail.GetReadyBufList();
+                    break;
+                case BufReadyType.NextNextRound:
+                    result = unitBufListDetail.GetReadyReadyBufList();
+                    break;
+            }
+            return result;
+        }
+    }
+}
+
+namespace BaseMod
+{
+    public static class CardBuffExtension
+    {
+
     }
 }

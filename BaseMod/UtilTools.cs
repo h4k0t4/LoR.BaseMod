@@ -341,7 +341,7 @@ namespace BaseMod
         {
             foreach (ModContent modContent in Harmony_Patch.LoadedModContents)
             {
-                DirectoryInfo _dirInfo = modContent.GetType().GetField("_dirInfo", AccessTools.all).GetValue(modContent) as DirectoryInfo;
+                DirectoryInfo _dirInfo = modContent._dirInfo;
                 if (Directory.Exists(_dirInfo.FullName + "/" + path))
                 {
                     return new DirectoryInfo(_dirInfo.FullName + "/" + path);
@@ -349,6 +349,54 @@ namespace BaseMod
             }
             return null;
         }
+        public static void CopyDir(string srcPath, string aimPath)
+        {
+            try
+            {
+                if (aimPath[aimPath.Length - 1] != Path.DirectorySeparatorChar)
+                {
+                    aimPath += Path.DirectorySeparatorChar;
+                }
+                if (!Directory.Exists(aimPath))
+                {
+                    Directory.CreateDirectory(aimPath);
+                }
+                string[] fileList = Directory.GetFileSystemEntries(srcPath);
+                foreach (string file in fileList)
+                {
+                    if (Directory.Exists(file))
+                    {
+                        CopyDir(file, aimPath + Path.GetFileName(file));
+                    }
+                    else
+                    {
+                        File.Copy(file, aimPath + Path.GetFileName(file), true);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Singleton<ModContentManager>.Instance.AddErrorLog(ex.Message + Environment.NewLine + ex.StackTrace);
+                File.WriteAllText(Application.dataPath + "/Mods/CopyDirerror.log", ex.Message + Environment.NewLine + ex.StackTrace);
+            }
+        }/*
+        public static void CreateShortcut(string shortcutDirectory, string shortcutName, string targetPath,
+             string description = null, string iconLocation = null)
+        {
+            if (!Directory.Exists(shortcutDirectory))
+            {
+                Directory.CreateDirectory(shortcutDirectory);
+            }
+            string shortcutPath = Path.Combine(shortcutDirectory, string.Format("{0}.lnk", shortcutName));
+            IWshRuntimeLibrary.WshShell shell = new IWshRuntimeLibrary.WshShell();
+            IWshRuntimeLibrary.IWshShortcut shortcut = (IWshRuntimeLibrary.IWshShortcut)shell.CreateShortcut(shortcutPath);
+            shortcut.TargetPath = targetPath;
+            shortcut.WorkingDirectory = Path.GetDirectoryName(targetPath);
+            shortcut.WindowStyle = 1;
+            shortcut.Description = description;
+            shortcut.IconLocation = string.IsNullOrWhiteSpace(iconLocation) ? targetPath : iconLocation;
+            shortcut.Save();
+        }*/
         public static string GetTransformPath(Transform transform, bool includeSelf = false)
         {
             StringBuilder stringBuilder = new StringBuilder();

@@ -7,6 +7,7 @@ using LOR_DiceSystem;
 using LOR_XML;
 using Mod;
 using ModSettingTool;
+using Opening;
 using Spine;
 using System;
 using System.Collections;
@@ -101,12 +102,27 @@ namespace BaseMod
                 ModStoryCG = new Dictionary<LorId, ModStroyCG>();
                 ModWorkShopId = new Dictionary<Assembly, string>();
                 IsModStorySelected = false;
-                LoadCoreThumbs();
+                //CreateShortcuts();
+                ExportDocuments();
             }
             catch (Exception ex)
             {
                 Singleton<ModContentManager>.Instance.AddErrorLog(ex.Message + Environment.NewLine + ex.StackTrace);
                 File.WriteAllText(Application.dataPath + "/Mods/error.log", ex.Message + Environment.NewLine + ex.StackTrace);
+            }
+        }/*
+        private static void CreateShortcuts()
+        {
+            string baseModPath = Singleton<ModContentManager>.Instance.GetModPath("BaseMod");
+            UtilTools.CreateShortcut(Application.dataPath + "/Managed/BaseMod/", "BaseMod for Workshop", baseModPath, "Way to BaseMod Files");
+            UtilTools.CreateShortcut(Application.dataPath + "/Managed/BaseMod/", "SaveFiles", SaveManager.savePath, "Way to BaseMod Files");
+        }*/
+        private static void ExportDocuments()
+        {
+            string baseModPath = Singleton<ModContentManager>.Instance.GetModPath("BaseMod");
+            if (Directory.Exists(baseModPath + "/Documents/"))
+            {
+                UtilTools.CopyDir(baseModPath + "/Documents", Application.dataPath + "/Managed/BaseMod/Documents");
             }
         }
         public static void LoadAssemblyFiles()
@@ -158,7 +174,7 @@ namespace BaseMod
                                 }
                             }
                             errorname = "LoadOtherTypes";
-                            Singleton<AssemblyManager>.Instance.LoadTypesFromAssembly(currentAssembly);
+                            LoadTypesFromAssembly(currentAssembly);
                             ModSaveTool.LoadedModsWorkshopId.Add(Tools.GetModId(currentAssembly));
                             AssemList.Add(currentAssembly);
                         }
@@ -168,6 +184,50 @@ namespace BaseMod
                         Singleton<ModContentManager>.Instance.AddErrorLog("Load_" + fileInfo.Name + "_" + errorname + "_Error");
                         File.WriteAllText(Application.dataPath + "/Mods/Load_" + fileInfo.Name + "_" + errorname + "_Error" + ".log", ex.Message + Environment.NewLine + ex.StackTrace);
                     }
+                }
+            }
+        }
+        private static void LoadTypesFromAssembly(Assembly assembly)
+        {
+            foreach (Type type in assembly.GetTypes())
+            {
+                string name = type.Name;
+                if (type.IsSubclassOf(typeof(DiceCardSelfAbilityBase)) && name.StartsWith("DiceCardSelfAbility_"))
+                {
+                    Singleton<AssemblyManager>.Instance._diceCardSelfAbilityDict.Add(name.Substring("DiceCardSelfAbility_".Length), type);
+                }
+                else if (type.IsSubclassOf(typeof(DiceCardAbilityBase)) && name.StartsWith("DiceCardAbility_"))
+                {
+                    Singleton<AssemblyManager>.Instance._diceCardAbilityDict.Add(name.Substring("DiceCardAbility_".Length), type);
+                }
+                else if (type.IsSubclassOf(typeof(BehaviourActionBase)) && name.StartsWith("BehaviourAction_"))
+                {
+                    Singleton<AssemblyManager>.Instance._behaviourActionDict.Add(name.Substring("BehaviourAction_".Length), type);
+                }
+                else if (type.IsSubclassOf(typeof(PassiveAbilityBase)) && name.StartsWith("PassiveAbility_"))
+                {
+                    Singleton<AssemblyManager>.Instance._passiveAbilityDict.Add(name.Substring("PassiveAbility_".Length), type);
+                }
+                else if (type.IsSubclassOf(typeof(DiceCardPriorityBase)) && name.StartsWith("DiceCardPriority_"))
+                {
+                    Singleton<AssemblyManager>.Instance._diceCardPriorityDict.Add(name.Substring("DiceCardPriority_".Length), type);
+                }
+                else if (type.IsSubclassOf(typeof(EnemyUnitAggroSetter)) && name.StartsWith("EnemyUnitAggroSetter_"))
+                {
+                    Singleton<AssemblyManager>.Instance._enemyUnitAggroSetterDict.Add(name.Substring("EnemyUnitAggroSetter_".Length), type);
+                }
+                else if (type.IsSubclassOf(typeof(EnemyTeamStageManager)) && name.StartsWith("EnemyTeamStageManager_"))
+                {
+                    Singleton<AssemblyManager>.Instance._enemyTeamStageManagerDict.Add(name.Substring("EnemyTeamStageManager_".Length), type);
+                }
+                else if (type.IsSubclassOf(typeof(EnemyUnitTargetSetter)) && name.StartsWith("EnemyUnitTargetSetter_"))
+                {
+                    Singleton<AssemblyManager>.Instance._enemyUnitTargetSetterDict.Add(name.Substring("EnemyUnitTargetSetter_".Length), type);
+                }
+                else if (type.IsSubclassOf(typeof(ModInitializer)))
+                {
+                    ModInitializer modInitializer = Activator.CreateInstance(type) as ModInitializer;
+                    modInitializer.OnInitializeMod();
                 }
             }
         }
@@ -480,6 +540,7 @@ namespace BaseMod
                             }
                         }
                     }
+                    LoadFaceCustom(workshopAppearanceInfo.faceCustomInfo);
                 }
                 if (xmlNode3 != null)
                 {
@@ -976,8 +1037,10 @@ namespace BaseMod
             var list = Singleton<BookXmlList>.Instance._list;
             foreach (BookXmlInfo info in list)
             {
-                if (!string.IsNullOrEmpty(info.workshopID))
+                if (info.id.IsWorkshop())
+                {
                     continue;
+                }
                 foreach (string skinName in info.CharacterSkin)
                 {
                     if (!dic.ContainsKey(skinName))
@@ -1427,6 +1490,21 @@ namespace BaseMod
                 File.WriteAllText(Application.dataPath + "/Mods/UIEquipPageCustomizePanel_UpdateEquipPageSlotList.log", ex.Message + Environment.NewLine + ex.StackTrace);
             }
             return true;
+        }
+        //Remove Garbage Projection
+        [HarmonyPatch(typeof(CustomCoreBookInventoryModel), "GetBookIdList_CustomCoreBook")]
+        [HarmonyPostfix]
+        private static List<int> CustomCoreBookInventoryModel_GetBookIdList_CustomCoreBook_Post(List<int> idList)
+        {
+            try
+            {
+                idList.RemoveAll(x => Singleton<BookInventoryModel>.Instance.GetBookCount(x) < 1);
+            }
+            catch (Exception ex)
+            {
+                File.WriteAllText(Application.dataPath + "/Mods/RemoveGarbageProjectionerror.log", ex.Message + Environment.NewLine + ex.StackTrace);
+            }
+            return idList;
         }
         public static BookXmlInfo GetModWorkshopBookData(int i)
         {
@@ -2567,6 +2645,16 @@ namespace BaseMod
                 {
                     ____abilityList = new List<EmotionCardAbilityBase>();
                 }
+                foreach (string text in xmlInfo.Script)
+                {
+                    EmotionCardAbilityBase emotionCardAbilityBase = FindEmotionCardAbility(text.Trim());
+                    if (emotionCardAbilityBase != null)
+                    {
+                        emotionCardAbilityBase.SetEmotionCard(__instance);
+                        ____abilityList.RemoveAll(x => x.GetType().Name.Substring("EmotionCardAbility_".Length).Trim() == text);
+                        ____abilityList.Add(emotionCardAbilityBase);
+                    }
+                }/*
                 List<string> list = new List<string>();
                 list.AddRange(xmlInfo.Script);
                 foreach (EmotionCardAbilityBase emotionCardAbility in ____abilityList)
@@ -2581,7 +2669,7 @@ namespace BaseMod
                         emotionCardAbilityBase.SetEmotionCard(__instance);
                         ____abilityList.Add(emotionCardAbilityBase);
                     }
-                }
+                }*/
             }
             catch (Exception ex)
             {
@@ -3865,25 +3953,46 @@ namespace BaseMod
                                 {
                                     '_'
                                 });
-                                if (array[0].ToLower() == "custom" && CustomMapManager.TryGetValue(text.Substring("custom_".Length).Trim() + "MapManager", out Type mapmanager))
+                                if (array[0].ToLower() == "custom")
                                 {
-                                    if (mapmanager == null)
+                                    string mapName = text.Substring("custom_".Length).Trim();
+                                    string resourcePath = Singleton<ModContentManager>.Instance.GetModPath(__instance.GetStageModel().ClassInfo.workshopID) + "/CustomMap_" + mapName;
+                                    Debug.LogError("resourcePath:" + resourcePath);
+                                    if (CustomMapManager.TryGetValue(mapName, out Type mapmanager))
                                     {
-                                        return true;
+                                        Debug.LogError("Find MapManager:" + mapName);
+                                        if (mapmanager == null)
+                                        {
+                                            return true;
+                                        }
+                                        GameObject gameObject = Util.LoadPrefab("LibraryMaps/KETHER_Map", SingletonBehavior<BattleSceneRoot>.Instance.transform);
+                                        GameObject borderFrame = gameObject.GetComponent<MapManager>().borderFrame;
+                                        GameObject backgroundRoot = gameObject.GetComponent<MapManager>().backgroundRoot;
+                                        UnityEngine.Object.Destroy(gameObject.GetComponent<MapManager>());
+                                        gameObject.name = "InvitationMap_" + text;
+                                        MapManager mapManager = (MapManager)gameObject.AddComponent(mapmanager);
+                                        mapManager.borderFrame = borderFrame;
+                                        mapManager.backgroundRoot = backgroundRoot;
+                                        if (mapManager is CustomMapManager)
+                                        {
+                                            (mapManager as CustomMapManager).CustomInit();
+                                        }
+                                        SingletonBehavior<BattleSceneRoot>.Instance.InitInvitationMap(mapManager);
                                     }
-                                    GameObject gameObject = Util.LoadPrefab("LibraryMaps/KETHER_Map", SingletonBehavior<BattleSceneRoot>.Instance.transform);
-                                    GameObject borderFrame = gameObject.GetComponent<MapManager>().borderFrame;
-                                    GameObject backgroundRoot = gameObject.GetComponent<MapManager>().backgroundRoot;
-                                    UnityEngine.Object.Destroy(gameObject.GetComponent<MapManager>());
-                                    gameObject.name = "InvitationMap_" + text;
-                                    MapManager mapManager = (MapManager)gameObject.AddComponent(mapmanager);
-                                    mapManager.borderFrame = borderFrame;
-                                    mapManager.backgroundRoot = backgroundRoot;
-                                    if (mapManager is CustomMapManager)
+                                    else if (Directory.Exists(resourcePath))
                                     {
-                                        (mapManager as CustomMapManager).CustomInit();
+                                        GameObject gameObject = Util.LoadPrefab("LibraryMaps/KETHER_Map", SingletonBehavior<BattleSceneRoot>.Instance.transform);
+                                        GameObject borderFrame = gameObject.GetComponent<MapManager>().borderFrame;
+                                        GameObject backgroundRoot = gameObject.GetComponent<MapManager>().backgroundRoot;
+                                        UnityEngine.Object.Destroy(gameObject.GetComponent<MapManager>());
+                                        gameObject.name = "InvitationMap_" + text;
+                                        SimpleMapManager simpleMapManager = (SimpleMapManager)gameObject.AddComponent(typeof(SimpleMapManager));
+                                        simpleMapManager.borderFrame = borderFrame;
+                                        simpleMapManager.backgroundRoot = backgroundRoot;
+                                        simpleMapManager.SimpleInit(resourcePath, mapName);
+                                        simpleMapManager.CustomInit();
+                                        SingletonBehavior<BattleSceneRoot>.Instance.InitInvitationMap(simpleMapManager);
                                     }
-                                    SingletonBehavior<BattleSceneRoot>.Instance.InitInvitationMap(mapManager);
                                 }
                                 else
                                 {
@@ -4669,7 +4778,7 @@ namespace BaseMod
             {
                 File.WriteAllText(Application.dataPath + "/Mods/SaveFailed.log", ex.Message + Environment.NewLine + ex.StackTrace);
             }
-        }/*
+        }
         //RemoveUnknownSaves
         [HarmonyPatch(typeof(GameOpeningController), "StopOpening")]
         [HarmonyPostfix]
@@ -4677,13 +4786,13 @@ namespace BaseMod
         {
             try
             {
-                ModSaveTool.RemoveUnknownSaves();
+                LoadCoreThumbs();
             }
             catch (Exception ex)
             {
                 File.WriteAllText(Application.dataPath + "/Mods/LoadFromModSaveDataerror.txt", ex.Message + Environment.NewLine + ex.StackTrace);
             }
-        }*/
+        }
         //CustomGift
         //CreateGiftData
         [HarmonyPatch(typeof(CharacterAppearance), "CreateGiftData")]
@@ -5186,8 +5295,8 @@ namespace BaseMod
         }
 
         //Skeleton
-        [HarmonyPatch(typeof(SkeletonJson), "ReadSkeletonData", new Type[] { typeof(TextReader) })]
-        [HarmonyPrefix]
+        //[HarmonyPatch(typeof(SkeletonJson), "ReadSkeletonData", new Type[] { typeof(TextReader) })]
+        //[HarmonyPrefix]
         private static bool SkeletonJson_ReadSkeletonData_Pre(ref SkeletonData __result, TextReader reader, SkeletonJson __instance)
         {
             bool result;
