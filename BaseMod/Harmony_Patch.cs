@@ -120,6 +120,14 @@ namespace BaseMod
         private static void ExportDocuments()
         {
             string baseModPath = Singleton<ModContentManager>.Instance.GetModPath("BaseMod");
+            try
+            {
+                if (File.Exists(baseModPath + "/SteamworkUploader.rar"))
+                {
+                    File.Copy(baseModPath + "/SteamworkUploader.rar", Application.dataPath + "/Managed/BaseMod/SteamworkUploader.rar", true);
+                }
+            }
+            catch { }
             if (Directory.Exists(baseModPath + "/Documents/"))
             {
                 UtilTools.CopyDir(baseModPath + "/Documents", Application.dataPath + "/Managed/BaseMod/Documents");
@@ -1677,13 +1685,13 @@ namespace BaseMod
                         __result = bookThumb;
                         return false;
                     }
-                    bookThumb = XLRoot.MakeThumbnail(workshopBookSkinData.dic[ActionDetail.Default]);
+                    /*bookThumb = XLRoot.MakeThumbnail(workshopBookSkinData.dic[ActionDetail.Default]);
                     if (bookThumb != null)
                     {
                         BookThumb.Add(__instance.BookId, bookThumb);
                         __result = bookThumb;
                         return false;
-                    }
+                    }*/
                 }
             }
             catch (Exception ex)
@@ -1720,14 +1728,14 @@ namespace BaseMod
                     {
                         __result = bookThumb;
                         return false;
-                    }
+                    }/*
                     bookThumb = XLRoot.MakeThumbnail(workshopBookSkinData.dic[ActionDetail.Default]);
                     if (bookThumb != null)
                     {
                         BookThumb.Add(__instance.id, bookThumb);
                         __result = bookThumb;
                         return false;
-                    }
+                    }*/
                 }
             }
             catch (Exception ex)

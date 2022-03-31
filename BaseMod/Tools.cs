@@ -378,18 +378,18 @@ namespace BaseMod
             battleUnitBuf.Modify(stack, actor, true);
             return battleUnitBuf;
         }
-        public static BattleUnitBuf AddBufByCard<T>(this BattleUnitBufListDetail unitBufListDetail, int stack, BattleUnitModel actor = null, BufReadyType readyType = BufReadyType.ThisRound) where T : BattleUnitBuf
+        public static T AddBufByCard<T>(this BattleUnitBufListDetail unitBufListDetail, int stack, BattleUnitModel actor = null, BufReadyType readyType = BufReadyType.ThisRound) where T : BattleUnitBuf
         {
             if (actor == null)
             {
                 actor = unitBufListDetail._self;
             }
-            BattleUnitBuf buf = Activator.CreateInstance<T>();
+            T buf = Activator.CreateInstance<T>();
             buf._owner = unitBufListDetail._self;
             buf.stack = 0;
             BattleUnitBuf battleUnitBuf = buf.FindMatch(readyType);
             battleUnitBuf.Modify(stack, actor, true);
-            return battleUnitBuf;
+            return (T)battleUnitBuf;
         }
         public static BattleUnitBuf AddBufByEtc(this BattleUnitBufListDetail unitBufListDetail, BattleUnitBuf buf, int stack, BattleUnitModel actor = null, BufReadyType readyType = BufReadyType.ThisRound)
         {
@@ -407,18 +407,18 @@ namespace BaseMod
             battleUnitBuf.Modify(stack, actor, false);
             return battleUnitBuf;
         }
-        public static BattleUnitBuf AddBufByEtc<T>(this BattleUnitBufListDetail unitBufListDetail, int stack, BattleUnitModel actor = null, BufReadyType readyType = BufReadyType.ThisRound) where T : BattleUnitBuf
+        public static T AddBufByEtc<T>(this BattleUnitBufListDetail unitBufListDetail, int stack, BattleUnitModel actor = null, BufReadyType readyType = BufReadyType.ThisRound) where T : BattleUnitBuf
         {
             if (actor == null)
             {
                 actor = unitBufListDetail._self;
             }
-            BattleUnitBuf buf = Activator.CreateInstance<T>();
+            T buf = Activator.CreateInstance<T>();
             buf._owner = unitBufListDetail._self;
             buf.stack = 0;
             BattleUnitBuf battleUnitBuf = buf.FindMatch(readyType);
             battleUnitBuf.Modify(stack, actor, false);
-            return battleUnitBuf;
+            return (T)battleUnitBuf;
         }
         public static TResult FindBuf<TResult>(this BattleUnitBufListDetail unitBufListDetail, BufReadyType readyType = BufReadyType.ThisRound) where TResult : BattleUnitBuf
         {
