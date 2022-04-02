@@ -1,442 +1,32 @@
-using BaseMod;
+﻿using BaseMod;
 using BattleCharacterProfile;
 using ExtendedLoader;
 using HarmonyLib;
-using Opening;
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Reflection;
 using TMPro;
 using UI;
 using UnityEngine;
-using UnityEngine.Events;
-using UnityEngine.EventSystems;
 using UnityEngine.UI;
 using Workshop;
 
 namespace SummonLiberation
 {
-    public class ButtonColor : EventTrigger
-    {
-        private void Update()
-        {
-        }
-        public override void OnPointerEnter(PointerEventData eventData)
-        {
-            Image.color = OnEnterColor;
-        }
-        public override void OnPointerExit(PointerEventData eventData)
-        {
-            Image.color = DefaultColor;
-        }
-        public override void OnPointerUp(PointerEventData eventData)
-        {
-            Image.color = DefaultColor;
-        }
-
-        public Color DefaultColor = new Color(1f, 1f, 1f);
-
-        public static Color OnEnterColor;
-
-        public Image Image;
-    }
-}
-
-namespace SummonLiberation
-{
-    public static class StageButtonTool
-    {
-        static StageButtonTool()
-        {
-            Sprite sprite = BaseMod.UIPanelTool.GetEnemyCharacterListPanel().transform.GetChild(0).GetChild(3).GetChild(1).GetChild(0).GetComponent<Image>().sprite;
-            ButtonColor.OnEnterColor = new Color(0.13333334f, 1f, 0.89411765f);
-            EnemyUP = BaseMod.UtilTools.CreateButton(BaseMod.UIPanelTool.GetEnemyCharacterListPanel().transform.GetChild(0).transform, sprite, new Vector2(0.07f, 0.07f), new Vector2(550f, -105f));
-            EnemyUP.name = "[Button]up";
-            EnemyUP.image.color = new Color(1f, 1f, 1f);
-            EnemyUP.transform.rotation = new Quaternion(0f, 0f, 180f, 0f);
-            ButtonColor buttonColor = EnemyUP.gameObject.AddComponent<ButtonColor>();
-            buttonColor.Image = EnemyUP.image;
-            LibrarianUP = BaseMod.UtilTools.CreateButton(BaseMod.UIPanelTool.GetLibrarianCharacterListPanel().transform.GetChild(0).transform, sprite, new Vector2(0.07f, 0.07f), new Vector2(-550f, -95f));
-            LibrarianUP.name = "[Button]up";
-            LibrarianUP.image.color = new Color(1f, 1f, 1f);
-            LibrarianUP.transform.rotation = new Quaternion(0f, 0f, 180f, 0f);
-            ButtonColor buttonColor2 = LibrarianUP.gameObject.AddComponent<ButtonColor>();
-            buttonColor2.Image = LibrarianUP.image;
-            EnemyDown = BaseMod.UtilTools.CreateButton(BaseMod.UIPanelTool.GetEnemyCharacterListPanel().transform.GetChild(0).transform, sprite, new Vector2(0.07f, 0.07f), new Vector2(550f, -270f));
-            EnemyDown.name = "[Button]down";
-            EnemyDown.image.color = new Color(1f, 1f, 1f);
-            ButtonColor buttonColor3 = EnemyDown.gameObject.AddComponent<ButtonColor>();
-            buttonColor3.Image = EnemyDown.image;
-            LibrarianDown = BaseMod.UtilTools.CreateButton(BaseMod.UIPanelTool.GetLibrarianCharacterListPanel().transform.GetChild(0).transform, sprite, new Vector2(0.07f, 0.07f), new Vector2(-550f, -260f));
-            LibrarianDown.name = "[Button]down";
-            LibrarianDown.image.color = new Color(1f, 1f, 1f);
-            ButtonColor buttonColor4 = LibrarianDown.gameObject.AddComponent<ButtonColor>();
-            buttonColor4.Image = LibrarianDown.image;
-            Init();
-            EnemyUP.gameObject.SetActive(false);
-            EnemyDown.gameObject.SetActive(false);
-            LibrarianUP.gameObject.SetActive(false);
-            LibrarianDown.gameObject.SetActive(false);
-        }
-        public static void Init()
-        {
-            EnemyUP.onClick.AddListener(new UnityAction(OnClickEnemyUP));
-            EnemyDown.onClick.AddListener(new UnityAction(OnClickEnemyDown));
-            LibrarianUP.onClick.AddListener(new UnityAction(OnClickLibrarianUP));
-            LibrarianDown.onClick.AddListener(new UnityAction(OnClickLibrarianDown));
-        }
-        public static void RefreshEnemy()
-        {
-            if (enemyCharacterList == null)
-            {
-                enemyCharacterList = (UICharacterList)typeof(UICharacterListPanel).GetField("CharacterList", AccessTools.all).GetValue(BaseMod.UIPanelTool.GetEnemyCharacterListPanel());
-            }
-            /*currentEnemyStageinfo = (StageClassInfo)BaseMod.UIPanelTool.GetEnemyCharacterListPanel().GetType().GetField("currentEnemyStageinfo", AccessTools.all).GetValue(BaseMod.UIPanelTool.GetEnemyCharacterListPanel());
-            currentWave = (int)BaseMod.UIPanelTool.GetEnemyCharacterListPanel().GetType().GetField("currentWave", AccessTools.all).GetValue(BaseMod.UIPanelTool.GetEnemyCharacterListPanel());*/
-            currentEnemyUnitIndex = 0;
-            Color color = UIColorManager.Manager.EnemyUIColor;
-            if (Enum.IsDefined(typeof(UIStoryLine), Singleton<StageController>.Instance.GetStageModel().ClassInfo.storyType))
-            {
-                UIStoryLine story = (UIStoryLine)Enum.Parse(typeof(UIStoryLine), Singleton<StageController>.Instance.GetStageModel().ClassInfo.storyType);
-                switch (story)
-                {
-                    case UIStoryLine.TheBlueReverberationPrimary:
-                        color = UIColorManager.Manager.BlueEffectContentColor;
-                        break;
-                    case UIStoryLine.BlackSilence:
-                        color = UIColorManager.Manager.BlackSilenceEffectColor[0];
-                        color.a = 0.5f;
-                        break;
-                    case UIStoryLine.TwistedBlue:
-                        color = UIColorManager.Manager.BlueEffectContentColor;
-                        break;
-                    case UIStoryLine.Final:
-                        color = UIColorManager.Manager.AnotherEtcEffectColor[0];
-                        break;
-                    default:
-                        break;
-
-                }
-            }
-            EnemyUP.gameObject.GetComponent<ButtonColor>().Image.color = color;
-            EnemyDown.gameObject.GetComponent<ButtonColor>().Image.color = color;
-            EnemyUP.gameObject.GetComponent<ButtonColor>().DefaultColor = color;
-            EnemyDown.gameObject.GetComponent<ButtonColor>().DefaultColor = color;
-            EnemyUP.gameObject.SetActive(false);
-            EnemyDown.gameObject.SetActive(false);
-            if (UIPanel.Controller.CurrentUIPhase == UIPhase.BattleSetting)
-            {
-                if (Singleton<StageController>.Instance.GetStageModel() != null && Singleton<StageController>.Instance.GetCurrentWaveModel().UnitList.Count > 5)
-                {
-                    EnemyDown.gameObject.SetActive(true);
-                }
-                else
-                {
-                    EnemyDown.gameObject.SetActive(false);
-                }
-            }
-        }
-        public static void RefreshLibrarian()
-        {
-            if (librarianCharacterList == null)
-            {
-                librarianCharacterList = (UICharacterList)typeof(UICharacterListPanel).GetField("CharacterList", AccessTools.all).GetValue(BaseMod.UIPanelTool.GetLibrarianCharacterListPanel());
-            }
-            Color color = UIColorManager.Manager.GetSephirahColor(UIPanel.Controller.CurrentSephirah);
-            LibrarianUP.gameObject.GetComponent<ButtonColor>().Image.color = color;
-            LibrarianDown.gameObject.GetComponent<ButtonColor>().Image.color = color;
-            LibrarianUP.gameObject.GetComponent<ButtonColor>().DefaultColor = color;
-            LibrarianDown.gameObject.GetComponent<ButtonColor>().DefaultColor = color;
-            currentLibrarianUnitIndex = 0;
-            LibrarianUP.gameObject.SetActive(false);
-            LibrarianDown.gameObject.SetActive(false);
-            if (UIPanel.Controller.CurrentUIPhase == UIPhase.BattleSetting)
-            {
-                if (Singleton<StageController>.Instance.GetCurrentStageFloorModel() != null && Singleton<StageController>.Instance.GetCurrentStageFloorModel().GetUnitBattleDataList().Count > 5)
-                {
-                    LibrarianDown.gameObject.SetActive(true);
-                }
-                else
-                {
-                    LibrarianDown.gameObject.SetActive(false);
-                }
-            }
-            IsTurningPage = false;
-        }
-        public static void OnClickEnemyUP()
-        {
-            if (currentEnemyUnitIndex < 5)
-            {
-                EnemyUP.gameObject.SetActive(false);
-                return;
-            }
-            try
-            {
-                currentEnemyUnitIndex -= 5;
-                if (currentEnemyUnitIndex <= 0)
-                {
-                    currentEnemyUnitIndex = 0;
-                    EnemyUP.gameObject.SetActive(false);
-                }
-                UpdateEnemyCharacterList();
-                if (Singleton<StageController>.Instance.GetStageModel() != null && Singleton<StageController>.Instance.GetCurrentWaveModel().UnitList.Count - currentEnemyUnitIndex > 5)
-                {
-                    EnemyDown.gameObject.SetActive(true);
-                }
-                else
-                {
-                    EnemyDown.gameObject.SetActive(false);
-                }
-            }
-            catch { }
-        }
-        public static void OnClickEnemyDown()
-        {
-            if (Singleton<StageController>.Instance.GetStageModel() != null && Singleton<StageController>.Instance.GetCurrentWaveModel().UnitList.Count - currentEnemyUnitIndex <= 5)
-            {
-                EnemyDown.gameObject.SetActive(false);
-                return;
-            }
-            try
-            {
-                currentEnemyUnitIndex += 5;
-                EnemyUP.gameObject.SetActive(true);
-                UpdateEnemyCharacterList();
-                if (Singleton<StageController>.Instance.GetStageModel() != null && Singleton<StageController>.Instance.GetCurrentWaveModel().UnitList.Count - currentEnemyUnitIndex <= 5)
-                {
-                    EnemyDown.gameObject.SetActive(false);
-                }
-                else
-                {
-                    EnemyDown.gameObject.SetActive(true);
-                }
-            }
-            catch { }
-        }
-        public static void OnClickLibrarianUP()
-        {
-            if (currentLibrarianUnitIndex == 0)
-            {
-                LibrarianUP.gameObject.SetActive(false);
-                return;
-            }
-            try
-            {
-                currentLibrarianUnitIndex -= 5;
-                if (currentLibrarianUnitIndex <= 0)
-                {
-                    currentLibrarianUnitIndex = 0;
-                    LibrarianUP.gameObject.SetActive(false);
-                }
-                UpdateLibrarianCharacterList();
-                if (Singleton<StageController>.Instance.GetCurrentStageFloorModel() != null && Singleton<StageController>.Instance.GetCurrentStageFloorModel().GetUnitBattleDataList().Count - currentLibrarianUnitIndex > 5)
-                {
-                    LibrarianDown.gameObject.SetActive(true);
-                }
-                else
-                {
-                    LibrarianDown.gameObject.SetActive(false);
-                }
-            }
-            catch { }
-        }
-
-        public static void OnClickLibrarianDown()
-        {
-            try
-            {
-                if (Singleton<StageController>.Instance.GetCurrentStageFloorModel() != null && Singleton<StageController>.Instance.GetCurrentStageFloorModel().GetUnitBattleDataList().Count - currentLibrarianUnitIndex <= 5)
-                {
-                    LibrarianDown.gameObject.SetActive(false);
-                    return;
-                }
-                try
-                {
-                    currentLibrarianUnitIndex += 5;
-                    LibrarianUP.gameObject.SetActive(true);
-                    UpdateLibrarianCharacterList();
-                    if (Singleton<StageController>.Instance.GetCurrentStageFloorModel() != null && Singleton<StageController>.Instance.GetCurrentStageFloorModel().GetUnitBattleDataList().Count - currentLibrarianUnitIndex <= 5)
-                    {
-                        LibrarianDown.gameObject.SetActive(false);
-                    }
-                    else
-                    {
-                        LibrarianDown.gameObject.SetActive(true);
-                    }
-                }
-                catch { }
-            }
-            catch { }
-        }
-        public static void UpdateEnemyCharacterList()
-        {
-            if (UIPanel.Controller.CurrentUIPhase == UIPhase.BattleSetting)
-            {
-                List<UnitBattleDataModel> list = new List<UnitBattleDataModel>();
-                for (int i = 0; i < 5; i++)
-                {
-                    if (Singleton<StageController>.Instance.GetCurrentWaveModel().UnitList.Count <= (currentEnemyUnitIndex + i))
-                    {
-                        break;
-                    }
-                    list.Add(Singleton<StageController>.Instance.GetCurrentWaveModel().UnitList[currentEnemyUnitIndex + i]);
-                }
-                if (list != null)
-                {
-                    BaseMod.UIPanelTool.GetEnemyCharacterListPanel().SetCharacterRenderer(list, true);
-                    enemyCharacterList.InitBattleEnemyList(list);
-                    BaseMod.UIPanelTool.GetEnemyCharacterListPanel().GetType().GetMethod("UpdateFrame", AccessTools.all).Invoke(BaseMod.UIPanelTool.GetEnemyCharacterListPanel(), new object[] { UIStoryLine.None });
-                }
-            }
-        }
-        public static void UpdateLibrarianCharacterList()
-        {
-            StageLibraryFloorModel currentStageFloorModel = Singleton<StageController>.Instance.GetCurrentStageFloorModel();
-            if (currentStageFloorModel == null)
-            {
-                return;
-            }
-            if (UIPanel.Controller.CurrentUIPhase == UIPhase.BattleSetting)
-            {
-
-                List<UnitBattleDataModel> list = new List<UnitBattleDataModel>();
-                for (int i = 0; i < 5; i++)
-                {
-                    if (currentStageFloorModel.GetUnitBattleDataList().Count <= currentLibrarianUnitIndex + i)
-                    {
-                        break;
-                    }
-                    list.Add(currentStageFloorModel.GetUnitBattleDataList()[currentLibrarianUnitIndex + i]);
-                }
-                if (list != null)
-                {
-                    BaseMod.UIPanelTool.GetLibrarianCharacterListPanel().SetCharacterRenderer(list, false);
-                    IsTurningPage = true;
-                    librarianCharacterList.InitUnitListFromBattleData(list);
-                    BaseMod.UIPanelTool.GetLibrarianCharacterListPanel().GetType().GetMethod("UpdateFrameToSephirahInBattle", AccessTools.all).Invoke(BaseMod.UIPanelTool.GetLibrarianCharacterListPanel(), new object[] { currentStageFloorModel.Sephirah });
-                }
-            }
-        }
-
-        public static bool IsTurningPage;
-
-        public static UICharacterList enemyCharacterList;
-
-        public static UICharacterList librarianCharacterList;
-
-        public static int currentEnemyUnitIndex = 0;
-
-        public static int currentLibrarianUnitIndex = 0;
-
-        public static Button EnemyUP;
-
-        public static Button EnemyDown;
-
-        public static Button LibrarianUP;
-
-        public static Button LibrarianDown;
-    }
-}
-
-namespace SummonLiberation
-{
     public class Harmony_Patch
     {
-        public Harmony_Patch()
+        public static void Init()
         {
-
-            Harmony harmony = new Harmony("SummonLiberation_Mod");
             //初始化侧边栏信息槽
             enemyProfileArray2 = new List<BattleCharacterProfileUI>();
             allyProfileArray2 = new List<BattleCharacterProfileUI>();
             enermy2 = new List<BattleEmotionCoinUI.BattleEmotionCoinData>();
             librarian2 = new List<BattleEmotionCoinUI.BattleEmotionCoinData>();
-            //司书阵型扩容
-            MethodInfo method = typeof(Harmony_Patch).GetMethod("LibraryFloorModel_Init_Post", AccessTools.all);
-            Patching(harmony, new HarmonyMethod(method), typeof(LibraryFloorModel).GetMethod("Init", AccessTools.all), PatchType.postfix);
-            //来宾阵型扩容
-            method = typeof(Harmony_Patch).GetMethod("StageWaveModel_Init_Post", AccessTools.all);
-            Patching(harmony, new HarmonyMethod(method), typeof(StageWaveModel).GetMethod("Init", AccessTools.all), PatchType.postfix);
-            method = typeof(Harmony_Patch).GetMethod("StageWaveModel_GetUnitBattleDataListByFormation_Pre", AccessTools.all);
-            Patching(harmony, new HarmonyMethod(method), typeof(StageWaveModel).GetMethod("GetUnitBattleDataListByFormation", AccessTools.all), PatchType.prefix);
-            //侧边栏扩容（8个）
-            method = typeof(Harmony_Patch).GetMethod("BattleUnitInfoManagerUI_Initialize_Pre", AccessTools.all);
-            Patching(harmony, new HarmonyMethod(method), typeof(BattleUnitInfoManagerUI).GetMethod("Initialize", AccessTools.all), PatchType.prefix);
-            //角色底部血条信息修正
-            method = typeof(Harmony_Patch).GetMethod("BattleUnitInfoManagerUI_UpdateCharacterProfile_Post", AccessTools.all);
-            Patching(harmony, new HarmonyMethod(method), typeof(BattleUnitInfoManagerUI).GetMethod("UpdateCharacterProfile", AccessTools.all), PatchType.postfix);
-            //情感硬币槽修正
-            method = typeof(Harmony_Patch).GetMethod("BattleEmotionCoinUI_Init_Pre", AccessTools.all);
-            Patching(harmony, new HarmonyMethod(method), typeof(BattleEmotionCoinUI).GetMethod("Init", AccessTools.all), PatchType.prefix);
-            method = typeof(Harmony_Patch).GetMethod("BattleEmotionCoinUI_Acquisition_Pre", AccessTools.all);
-            Patching(harmony, new HarmonyMethod(method), typeof(BattleEmotionCoinUI).GetMethod("Acquisition", AccessTools.all), PatchType.prefix);
-            //团队情感修正（不计算临时加入战斗的单位）11
-            method = typeof(Harmony_Patch).GetMethod("EmotionBattleTeamModel_UpdateUnitList_Pre", AccessTools.all);
-            Patching(harmony, new HarmonyMethod(method), typeof(EmotionBattleTeamModel).GetMethod("UpdateUnitList", AccessTools.all), PatchType.prefix);
-            //侧边栏头像
-            method = typeof(Harmony_Patch).GetMethod("UICharacterRenderer_SetCharacter_Pre", AccessTools.all);
-            Patching(harmony, new HarmonyMethod(method), typeof(UICharacterRenderer).GetMethod("SetCharacter", AccessTools.all), PatchType.prefix);
-            method = typeof(Harmony_Patch).GetMethod("UICharacterRenderer_GetRenderTextureByIndex_Pre", AccessTools.all);
-            Patching(harmony, new HarmonyMethod(method), typeof(UICharacterRenderer).GetMethod("GetRenderTextureByIndex", AccessTools.all), PatchType.prefix);
-            method = typeof(Harmony_Patch).GetMethod("UICharacterRenderer_GetRenderTextureByIndexAndSize_Pre", AccessTools.all);
-            Patching(harmony, new HarmonyMethod(method), typeof(UICharacterRenderer).GetMethod("GetRenderTextureByIndexAndSize", AccessTools.all), PatchType.prefix);
-            //单位信息翻页按钮
-            method = typeof(Harmony_Patch).GetMethod("GameOpeningController_StopOpening_Post", AccessTools.all);
-            Patching(harmony, new HarmonyMethod(method), typeof(GameOpeningController).GetMethod("StopOpening", AccessTools.all), PatchType.postfix);
-            method = typeof(Harmony_Patch).GetMethod("UIBattleSettingPanel_OnOpen_Pre", AccessTools.all);
-            Patching(harmony, new HarmonyMethod(method), typeof(UIBattleSettingPanel).GetMethod("OnOpen", AccessTools.all), PatchType.prefix);
-            method = typeof(Harmony_Patch).GetMethod("UIEnemyCharacterListPanel_Activate_Pre", AccessTools.all);
-            Patching(harmony, new HarmonyMethod(method), typeof(UIEnemyCharacterListPanel).GetMethod("Activate", AccessTools.all), PatchType.prefix);
-            method = typeof(Harmony_Patch).GetMethod("UIEnemyCharacterListPanel_SetEnemyWave_Pre", AccessTools.all);
-            Patching(harmony, new HarmonyMethod(method), typeof(UIEnemyCharacterListPanel).GetMethod("SetEnemyWave", AccessTools.all), PatchType.prefix);
-            method = typeof(Harmony_Patch).GetMethod("UILibrarianCharacterListPanel_OnSetSephirah_Pre", AccessTools.all);
-            Patching(harmony, new HarmonyMethod(method), typeof(UILibrarianCharacterListPanel).GetMethod("OnSetSephirah", AccessTools.all), PatchType.prefix);
-            method = typeof(Harmony_Patch).GetMethod("UICharacterList_InitEnemyList_Pre", AccessTools.all);
-            Patching(harmony, new HarmonyMethod(method), typeof(UICharacterList).GetMethod("InitEnemyList", AccessTools.all), PatchType.prefix);
-            method = typeof(Harmony_Patch).GetMethod("UICharacterList_InitLibrarianList_Pre", AccessTools.all);
-            Patching(harmony, new HarmonyMethod(method), typeof(UICharacterList).GetMethod("InitLibrarianList", AccessTools.all), PatchType.prefix);
-            method = typeof(Harmony_Patch).GetMethod("UICharacterList_InitUnitListFromBattleData_Pre", AccessTools.all);
-            Patching(harmony, new HarmonyMethod(method), typeof(UICharacterList).GetMethod("InitUnitListFromBattleData", AccessTools.all), PatchType.prefix);
-            method = typeof(Harmony_Patch).GetMethod("UICharacterList_InitBattleEnemyList_Pre", AccessTools.all);
-            Patching(harmony, new HarmonyMethod(method), typeof(UICharacterList).GetMethod("InitBattleEnemyList", AccessTools.all), PatchType.prefix);
-            //修正单位勾选取消问题
-            method = typeof(Harmony_Patch).GetMethod("UIBattleSettingPanel_SetToggles_Pre", AccessTools.all);
-            Patching(harmony, new HarmonyMethod(method), typeof(UIBattleSettingPanel).GetMethod("SetToggles", AccessTools.all), PatchType.prefix);
-            method = typeof(Harmony_Patch).GetMethod("UIBattleSettingPanel_SelectedToggles_Pre", AccessTools.all);
-            Patching(harmony, new HarmonyMethod(method), typeof(UIBattleSettingPanel).GetMethod("SelectedToggles", AccessTools.all), PatchType.prefix);
-            //情感等级奖励UI
-            method = typeof(Harmony_Patch).GetMethod("BattleEmotionRewardInfoUI_SetData_Pre", AccessTools.all);
-            Patching(harmony, new HarmonyMethod(method), typeof(BattleEmotionRewardInfoUI).GetMethod("SetData", AccessTools.all), PatchType.prefix);
+            EnemyListCache = new Dictionary<LorId, List<List<UnitDataModel>>>();
         }
-        /*
-         function SaveTextureToFile( texture: Texture2D,fileName)
-{
-    var bytes=texture.EncodeToPNG();
-    var file = new File.Open(Application.dataPath + "/"+fileName,FileMode.Create);
-    var binary= new BinaryWriter(file);
-    binary.Write(bytes);
-    file.Close();
-}
-         */
-        public static void Patching(Harmony harmony, HarmonyMethod method, MethodBase original, PatchType type)
-        {
-            try
-            {
-                if (type == PatchType.prefix)
-                {
-                    harmony.Patch(original, method, null, null, null, null);
-                }
-                else
-                {
-                    harmony.Patch(original, null, method, null, null, null);
-                }
-            }
-            catch (Exception ex)
-            {
-                File.WriteAllText(Application.dataPath + "/Mods/SummonLiberationPatch" + original.Name + ".txt", ex.Message + Environment.NewLine + ex.StackTrace);
-            }
-        }
+        //Enlarge Librarian's formation
+        [HarmonyPatch(typeof(LibraryFloorModel), "Init")]
+        [HarmonyPostfix]
         private static void LibraryFloorModel_Init_Post(ref List<int> ____formationIndex, ref FormationModel ____defaultFormation, ref FormationModel ____formation)
         {
             try
@@ -461,6 +51,9 @@ namespace SummonLiberation
                 File.WriteAllText(Application.dataPath + "/Mods/LFIerror.txt", ex.Message + Environment.NewLine + ex.StackTrace);
             }
         }
+        //Enlarge Enemy's formation
+        [HarmonyPatch(typeof(StageWaveModel), "Init")]
+        [HarmonyPostfix]
         private static void StageWaveModel_Init_Post(ref FormationModel ____formation, ref List<int> ____formationIndex)
         {
             try
@@ -476,6 +69,9 @@ namespace SummonLiberation
                 File.WriteAllText(Application.dataPath + "/Mods/SWMIerror.txt", ex.Message + Environment.NewLine + ex.StackTrace);
             }
         }
+        //Enlarge Enemy's formation
+        [HarmonyPatch(typeof(StageWaveModel), "GetUnitBattleDataListByFormation")]
+        [HarmonyPrefix]
         private static bool StageWaveModel_GetUnitBattleDataListByFormation_Pre(StageWaveModel __instance, ref List<UnitBattleDataModel> __result, List<UnitBattleDataModel> ____unitList)
         {
             try
@@ -499,14 +95,17 @@ namespace SummonLiberation
             }
             return true;
         }
+        //BattleUnitProfileArray Up to 9
+        [HarmonyPatch(typeof(BattleUnitInfoManagerUI), "Initialize")]
+        [HarmonyPrefix]
         private static bool BattleUnitInfoManagerUI_Initialize_Pre(BattleUnitInfoManagerUI __instance, IList<BattleUnitModel> unitList, ref Direction ___allyDirection)
         {
             try
             {
-                if (allyProfileArray2.Count < 8)
+                if (allyProfileArray2.Count < 9)
                 {
                     allyProfileArray2.Clear();
-                    for (int i = 0; i < 8; i++)
+                    for (int i = 0; i < 9; i++)
                     {
                         if (__instance.allyProfileArray.Length > i)
                         {
@@ -515,14 +114,14 @@ namespace SummonLiberation
                         else
                         {
                             allyProfileArray2.Add(UnityEngine.Object.Instantiate(allyProfileArray2[4], allyProfileArray2[4].transform.parent));
-                            allyProfileArray2[i].gameObject.transform.localPosition += new Vector3(0f, (i - 4) * 64f + 26f, 0f);
+                            allyProfileArray2[i].gameObject.transform.localPosition += new Vector3(0f, (i - 4) * 64f, 0f);
                         }
                     }
                 }
-                if (enemyProfileArray2.Count < 8)
+                if (enemyProfileArray2.Count < 9)
                 {
                     enemyProfileArray2.Clear();
-                    for (int i = 0; i < 8; i++)
+                    for (int i = 0; i < 9; i++)
                     {
                         if (__instance.enemyProfileArray.Length > i)
                         {
@@ -531,7 +130,7 @@ namespace SummonLiberation
                         else
                         {
                             enemyProfileArray2.Add(UnityEngine.Object.Instantiate(enemyProfileArray2[4], enemyProfileArray2[4].transform.parent));
-                            enemyProfileArray2[i].gameObject.transform.localPosition += new Vector3(0f, (i - 4) * 64f + 26f, 0f);
+                            enemyProfileArray2[i].gameObject.transform.localPosition += new Vector3(0f, (i - 4) * 64f, 0f);
                         }
                     }
                 }
@@ -563,7 +162,7 @@ namespace SummonLiberation
                 {
                     BattleUnitModel battleUnitModel = unitList[k];
                     int index = battleUnitModel.index;
-                    if (index >= 8)
+                    if (index >= 9)
                     {
                         continue;
                     }
@@ -588,6 +187,9 @@ namespace SummonLiberation
             }
             return true;
         }
+        //CharacterProfile under character
+        [HarmonyPatch(typeof(BattleUnitInfoManagerUI), "UpdateCharacterProfile")]
+        [HarmonyPostfix]
         private static void BattleUnitInfoManagerUI_UpdateCharacterProfile_Post(BattleUnitModel unit, float hp, int bp, BattleBufUIDataList bufDataList = null)
         {
             try
@@ -599,6 +201,9 @@ namespace SummonLiberation
                 File.WriteAllText(Application.dataPath + "/Mods/BUIFMUCPerror.txt", ex.Message + Environment.NewLine + ex.StackTrace);
             }
         }
+        //BattleEmotionCoinUI
+        [HarmonyPatch(typeof(BattleEmotionCoinUI), "Init")]
+        [HarmonyPrefix]
         private static bool BattleEmotionCoinUI_Init_Pre(BattleEmotionCoinUI __instance, ref Dictionary<int, BattleEmotionCoinUI.BattleEmotionCoinData> ____librarian_lib, ref Dictionary<int, BattleEmotionCoinUI.BattleEmotionCoinData> ____enemy_lib, ref Dictionary<int, Queue<EmotionCoinType>> ____lib_queue, ref Dictionary<int, Queue<EmotionCoinType>> ____ene_queue, ref bool ____init)
         {
             try
@@ -612,10 +217,10 @@ namespace SummonLiberation
                 int num2 = 0;
                 Direction allyFormationDirection = Singleton<StageController>.Instance.AllyFormationDirection;
 
-                if (librarian2.Count < 8)
+                if (librarian2.Count < 9)
                 {
                     librarian2.Clear();
-                    for (int i = 0; i < 8; i++)
+                    for (int i = 0; i < 9; i++)
                     {
                         if (__instance.librarian.Length > i)
                         {
@@ -629,14 +234,14 @@ namespace SummonLiberation
                                 sinFactor = 1f,
                                 target = UnityEngine.Object.Instantiate(__instance.librarian[4].target, __instance.librarian[4].target)
                             });
-                            librarian2[i].target.localPosition += new Vector3(0f, (i - 4) * 64f + 26f, 0f);
+                            librarian2[i].target.localPosition += new Vector3(0f, (i - 4) * 64f, 0f);
                         }
                     }
                 }
-                if (enermy2.Count < 8)
+                if (enermy2.Count < 9)
                 {
                     enermy2.Clear();
-                    for (int i = 0; i < 8; i++)
+                    for (int i = 0; i < 9; i++)
                     {
                         if (__instance.enermy.Length > i)
                         {
@@ -650,7 +255,7 @@ namespace SummonLiberation
                                 sinFactor = 1f,
                                 target = UnityEngine.Object.Instantiate(__instance.enermy[4].target, __instance.enermy[4].target)
                             });
-                            enermy2[i].target.localPosition += new Vector3(0f, (i - 4) * 64f + 26f, 0f);
+                            enermy2[i].target.localPosition += new Vector3(0f, (i - 4) * 64f, 0f);
                         }
                     }
                 }
@@ -664,12 +269,12 @@ namespace SummonLiberation
                 {
                     if (battleUnitModel.faction == Faction.Enemy)
                     {
-                        if (num2 <= 7)
+                        if (num2 <= 8)
                         {
                             ____enemy_lib.Add(battleUnitModel.id, array2[num2++]);
                         }
                     }
-                    else if (num <= 7)
+                    else if (num <= 8)
                     {
                         ____librarian_lib.Add(battleUnitModel.id, array[num++]);
                     }
@@ -683,6 +288,9 @@ namespace SummonLiberation
             }
             return true;
         }
+        //BattleEmotionCoinUI
+        [HarmonyPatch(typeof(BattleEmotionCoinUI), "Acquisition")]
+        [HarmonyPrefix]
         private static bool BattleEmotionCoinUI_Acquisition_Pre(BattleUnitModel unit)
         {
             try
@@ -698,17 +306,23 @@ namespace SummonLiberation
             }
             return true;
         }
+        //EmotionBattleTeamModel
+        [HarmonyPatch(typeof(EmotionBattleTeamModel), "UpdateUnitList")]
+        [HarmonyPrefix]
         private static bool EmotionBattleTeamModel_UpdateUnitList_Pre(EmotionBattleTeamModel __instance, ref List<UnitBattleDataModel> ____unitlist)
-        {
+        {/*
             try
             {
             }
             catch (Exception ex)
             {
                 File.WriteAllText(Application.dataPath + "/Mods/TeamEmotion_UpdateListerror.txt", ex.Message + Environment.NewLine + ex.StackTrace);
-            }
+            }*/
             return true;
         }
+        //ProfileUI Unit Preview
+        [HarmonyPatch(typeof(UICharacterRenderer), "SetCharacter")]
+        [HarmonyPrefix]
         private static bool UICharacterRenderer_SetCharacter_Pre(UICharacterRenderer __instance, UnitDataModel unit, int index, bool forcelyReload = false)
         {
             if (__instance.characterList.Capacity < 199)
@@ -781,68 +395,66 @@ namespace SummonLiberation
                                 s = "_N";
                                 break;
                         }
-                        bool flag = false;
-                        int SkinType = 0;
+                        bool isCustom = false;
                         if (!string.IsNullOrEmpty(unit.workshopSkin))
                         {
-                            SkinType = 1;
-                        }
-                        else if ((unit.CustomBookItem.IsWorkshop || Singleton<CustomizingBookSkinLoader>.Instance.GetWorkshopBookSkinData("") != null) && customBookItem.ClassInfo.skinType == "Custom")
-                        {
-                            SkinType = 2;
-                        }
-                        if (SkinType == 1)
-                        {
                             WorkshopSkinData workshopSkinData = Singleton<CustomizingResourceLoader>.Instance.GetWorkshopSkinData(unit.workshopSkin);
-                            GameObject original = XLRoot.CustomAppearancePrefab;
+                            GameObject original = XLRoot.UICustomAppearancePrefab;
                             uicharacter.unitModel = unit;
-                            uicharacter.unitAppearance = UnityEngine.Object.Instantiate<GameObject>(original, __instance.characterRoot).GetComponent<CharacterAppearance>();
+                            uicharacter.unitAppearance = UnityEngine.Object.Instantiate(original, __instance.characterRoot).GetComponent<CharacterAppearance>();
                             uicharacter.unitAppearance.transform.localPosition = new Vector3(num, -2f, 10f);
                             uicharacter.unitAppearance.GetComponent<WorkshopSkinDataSetter>().SetData(workshopSkinData);
                             uicharacter.resName = workshopSkinData.dataName;
                             resName = workshopSkinData.dataName;
-                            flag = true;
-                        }
-                        else if (SkinType == 2)
-                        {
-                            string skinName = unit.CustomBookItem.ClassInfo.GetCharacterSkin();
-                            WorkshopSkinData workshopBookSkinData = Singleton<CustomizingBookSkinLoader>.Instance.GetWorkshopBookSkinData(unit.CustomBookItem.BookId.packageId, skinName, s) ?? Singleton<CustomizingResourceLoader>.Instance.GetWorkshopSkinData(skinName);
-                            GameObject original2 = XLRoot.UICustomAppearancePrefab;
-                            uicharacter.unitModel = unit;
-                            uicharacter.unitAppearance = UnityEngine.Object.Instantiate(original2, __instance.characterRoot).GetComponent<CharacterAppearance>();
-                            uicharacter.unitAppearance.transform.localPosition = new Vector3(num, -2f, 10f);
-                            WorkshopSkinDataSetter component = uicharacter.unitAppearance.GetComponent<WorkshopSkinDataSetter>();
-                            if (workshopBookSkinData != null)
-                            {
-                                component.SetData(workshopBookSkinData);
-                                flag = true;
-                            }
-                            uicharacter.resName = workshopBookSkinData.dataName;
-                            resName = workshopBookSkinData.dataName;
+                            isCustom = true;
                         }
                         else
                         {
-                            GameObject gameObject;
-                            if (unit.gender == Gender.Creature)
+                            if ((unit.CustomBookItem.IsWorkshop || Singleton<CustomizingBookSkinLoader>.Instance.GetWorkshopBookSkinData("") != null) && customBookItem.ClassInfo.skinType == "Custom")
                             {
-                                resName = characterName;
-                                gameObject = Singleton<AssetBundleManagerRemake>.Instance.LoadSdPrefab(resName);
-                            }
-                            else if (unit.gender == Gender.EGO)
-                            {
-                                resName = "[Prefab]" + characterName;
-                                gameObject = Singleton<AssetBundleManagerRemake>.Instance.LoadSdPrefab(resName);
+                                string characterSkin = unit.CustomBookItem.ClassInfo.GetCharacterSkin();
+                                WorkshopSkinData workshopBookSkinData = Singleton<CustomizingBookSkinLoader>.Instance.GetWorkshopBookSkinData(unit.CustomBookItem.BookId.packageId, characterSkin, s) ??
+                                    Singleton<CustomizingResourceLoader>.Instance.GetWorkshopSkinData(characterSkin);
+                                GameObject original = XLRoot.UICustomAppearancePrefab;
+                                uicharacter.unitModel = unit;
+                                uicharacter.unitAppearance = UnityEngine.Object.Instantiate(original, __instance.characterRoot).GetComponent<CharacterAppearance>();
+                                uicharacter.unitAppearance.transform.localPosition = new Vector3(num, -2f, 10f);
+                                WorkshopSkinDataSetter component = uicharacter.unitAppearance.GetComponent<WorkshopSkinDataSetter>();
+                                if (workshopBookSkinData != null)
+                                {
+                                    component.SetData(workshopBookSkinData);
+                                    isCustom = true;
+                                }
+                                uicharacter.resName = workshopBookSkinData.dataName;
+                                resName = workshopBookSkinData.dataName;
                             }
                             else
                             {
-                                gameObject = Singleton<AssetBundleManagerRemake>.Instance.LoadCharacterPrefab_DefaultMotion(characterName, s, out resName);
-                            }
-                            if (gameObject != null)
-                            {
-                                uicharacter.unitModel = unit;
-                                uicharacter.unitAppearance = UnityEngine.Object.Instantiate(gameObject, __instance.characterRoot).GetComponent<CharacterAppearance>();
-                                uicharacter.unitAppearance.transform.localPosition = new Vector3(num, -2f, 10f);
-                                uicharacter.resName = resName;
+                                GameObject gameObject;
+                                if (unit.gender == Gender.Creature)
+                                {
+                                    resName = characterName;
+                                    gameObject = Singleton<AssetBundleManagerRemake>.Instance.LoadSdPrefab(resName);
+                                }
+                                else
+                                {
+                                    if (unit.gender == Gender.EGO)
+                                    {
+                                        resName = "[Prefab]" + characterName;
+                                        gameObject = Singleton<AssetBundleManagerRemake>.Instance.LoadSdPrefab(resName);
+                                    }
+                                    else
+                                    {
+                                        gameObject = Singleton<AssetBundleManagerRemake>.Instance.LoadCharacterPrefab_DefaultMotion(characterName, s, out resName);
+                                    }
+                                }
+                                if (gameObject != null)
+                                {
+                                    uicharacter.unitModel = unit;
+                                    uicharacter.unitAppearance = UnityEngine.Object.Instantiate(gameObject, __instance.characterRoot).GetComponent<CharacterAppearance>();
+                                    uicharacter.unitAppearance.transform.localPosition = new Vector3(num, -2f, 10f);
+                                    uicharacter.resName = resName;
+                                }
                             }
                         }
                         if (uicharacter != null)
@@ -857,7 +469,7 @@ namespace SummonLiberation
                                 unitAppearance.ChangeLayer("CharacterAppearance_UI");
                             }
                         }
-                        if (flag)
+                        if (isCustom)
                         {
                             try
                             {
@@ -885,7 +497,7 @@ namespace SummonLiberation
                                 }
                             }
                         }
-                        __instance.StartCoroutine(BaseMod.Harmony_Patch.RenderCam_2(unit.textureIndex, __instance));
+                        __instance.StartCoroutine(UtilTools.RenderCam_2(unit.textureIndex, __instance));
                     }
                     catch (Exception message)
                     {
@@ -900,6 +512,9 @@ namespace SummonLiberation
             }
             return true;
         }
+        //ProfileUI Unit Preview
+        [HarmonyPatch(typeof(UICharacterRenderer), "GetRenderTextureByIndex")]
+        [HarmonyPrefix]
         private static bool UICharacterRenderer_GetRenderTextureByIndex_Pre(UICharacterRenderer __instance, ref Texture __result, int index)
         {
             try
@@ -921,6 +536,9 @@ namespace SummonLiberation
             }
             return true;
         }
+        //ProfileUI Unit Preview
+        [HarmonyPatch(typeof(UICharacterRenderer), "GetRenderTextureByIndexAndSize")]
+        [HarmonyPrefix]
         private static bool UICharacterRenderer_GetRenderTextureByIndexAndSize_Pre(UICharacterRenderer __instance, ref Texture __result, int index)
         {
             try
@@ -944,7 +562,10 @@ namespace SummonLiberation
                 File.WriteAllText(Application.dataPath + "/Mods/UICR_GTBIASerror.txt", ex.Message + Environment.NewLine + ex.StackTrace);
             }
             return true;
-        }
+        }/*
+        //StageTurnPageButton
+        [HarmonyPatch(typeof(GameOpeningController), "StopOpening")]
+        [HarmonyPostfix]
         private static void GameOpeningController_StopOpening_Post()
         {
             try
@@ -956,7 +577,10 @@ namespace SummonLiberation
             {
                 File.WriteAllText(Application.dataPath + "/Mods/StageTurnPage.txt", ex.Message + Environment.NewLine + ex.StackTrace);
             }
-        }
+        }*/
+        //StageTurnPageButton
+        [HarmonyPatch(typeof(UIBattleSettingPanel), "OnOpen")]
+        [HarmonyPrefix]
         private static void UIBattleSettingPanel_OnOpen_Pre()
         {
             try
@@ -969,6 +593,9 @@ namespace SummonLiberation
                 File.WriteAllText(Application.dataPath + "/Mods/StageTurnPage1.txt", ex.Message + Environment.NewLine + ex.StackTrace);
             }
         }
+        //StageTurnPageButton
+        [HarmonyPatch(typeof(UIEnemyCharacterListPanel), "Activate")]
+        [HarmonyPrefix]
         private static void UIEnemyCharacterListPanel_Activate_Pre(bool isTrue)
         {
             try
@@ -983,6 +610,9 @@ namespace SummonLiberation
                 File.WriteAllText(Application.dataPath + "/Mods/StageTurnPage2.txt", ex.Message + Environment.NewLine + ex.StackTrace);
             }
         }
+        //StageTurnPageButton
+        [HarmonyPatch(typeof(UIEnemyCharacterListPanel), "SetEnemyWave")]
+        [HarmonyPrefix]
         private static bool UIEnemyCharacterListPanel_SetEnemyWave_Pre(UIEnemyCharacterListPanel __instance, int targetWave, ref StageClassInfo ___currentEnemyStageinfo, UICharacterList ___CharacterList, ref int ___currentWave, GameObject ___ob_blueeffect)
         {
             try
@@ -1096,6 +726,9 @@ namespace SummonLiberation
             }
             return EnemyListCache[___currentEnemyStageinfo.id][___currentWave];
         }
+        //StageTurnPageButton
+        [HarmonyPatch(typeof(UILibrarianCharacterListPanel), "OnSetSephirah")]
+        [HarmonyPrefix]
         private static void UILibrarianCharacterListPanel_OnSetSephirah_Pre(SephirahType targetSephirah)
         {
             try
@@ -1107,6 +740,9 @@ namespace SummonLiberation
                 File.WriteAllText(Application.dataPath + "/Mods/StageTurnPage4.txt", ex.Message + Environment.NewLine + ex.StackTrace);
             }
         }
+        //StageTurnPageButton
+        [HarmonyPatch(typeof(UICharacterList), "InitEnemyList")]
+        [HarmonyPrefix]
         private static void UICharacterList_InitEnemyList_Pre(ref List<UnitDataModel> unitList)
         {
             try
@@ -1121,6 +757,9 @@ namespace SummonLiberation
                 File.WriteAllText(Application.dataPath + "/Mods/StageTurnPage5.txt", ex.Message + Environment.NewLine + ex.StackTrace);
             }
         }
+        //StageTurnPageButton
+        [HarmonyPatch(typeof(UICharacterList), "InitLibrarianList")]
+        [HarmonyPrefix]
         private static bool UICharacterList_InitLibrarianList_Pre(UICharacterList __instance, List<UnitDataModel> unitList, SephirahType sephirah, bool Selectable, Image ___highlightFrame)
         {
             if (unitList.Count <= 5)
@@ -1210,6 +849,9 @@ namespace SummonLiberation
             return true;
         }
 
+        //StageTurnPageButton
+        [HarmonyPatch(typeof(UICharacterList), "InitUnitListFromBattleData")]
+        [HarmonyPrefix]
         private static bool UICharacterList_InitUnitListFromBattleData_Pre(UICharacterList __instance, List<UnitBattleDataModel> dataList, Image ___highlightFrame)
         {
             if (dataList.Count <= 5)
@@ -1274,6 +916,9 @@ namespace SummonLiberation
             }
             return true;
         }
+        //StageTurnPageButton
+        [HarmonyPatch(typeof(UICharacterList), "InitBattleEnemyList")]
+        [HarmonyPrefix]
         private static void UICharacterList_InitBattleEnemyList_Pre(ref List<UnitBattleDataModel> unitList)
         {
             try
@@ -1288,6 +933,9 @@ namespace SummonLiberation
                 File.WriteAllText(Application.dataPath + "/Mods/StageTurnPage8.txt", ex.Message + Environment.NewLine + ex.StackTrace);
             }
         }
+        //StageTurnPageButton
+        [HarmonyPatch(typeof(UIBattleSettingPanel), "SetToggles")]
+        [HarmonyPrefix]
         private static bool UIBattleSettingPanel_SetToggles_Pre(UIBattleSettingPanel __instance, TextMeshProUGUI ___txt_AvailableUnitNumberText, Animator ___anim_availableText)
         {
             List<UnitBattleDataModel> battleDataModels = Singleton<StageController>.Instance.GetCurrentStageFloorModel().GetUnitBattleDataList();
@@ -1348,6 +996,9 @@ namespace SummonLiberation
             }
             return true;
         }
+        //StageTurnPageButton
+        [HarmonyPatch(typeof(UIBattleSettingPanel), "SelectedToggles")]
+        [HarmonyPrefix]
         private static bool UIBattleSettingPanel_SelectedToggles_Pre(UIBattleSettingPanel __instance, UICharacterSlot slot, TextMeshProUGUI ___txt_AvailableUnitNumberText, Animator ___anim_availableText)
         {
             List<UnitBattleDataModel> battleDataModels = Singleton<StageController>.Instance.GetCurrentStageFloorModel().GetUnitBattleDataList();
@@ -1421,11 +1072,14 @@ namespace SummonLiberation
             });
             ___anim_availableText.SetTrigger("Reveal");
         }
+        //StageTurnPageButton
+        [HarmonyPatch(typeof(BattleEmotionRewardInfoUI), "SetData")]
+        [HarmonyPrefix]
         private static bool BattleEmotionRewardInfoUI_SetData_Pre(List<UnitBattleDataModel> units, Faction faction, List<BattleEmotionRewardSlotUI> ___slots)
         {
             try
             {
-                while (units.Count > ___slots.Count && ___slots.Count < 8)
+                while (units.Count > ___slots.Count && ___slots.Count < 9)
                 {
                     BattleEmotionRewardSlotUI newUI = UnityEngine.Object.Instantiate(___slots[0]);
                     ___slots.Add(newUI);
@@ -1436,7 +1090,7 @@ namespace SummonLiberation
                 }
                 for (int i = 0; i < units.Count; i++)
                 {
-                    if (i > 7)
+                    if (i > 8)
                     {
                         break;
                     }
@@ -1972,16 +1626,7 @@ namespace SummonLiberation
 
     }
 }
-
-namespace SummonLiberation
-{
-    public enum PatchType
-    {
-        prefix,
-        postfix
-    }
-}
-
+/*
 namespace SummonLiberation
 {
     public class StageAndWave : IEquatable<StageAndWave>
@@ -2012,11 +1657,11 @@ namespace SummonLiberation
         {
             if (lhs == null)
             {
-                lhs = StageAndWave.None;
+                lhs = None;
             }
             if (rhs == null)
             {
-                rhs = StageAndWave.None;
+                rhs = None;
             }
             return lhs.Equals(rhs);
         }
@@ -2031,4 +1676,4 @@ namespace SummonLiberation
 
         public static readonly StageAndWave None = new StageAndWave(new LorId(-1), -1);
     }
-}
+}*/
