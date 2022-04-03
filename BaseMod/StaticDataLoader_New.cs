@@ -1118,31 +1118,7 @@ namespace BaseMod
             {
                 list.AddRange(LoadNewEnemyUnit(File.ReadAllText(fileInfo.FullName), uniqueId).list);
             }
-            foreach (EnemyUnitClassInfo enemyUnitClassInfo in list)
-            {
-            }
             AddEnemyUnitByMod(uniqueId, list, _workshopEnemyDict, _list);
-        }
-        private static void AddEnemyUnitByMod(string workshopId, List<EnemyUnitClassInfo> list, Dictionary<string, List<EnemyUnitClassInfo>> _workshopEnemyDict, List<EnemyUnitClassInfo> _list)
-        {
-            if (_workshopEnemyDict == null)
-            {
-                _workshopEnemyDict = new Dictionary<string, List<EnemyUnitClassInfo>>();
-            }
-            if (!_workshopEnemyDict.ContainsKey(workshopId))
-            {
-                _workshopEnemyDict.Add(workshopId, list);
-            }
-            else
-            {
-                _workshopEnemyDict[workshopId].RemoveAll((EnemyUnitClassInfo x) => list.Exists((EnemyUnitClassInfo y) => x.id == y.id));
-                _workshopEnemyDict[workshopId].AddRange(list);
-            }
-            if (_list != null)
-            {
-                _list.RemoveAll((EnemyUnitClassInfo x) => list.Exists((EnemyUnitClassInfo y) => x.id == y.id));
-                _list.AddRange(list);
-            }
         }
         private static EnemyUnitClassRoot LoadNewEnemyUnit(string str, string uniqueId)
         {
@@ -1192,6 +1168,27 @@ namespace BaseMod
                 result.list.Add(new EnemyUnitClassInfo().CopyEnemyUnitClassInfo(enemyUnitClassInfo_New, uniqueId));
             }
             return result;
+        }
+        private static void AddEnemyUnitByMod(string workshopId, List<EnemyUnitClassInfo> list, Dictionary<string, List<EnemyUnitClassInfo>> _workshopEnemyDict, List<EnemyUnitClassInfo> _list)
+        {
+            if (_workshopEnemyDict == null)
+            {
+                _workshopEnemyDict = new Dictionary<string, List<EnemyUnitClassInfo>>();
+            }
+            if (!_workshopEnemyDict.ContainsKey(workshopId))
+            {
+                _workshopEnemyDict.Add(workshopId, list);
+            }
+            else
+            {
+                _workshopEnemyDict[workshopId].RemoveAll((EnemyUnitClassInfo x) => list.Exists((EnemyUnitClassInfo y) => x.id == y.id));
+                _workshopEnemyDict[workshopId].AddRange(list);
+            }
+            if (_list != null)
+            {
+                _list.RemoveAll((EnemyUnitClassInfo x) => list.Exists((EnemyUnitClassInfo y) => x.id == y.id));
+                _list.AddRange(list);
+            }
         }
         private static void LoadStage_MOD(DirectoryInfo dir, string uniqueId, Dictionary<string, List<StageClassInfo>> _workshopStageDict, List<StageClassInfo> _list)
         {

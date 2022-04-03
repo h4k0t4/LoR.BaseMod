@@ -284,7 +284,7 @@ namespace BaseMod
             OrcTools.CharacterNameDic.Clear();
             OrcTools.EgoDic.Clear();
             OrcTools.DropItemDic.Clear();
-            OrcTools.DialogDic.Clear();
+            OrcTools.dialogDetails.Clear();
         }
         private static void LoadBookSkins(Dictionary<string, List<Workshop.WorkshopSkinData>> _bookSkinData)
         {
@@ -1994,31 +1994,37 @@ namespace BaseMod
                 }
                 else
                 {
-                    if (OrcTools.DialogDic.TryGetValue(lorId, out string characterName))
+                    OrcTools.DialogDetail dialogDetail = OrcTools.DialogDetail.FindDialogInBookID(lorId);
+                    if (dialogDetail == null)
                     {
-                        BattleDialogCharacter characterData = null;
-                        if (!string.IsNullOrEmpty(characterName) && OrcTools.DialogRelationDic.TryGetValue(lorId, out string groupID))
+                        dialogDetail = OrcTools.DialogDetail.FindDialogInCharacterID(lorId);
+                    }
+                    if (dialogDetail == null)
+                    {
+                        return true;
+                    }
+                    BattleDialogCharacter characterData = null;
+                    if (!string.IsNullOrEmpty(dialogDetail.GroupName))
+                    {
+                        characterData = Singleton<BattleDialogXmlList>.Instance.GetCharacterData(dialogDetail.GroupName, dialogDetail.CharacterID.id.ToString());
+                    }
+                    if (characterData == null)
+                    {
+                        characterData = Singleton<BattleDialogXmlList>.Instance.GetCharacterData_Mod(lorId.packageId, dialogDetail.CharacterID.id);
+                    }
+                    Type type = FindBattleDialogueModel(dialogDetail.CharacterName, characterData.characterID, lorId.IsWorkshop());
+                    if (type == null)
+                    {
+                        __instance.battleDialogModel = new BattleDialogueModel(characterData);
+                        return false;
+                    }
+                    else
+                    {
+                        __instance.battleDialogModel = Activator.CreateInstance(type, new object[]
                         {
-                            characterData = Singleton<BattleDialogXmlList>.Instance.GetCharacterData(groupID, lorId.id.ToString());
-                        }
-                        if (characterData == null)
-                        {
-                            characterData = Singleton<BattleDialogXmlList>.Instance.GetCharacterData_Mod(lorId.packageId, lorId.id);
-                        }
-                        Type type = FindBattleDialogueModel(characterName, characterData.characterID);
-                        if (type == null)
-                        {
-                            __instance.battleDialogModel = new BattleDialogueModel(characterData);
-                            return false;
-                        }
-                        else
-                        {
-                            __instance.battleDialogModel = Activator.CreateInstance(type, new object[]
-                            {
                                 characterData
-                            }) as BattleDialogueModel;
-                            return false;
-                        }
+                        }) as BattleDialogueModel;
+                        return false;
                     }
                 }
             }
@@ -2028,7 +2034,7 @@ namespace BaseMod
             }
             return true;
         }
-        public static Type FindBattleDialogueModel(string name, string id)
+        public static Type FindBattleDialogueModel(string name, string id, bool isMod)
         {
             if (!string.IsNullOrEmpty(name) && CustomBattleDialogModel.TryGetValue(name, out Type type))
             {
@@ -2038,11 +2044,14 @@ namespace BaseMod
             {
                 return type2;
             }
-            foreach (Type type3 in Assembly.LoadFile(Application.dataPath + "/Managed/Assembly-CSharp.dll").GetTypes())
+            if (!isMod)
             {
-                if (type3.Name == "BattleDialogueModel_" + id.Trim())
+                foreach (Type type3 in Assembly.LoadFile(Application.dataPath + "/Managed/Assembly-CSharp.dll").GetTypes())
                 {
-                    return type3;
+                    if (type3.Name == "BattleDialogueModel_" + id.Trim())
+                    {
+                        return type3;
+                    }
                 }
             }
             return null;
@@ -3965,10 +3974,9 @@ namespace BaseMod
                                 {
                                     string mapName = text.Substring("custom_".Length).Trim();
                                     string resourcePath = Singleton<ModContentManager>.Instance.GetModPath(__instance.GetStageModel().ClassInfo.workshopID) + "/CustomMap_" + mapName;
-                                    Debug.LogError("resourcePath:" + resourcePath);
-                                    if (CustomMapManager.TryGetValue(mapName, out Type mapmanager))
+                                    if (CustomMapManager.TryGetValue(mapName + "MapManager", out Type mapmanager))
                                     {
-                                        Debug.LogError("Find MapManager:" + mapName);
+                                        Debug.Log("Find MapManager:" + mapName);
                                         if (mapmanager == null)
                                         {
                                             return true;
@@ -3989,6 +3997,7 @@ namespace BaseMod
                                     }
                                     else if (Directory.Exists(resourcePath))
                                     {
+                                        Debug.Log("Find SimpleMap:" + resourcePath);
                                         GameObject gameObject = Util.LoadPrefab("LibraryMaps/KETHER_Map", SingletonBehavior<BattleSceneRoot>.Instance.transform);
                                         GameObject borderFrame = gameObject.GetComponent<MapManager>().borderFrame;
                                         GameObject backgroundRoot = gameObject.GetComponent<MapManager>().backgroundRoot;

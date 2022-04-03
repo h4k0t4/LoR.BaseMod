@@ -2,6 +2,7 @@
 using LOR_XML;
 using System;
 using System.Collections.Generic;
+using ExtendedLoader;
 
 namespace GTMDProjectMoon
 {
@@ -205,7 +206,7 @@ namespace GTMDProjectMoon
             battleDialogRoot.characterList = new List<BattleDialogCharacter>();
             foreach (BattleDialogCharacter_New battleDialogCharacter_New in newinfo.characterList)
             {
-                int dialogbookId = 0;
+                int dialogbookId = -1;
                 try
                 {
                     dialogbookId = int.Parse(battleDialogCharacter_New.characterID);
@@ -213,6 +214,7 @@ namespace GTMDProjectMoon
                 catch { }
                 battleDialogCharacter_New.workshopId = uniqueId;
                 battleDialogCharacter_New.bookId = dialogbookId;
+                battleDialogRoot.groupName = newinfo.groupName;
                 battleDialogRoot.characterList.Add(new BattleDialogCharacter()
                 {
                     characterID = battleDialogCharacter_New.characterID,
@@ -224,7 +226,25 @@ namespace GTMDProjectMoon
                 {
                     battleDialogCharacter_New.characterName = "";
                 }
-                DialogDic[new LorId(uniqueId, battleDialogCharacter_New.bookId)] = battleDialogCharacter_New.characterName;
+                if (dialogbookId == -1)
+                {
+                    continue;
+                }
+                DialogDetail dialogDetail = DialogDetail.FindDialogInCharacterID(new LorId(uniqueId, dialogbookId));
+                if (dialogDetail == null)
+                {
+                    dialogDetails.Add(new DialogDetail
+                    {
+                        GroupName = newinfo.groupName,
+                        BookId = new LorId(uniqueId, dialogbookId),
+                        CharacterID = new LorId(uniqueId, dialogbookId),
+                        CharacterName = battleDialogCharacter_New.characterName,
+                    });
+                }
+                else
+                {
+                    dialogDetail.CharacterName = battleDialogCharacter_New.characterName;
+                }
             }
             return battleDialogRoot;
         }
@@ -240,6 +260,12 @@ namespace GTMDProjectMoon
                 {
                     battleDialogRelationWithBookID_New.workshopId = "";
                 }
+                int characterId = -1;
+                try
+                {
+                    characterId = int.Parse(battleDialogRelationWithBookID_New.characterID);
+                }
+                catch { }
                 BattleDialogRelation.Add(new BattleDialogRelationWithBookID
                 {
                     bookID = battleDialogRelationWithBookID_New.bookID,
@@ -251,7 +277,25 @@ namespace GTMDProjectMoon
                 {
                     battleDialogRelationWithBookID_New.groupName = "";
                 }
-                DialogRelationDic[new LorId(battleDialogRelationWithBookID_New.workshopId, battleDialogRelationWithBookID_New.bookID)] = battleDialogRelationWithBookID_New.groupName;
+                if (characterId == -1)
+                {
+                    continue;
+                }
+                DialogDetail dialogDetail = DialogDetail.FindDialogInBookID(new LorId(battleDialogRelationWithBookID_New.workshopId, battleDialogRelationWithBookID_New.bookID));
+                if (dialogDetail == null)
+                {
+                    dialogDetails.Add(new DialogDetail
+                    {
+                        GroupName = battleDialogRelationWithBookID_New.groupName,
+                        BookId = new LorId(battleDialogRelationWithBookID_New.workshopId, battleDialogRelationWithBookID_New.bookID),
+                        CharacterID = new LorId(battleDialogRelationWithBookID_New.workshopId, characterId),
+                    });
+                }
+                else
+                {
+                    dialogDetail.GroupName = battleDialogRelationWithBookID_New.groupName;
+                    dialogDetail.CharacterID = new LorId(battleDialogRelationWithBookID_New.workshopId, characterId);
+                }
             }
             return BattleDialogRelation;
         }
@@ -264,7 +308,7 @@ namespace GTMDProjectMoon
             }
             return (BookCategory)BookCategoryDic[category];
         }
-        static Dictionary<string, int> LoadDefaultBookCategories()
+        private static Dictionary<string, int> LoadDefaultBookCategories()
         {
             var dic = new Dictionary<string, int>();
             foreach (BookCategory cat in Enum.GetValues(typeof(BookCategory)))
@@ -277,6 +321,79 @@ namespace GTMDProjectMoon
             }
             return dic;
         }
+        public class DialogDetail
+        {
+            public static DialogDetail FindDialogInBookID(LorId id)
+            {
+                if (id == null)
+                {
+                    return null;
+                }
+                foreach (DialogDetail dialogDetail in dialogDetails)
+                {
+                    if (dialogDetail.BookId == id)
+                    {
+                        return dialogDetail;
+                    }
+                }
+                return null;
+            }
+            public static DialogDetail FindDialogInCharacterName(string name)
+            {
+                if (string.IsNullOrEmpty(name))
+                {
+                    return null;
+                }
+                foreach (DialogDetail dialogDetail in dialogDetails)
+                {
+                    if (dialogDetail.CharacterName == name)
+                    {
+                        return dialogDetail;
+                    }
+                }
+                return null;
+            }
+            public static DialogDetail FindDialogInGroupName(string name)
+            {
+                if (string.IsNullOrEmpty(name))
+                {
+                    return null;
+                }
+                foreach (DialogDetail dialogDetail in dialogDetails)
+                {
+                    if (dialogDetail.GroupName == name)
+                    {
+                        return dialogDetail;
+                    }
+                }
+                return null;
+            }
+            public static DialogDetail FindDialogInCharacterID(LorId id)
+            {
+                if (id == null)
+                {
+                    return null;
+                }
+                foreach (DialogDetail dialogDetail in dialogDetails)
+                {
+                    if (dialogDetail.CharacterID == id)
+                    {
+                        return dialogDetail;
+                    }
+                }
+                return null;
+            }
+
+            public string CharacterName = "";
+
+            public string GroupName = "";
+
+            public LorId CharacterID = LorId.None;
+
+            public LorId BookId = LorId.None;
+        }
+
+        public static List<DialogDetail> dialogDetails = new List<DialogDetail>();
 
         public static Dictionary<LorId, List<LorId>> OnlyCardDic = new Dictionary<LorId, List<LorId>>();
 
@@ -293,10 +410,6 @@ namespace GTMDProjectMoon
         public static Dictionary<EmotionEgoXmlInfo, LorId> EgoDic = new Dictionary<EmotionEgoXmlInfo, LorId>();
 
         public static Dictionary<LorId, List<EnemyDropItemTable_New>> DropItemDic = new Dictionary<LorId, List<EnemyDropItemTable_New>>();
-
-        public static Dictionary<LorId, string> DialogDic = new Dictionary<LorId, string>();
-
-        public static Dictionary<LorId, string> DialogRelationDic = new Dictionary<LorId, string>();
 
         public static Dictionary<string, int> BookCategoryDic = LoadDefaultBookCategories();
 

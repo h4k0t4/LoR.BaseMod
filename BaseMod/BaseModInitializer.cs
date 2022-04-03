@@ -6,6 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
+using UnityEngine;
 
 namespace BaseMod
 {
@@ -27,6 +28,7 @@ namespace BaseMod
             baseMod.Patch(typeof(ModContentManager).GetMethod("SaveSelectionData", AccessTools.all), new HarmonyMethod(method), null, null, null, null);
             method = typeof(BaseModInitializer).GetMethod("NotReferenceError", AccessTools.all);
             baseMod.Patch(typeof(EntryScene).GetMethod("CheckModError", AccessTools.all), new HarmonyMethod(method), null, null, null, null);
+            ClearReference();
             //Initialize
             Harmony_Patch.Init();
             //Patch
@@ -61,6 +63,21 @@ namespace BaseMod
             extendedLoader.PatchAll(typeof(ExtendedLoader.ThumbPatch));
             extendedLoader.PatchAll(typeof(ExtendedLoader.VanillaSkinCopyPatch));
             extendedLoader.PatchAll(typeof(ExtendedLoader.WorkshopSetterPatch));
+        }
+        private static void ClearReference()
+        {
+            foreach (string name in References)
+            {
+                string path = Application.dataPath + "/Managed/" + name + ".dll";
+                if (File.Exists(path))
+                {
+                    try
+                    {
+                        File.Delete(path);
+                    }
+                    catch { }
+                }
+            }
         }
         private static void RemoveWarnings()
         {
@@ -122,5 +139,16 @@ namespace BaseMod
         {
             Singleton<ModContentManager>.Instance._logs = Singleton<ModContentManager>.Instance._logs.FindAll((string x) => !x.Contains("The same assembly name already exists"));
         }
+        private static readonly List<string> References = new List<string>()
+        {
+            "0Harmony",
+            "Mono.Cecil",
+            "Mono.Cecil.Mdb",
+            "Mono.Cecil.Pdb",
+            "Mono.Cecil.Rocks",
+            "MonoMod.Common",
+            "MonoMod.RuntimeDetour",
+            "MonoMod.Utils",
+        };
     }
 }

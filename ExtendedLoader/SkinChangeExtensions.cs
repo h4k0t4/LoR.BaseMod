@@ -334,7 +334,21 @@ namespace ExtendedLoader
             {
                 return Singleton<CustomizingResourceLoader>.Instance.GetWorkshopSkinData(name.name);
             }
-            WorkshopSkinData result = loader.GetWorkshopBookSkinData(name.packageId, name.name + gender);
+            WorkshopSkinData result;
+            try
+            {
+                result = loader.GetWorkshopBookSkinData(name.packageId, name.name + gender);
+            }
+            catch (Exception ex)
+            {
+                result = loader.GetWorkshopBookSkinData(name.packageId, name.name);
+                File.AppendAllLines(Application.dataPath + "/Mods/" + "A fucking idiot didn't check null.txt", new string[]
+                {
+                    "A fucking idiot from " + name.packageId + " use a stupid way to add special motion and didn't check null",
+                    ex.Message,
+                    ex.StackTrace,
+                });
+            }
             if (result == null)
             {
                 result = loader.GetWorkshopBookSkinData(name.packageId, name.name);

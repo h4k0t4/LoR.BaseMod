@@ -264,8 +264,8 @@ namespace BaseMod
                 try
                 {
                     LoadLocalizeFile_MOD(_dirInfo);
-                    LoadBattleDialogues_MOD(_dirInfo, BattleDialogues, workshopId);
                     LoadBattleDialogues_Relations_MOD(_dirInfo, BattleDialoguesRelations, BattleDialogues, workshopId);
+                    LoadBattleDialogues_MOD(_dirInfo, BattleDialogues, workshopId);
                     LoadCharactersName_MOD(_dirInfo, CharactersName, workshopId);
                     LoadLibrariansName_MOD(_dirInfo, LibrariansName);
                     LoadStageName_MOD(_dirInfo, StageName, workshopId);
