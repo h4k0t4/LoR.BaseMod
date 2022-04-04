@@ -88,7 +88,7 @@ namespace BaseMod
             try
             {
                 path = Path.GetDirectoryName(Uri.UnescapeDataString(new UriBuilder(Assembly.GetExecutingAssembly().CodeBase).Path));
-                IsEditing = false;
+                //IsEditing = false;
                 AssemList = new List<Assembly>();
                 LoadedAssembly = new List<string>();
                 ArtWorks = null;
@@ -4299,7 +4299,7 @@ namespace BaseMod
         //ChangeLanguage
         [HarmonyPatch(typeof(TextDataModel), "InitTextData")]
         [HarmonyPostfix]
-        private static void TextDataModel_InitTextData_Post(string currentLanguage)
+        private static void TextDataModel_InitTextData_Post()
         {
             try
             {
@@ -6213,7 +6213,7 @@ namespace BaseMod
 
         public static Dictionary<Assembly, string> ModWorkShopId;
 
-        private static bool IsEditing = false;
+        //private static bool IsEditing = false;
 
         private static DiceCardXmlInfo errNullCard = null;
 

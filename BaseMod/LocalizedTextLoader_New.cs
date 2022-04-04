@@ -777,6 +777,7 @@ namespace BaseMod
         }
         private static void LoadBookDescriptions_MOD(DirectoryInfo dir, Dictionary<string, List<BookDesc>> _dic, Dictionary<int, BookDesc> BookDescOrigin, string uniqueId)
         {
+            LoadBookDescriptions_MOD_Checking(dir, _dic, BookDescOrigin, uniqueId);
             if (dir.GetDirectories().Length != 0)
             {
                 DirectoryInfo[] directories = dir.GetDirectories();

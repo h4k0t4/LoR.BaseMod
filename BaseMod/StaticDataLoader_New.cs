@@ -1456,7 +1456,7 @@ namespace BaseMod
                     }
                 }
             }
-            Comparison<StageClassInfo> comparison = (StageClassInfo info1, StageClassInfo info2) => (int)(10f * (info2.invitationInfo.bookValue - info1.invitationInfo.bookValue));
+            int comparison(StageClassInfo info1, StageClassInfo info2) => (int)(10f * (info2.invitationInfo.bookValue - info1.invitationInfo.bookValue));
             _valueCondList[1].Sort(comparison);
             _valueCondList[2].Sort(comparison);
             _valueCondList[3].Sort(comparison);
