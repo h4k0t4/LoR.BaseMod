@@ -2,7 +2,6 @@
 using LOR_XML;
 using System;
 using System.Collections.Generic;
-using ExtendedLoader;
 
 namespace GTMDProjectMoon
 {

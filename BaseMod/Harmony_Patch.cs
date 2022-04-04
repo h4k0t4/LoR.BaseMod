@@ -102,21 +102,25 @@ namespace BaseMod
                 ModStoryCG = new Dictionary<LorId, ModStroyCG>();
                 ModWorkShopId = new Dictionary<Assembly, string>();
                 IsModStorySelected = false;
-                //CreateShortcuts();
-                ExportDocuments();
+                try
+                {
+                    CreateShortcuts();
+                    ExportDocuments();
+                }
+                catch { }
             }
             catch (Exception ex)
             {
                 Singleton<ModContentManager>.Instance.AddErrorLog(ex.Message + Environment.NewLine + ex.StackTrace);
                 File.WriteAllText(Application.dataPath + "/Mods/error.log", ex.Message + Environment.NewLine + ex.StackTrace);
             }
-        }/*
+        }
         private static void CreateShortcuts()
         {
             string baseModPath = Singleton<ModContentManager>.Instance.GetModPath("BaseMod");
-            UtilTools.CreateShortcut(Application.dataPath + "/Managed/BaseMod/", "BaseMod for Workshop", baseModPath, "Way to BaseMod Files");
-            UtilTools.CreateShortcut(Application.dataPath + "/Managed/BaseMod/", "SaveFiles", SaveManager.savePath, "Way to BaseMod Files");
-        }*/
+            UtilTools.CreateShortcut(Application.dataPath + "/Managed/BaseMod/", "BaseMod for Workshop", baseModPath, baseModPath, "Way to BaseMod Files");
+            UtilTools.CreateShortcut(Application.dataPath + "/Mods/", "Player.log", SaveManager.savePath + "/Player.log", SaveManager.savePath, "Way to Player.log");
+        }
         private static void ExportDocuments()
         {
             string baseModPath = Singleton<ModContentManager>.Instance.GetModPath("BaseMod");
@@ -4781,7 +4785,7 @@ namespace BaseMod
         {
             try
             {
-                ModSaveTool.SaveModSaveData();
+                ModSaveTool.SaveModSaveData();/*
                 if (File.Exists(SaveManager.savePath + "/Player.log"))
                 {
                     if (File.Exists(Application.dataPath + "/Mods/Player.log"))
@@ -4789,7 +4793,7 @@ namespace BaseMod
                         File.Delete(Application.dataPath + "/Mods/Player.log");
                     }
                     File.Copy(SaveManager.savePath + "/Player.log", Application.dataPath + "/Mods/Player.log");
-                }
+                }*/
             }
             catch (Exception ex)
             {
