@@ -263,20 +263,90 @@ namespace BaseMod
                 }
                 try
                 {
-                    LoadLocalizeFile_MOD(_dirInfo);
-                    LoadBattleDialogues_Relations_MOD(_dirInfo, BattleDialoguesRelations, BattleDialogues, workshopId);
-                    LoadBattleDialogues_MOD(_dirInfo, BattleDialogues, workshopId);
-                    LoadCharactersName_MOD(_dirInfo, CharactersName, workshopId);
-                    LoadLibrariansName_MOD(_dirInfo, LibrariansName);
-                    LoadStageName_MOD(_dirInfo, StageName, workshopId);
-                    LoadPassiveDesc_MOD(_dirInfo, PassiveDesc, workshopId);
-                    LoadGiftDesc_MOD(_dirInfo, GiftDesc);
-                    LoadBattleCardDescriptions_MOD(_dirInfo, BattleCardDesc, workshopId);
-                    LoadBattleCardAbilityDescriptions_MOD(_dirInfo, BattleCardAbilityDesc);
-                    LoadBattleEffectTexts_MOD(_dirInfo, BattleEffectTexts);
-                    LoadAbnormalityCardDescriptions_MOD(_dirInfo, AbnormalityCardDesc);
-                    LoadAbnormalityAbilityDescription_MOD(_dirInfo, AbnormalityAbilityText);
-                    LoadBookDescriptions_MOD(_dirInfo, BookDesc, BookDescOrigin, workshopId);
+                    string moddingPath = GetModdingPath(_dirInfo, "etc");
+                    DirectoryInfo directory = new DirectoryInfo(moddingPath);
+                    if (Directory.Exists(moddingPath))
+                    {
+                        LoadLocalizeFile_MOD(directory);
+                    }
+                    moddingPath = GetModdingPath(_dirInfo, "Book_BattleDlg_Relations");
+                    directory = new DirectoryInfo(moddingPath);
+                    if (Directory.Exists(moddingPath))
+                    {
+                        LoadBattleDialogues_Relations_MOD(directory, BattleDialoguesRelations, BattleDialogues, workshopId);
+                    }
+                    moddingPath = GetModdingPath(_dirInfo, "BattleDialogues");
+                    directory = new DirectoryInfo(moddingPath);
+                    if (Directory.Exists(moddingPath))
+                    {
+                        LoadBattleDialogues_MOD(directory, BattleDialogues, workshopId);
+                    }
+                    moddingPath = GetModdingPath(_dirInfo, "CharactersName");
+                    directory = new DirectoryInfo(moddingPath);
+                    if (Directory.Exists(moddingPath))
+                    {
+                        LoadCharactersName_MOD(directory, CharactersName, workshopId);
+                    }
+                    moddingPath = GetModdingPath(_dirInfo, "NormalLibrariansNamePreset");
+                    directory = new DirectoryInfo(moddingPath);
+                    if (Directory.Exists(moddingPath))
+                    {
+                        LoadLibrariansName_MOD(directory, LibrariansName);
+                    }
+                    moddingPath = GetModdingPath(_dirInfo, "StageName");
+                    directory = new DirectoryInfo(moddingPath);
+                    if (Directory.Exists(moddingPath))
+                    {
+                        LoadStageName_MOD(directory, StageName, workshopId);
+                    }
+                    moddingPath = GetModdingPath(_dirInfo, "PassiveDesc");
+                    directory = new DirectoryInfo(moddingPath);
+                    if (Directory.Exists(moddingPath))
+                    {
+                        LoadPassiveDesc_MOD(directory, PassiveDesc, workshopId);
+                    }
+                    moddingPath = GetModdingPath(_dirInfo, "GiftTexts");
+                    directory = new DirectoryInfo(moddingPath);
+                    if (Directory.Exists(moddingPath))
+                    {
+                        LoadGiftDesc_MOD(directory, GiftDesc);
+                    }
+                    moddingPath = GetModdingPath(_dirInfo, "BattlesCards");
+                    directory = new DirectoryInfo(moddingPath);
+                    if (Directory.Exists(moddingPath))
+                    {
+                        LoadBattleCardDescriptions_MOD(directory, BattleCardDesc, workshopId);
+                    }
+                    moddingPath = GetModdingPath(_dirInfo, "BattleCardAbilities");
+                    directory = new DirectoryInfo(moddingPath);
+                    if (Directory.Exists(moddingPath))
+                    {
+                        LoadBattleCardAbilityDescriptions_MOD(directory, BattleCardAbilityDesc);
+                    }
+                    moddingPath = GetModdingPath(_dirInfo, "EffectTexts");
+                    directory = new DirectoryInfo(moddingPath);
+                    if (Directory.Exists(moddingPath))
+                    {
+                        LoadBattleEffectTexts_MOD(directory, BattleEffectTexts);
+                    }
+                    moddingPath = GetModdingPath(_dirInfo, "AbnormalityCards");
+                    directory = new DirectoryInfo(moddingPath);
+                    if (Directory.Exists(moddingPath))
+                    {
+                        LoadAbnormalityCardDescriptions_MOD(directory, AbnormalityCardDesc);
+                    }
+                    moddingPath = GetModdingPath(_dirInfo, "AbnormalityAbilities");
+                    directory = new DirectoryInfo(moddingPath);
+                    if (Directory.Exists(moddingPath))
+                    {
+                        LoadAbnormalityAbilityDescription_MOD(directory, AbnormalityAbilityText);
+                    }
+                    moddingPath = GetModdingPath(_dirInfo, "Books");
+                    directory = new DirectoryInfo(moddingPath);
+                    if (Directory.Exists(moddingPath))
+                    {
+                        LoadBookDescriptions_MOD(directory, BookDesc, BookDescOrigin, workshopId);
+                    }
                 }
                 catch (Exception ex)
                 {
@@ -287,10 +357,14 @@ namespace BaseMod
         }
         public static void LoadLocalizeFile_MOD(DirectoryInfo dir)
         {
-            string moddingPath = GetModdingPath(dir, "etc");
-            if (Directory.Exists(moddingPath))
+            LoadLocalizeFile_MOD_Checking(dir, TextDataModel.textDic);
+            if (dir.GetDirectories().Length != 0)
             {
-                LoadLocalizeFile_MOD_Checking(new DirectoryInfo(moddingPath), TextDataModel.textDic);
+                DirectoryInfo[] directories = dir.GetDirectories();
+                for (int i = 0; i < directories.Length; i++)
+                {
+                    LoadLocalizeFile_MOD(directories[i]);
+                }
             }
         }
         public static void LoadLocalizeFile_MOD_Checking(DirectoryInfo dir, Dictionary<string, string> dic)
@@ -313,39 +387,16 @@ namespace BaseMod
                 }
             }
         }
-        private static void LoadBattleDialogues_MOD(DirectoryInfo dir, Dictionary<string, LOR_XML.BattleDialogRoot> dic, string uniqueId)
-        {
-            string moddingPath = GetModdingPath(dir, "BattleDialogues");
-            if (Directory.Exists(moddingPath))
-            {
-                LoadBattleDialogues_MOD_Checking(new DirectoryInfo(moddingPath), dic, uniqueId);
-            }
-        }
-        private static void LoadBattleDialogues_MOD_Checking(DirectoryInfo dir, Dictionary<string, LOR_XML.BattleDialogRoot> dic, string uniqueId)
-        {
-            Dictionary<string, LOR_XML.BattleDialogRoot> dictionary = new Dictionary<string, LOR_XML.BattleDialogRoot>();
-            List<BattleDialogCharacter> list = new List<BattleDialogCharacter>();
-            foreach (FileInfo fileInfo in dir.GetFiles())
-            {
-                using (StringReader stringReader = new StringReader(File.ReadAllText(fileInfo.FullName)))
-                {
-                    GTMDProjectMoon.BattleDialogRoot battleDialogRoot = (GTMDProjectMoon.BattleDialogRoot)new XmlSerializer(typeof(GTMDProjectMoon.BattleDialogRoot)).Deserialize(stringReader);
-                    dictionary.Add(battleDialogRoot.groupName, new LOR_XML.BattleDialogRoot().CopyBattleDialogRoot(battleDialogRoot, uniqueId));
-                    list.AddRange(dictionary[battleDialogRoot.groupName].characterList);
-                }
-            }
-            foreach (KeyValuePair<string, LOR_XML.BattleDialogRoot> keyValuePair in dictionary)
-            {
-                dic[keyValuePair.Key] = keyValuePair.Value;
-            }
-            Singleton<BattleDialogXmlList>.Instance.AddDialogByMod(list);
-        }
         private static void LoadBattleDialogues_Relations_MOD(DirectoryInfo dir, List<BattleDialogRelationWithBookID> _relationList, Dictionary<string, LOR_XML.BattleDialogRoot> _dictionary, string uniqueId)
         {
-            string moddingPath = GetModdingPath(dir, "Book_BattleDlg_Relations");
-            if (Directory.Exists(moddingPath))
+            LoadBattleDialogues_Relations_MOD_Checking(dir, _relationList, _dictionary, uniqueId);
+            if (dir.GetDirectories().Length != 0)
             {
-                LoadBattleDialogues_Relations_MOD_Checking(new DirectoryInfo(moddingPath), _relationList, _dictionary, uniqueId);
+                DirectoryInfo[] directories = dir.GetDirectories();
+                for (int i = 0; i < directories.Length; i++)
+                {
+                    LoadBattleDialogues_Relations_MOD(directories[i], _relationList, _dictionary, uniqueId);
+                }
             }
         }
         private static void LoadBattleDialogues_Relations_MOD_Checking(DirectoryInfo dir, List<BattleDialogRelationWithBookID> _relationList, Dictionary<string, LOR_XML.BattleDialogRoot> _dictionary, string uniqueId)
@@ -379,12 +430,47 @@ namespace BaseMod
                 _relationList.Add(battleDialogRelationWithBookID);
             }
         }
+        private static void LoadBattleDialogues_MOD(DirectoryInfo dir, Dictionary<string, LOR_XML.BattleDialogRoot> dic, string uniqueId)
+        {
+            LoadBattleDialogues_MOD_Checking(dir, dic, uniqueId);
+            if (dir.GetDirectories().Length != 0)
+            {
+                DirectoryInfo[] directories = dir.GetDirectories();
+                for (int i = 0; i < directories.Length; i++)
+                {
+                    LoadBattleDialogues_MOD(directories[i], dic, uniqueId);
+                }
+            }
+        }
+        private static void LoadBattleDialogues_MOD_Checking(DirectoryInfo dir, Dictionary<string, LOR_XML.BattleDialogRoot> dic, string uniqueId)
+        {
+            Dictionary<string, LOR_XML.BattleDialogRoot> dictionary = new Dictionary<string, LOR_XML.BattleDialogRoot>();
+            List<BattleDialogCharacter> list = new List<BattleDialogCharacter>();
+            foreach (FileInfo fileInfo in dir.GetFiles())
+            {
+                using (StringReader stringReader = new StringReader(File.ReadAllText(fileInfo.FullName)))
+                {
+                    GTMDProjectMoon.BattleDialogRoot battleDialogRoot = (GTMDProjectMoon.BattleDialogRoot)new XmlSerializer(typeof(GTMDProjectMoon.BattleDialogRoot)).Deserialize(stringReader);
+                    dictionary.Add(battleDialogRoot.groupName, new LOR_XML.BattleDialogRoot().CopyBattleDialogRoot(battleDialogRoot, uniqueId));
+                    list.AddRange(dictionary[battleDialogRoot.groupName].characterList);
+                }
+            }
+            foreach (KeyValuePair<string, LOR_XML.BattleDialogRoot> keyValuePair in dictionary)
+            {
+                dic[keyValuePair.Key] = keyValuePair.Value;
+            }
+            Singleton<BattleDialogXmlList>.Instance.AddDialogByMod(list);
+        }
         private static void LoadCharactersName_MOD(DirectoryInfo dir, Dictionary<int, string> dic, string uniqueId)
         {
-            string moddingPath = GetModdingPath(dir, "CharactersName");
-            if (Directory.Exists(moddingPath))
+            LoadCharactersName_MOD_Checking(dir, dic, uniqueId);
+            if (dir.GetDirectories().Length != 0)
             {
-                LoadCharactersName_MOD_Checking(new DirectoryInfo(moddingPath), dic, uniqueId);
+                DirectoryInfo[] directories = dir.GetDirectories();
+                for (int i = 0; i < directories.Length; i++)
+                {
+                    LoadCharactersName_MOD(directories[i], dic, uniqueId);
+                }
             }
         }
         private static void LoadCharactersName_MOD_Checking(DirectoryInfo dir, Dictionary<int, string> dic, string uniqueId)
@@ -412,10 +498,14 @@ namespace BaseMod
         }
         private static void LoadLibrariansName_MOD(DirectoryInfo dir, Dictionary<int, string> dic)
         {
-            string moddingPath = GetModdingPath(dir, "NormalLibrariansNamePreset");
-            if (Directory.Exists(moddingPath))
+            LoadLibrariansName_MOD_Checking(dir, dic);
+            if (dir.GetDirectories().Length != 0)
             {
-                LoadLibrariansName_MOD_Checking(new DirectoryInfo(moddingPath), dic);
+                DirectoryInfo[] directories = dir.GetDirectories();
+                for (int i = 0; i < directories.Length; i++)
+                {
+                    LoadLibrariansName_MOD(directories[i], dic);
+                }
             }
         }
         private static void LoadLibrariansName_MOD_Checking(DirectoryInfo dir, Dictionary<int, string> dic)
@@ -436,10 +526,14 @@ namespace BaseMod
         }
         private static void LoadStageName_MOD(DirectoryInfo dir, Dictionary<int, string> dic, string uniqueId)
         {
-            string moddingPath = GetModdingPath(dir, "StageName");
-            if (Directory.Exists(moddingPath))
+            LoadStageName_MOD_Checking(dir, dic, uniqueId);
+            if (dir.GetDirectories().Length != 0)
             {
-                LoadStageName_MOD_Checking(new DirectoryInfo(moddingPath), dic, uniqueId);
+                DirectoryInfo[] directories = dir.GetDirectories();
+                for (int i = 0; i < directories.Length; i++)
+                {
+                    LoadStageName_MOD(directories[i], dic, uniqueId);
+                }
             }
         }
         private static void LoadStageName_MOD_Checking(DirectoryInfo dir, Dictionary<int, string> dic, string uniqueId)
@@ -468,10 +562,14 @@ namespace BaseMod
         }
         private static void LoadPassiveDesc_MOD(DirectoryInfo dir, Dictionary<LorId, PassiveDesc> dic, string uniqueId)
         {
-            string moddingPath = GetModdingPath(dir, "PassiveDesc");
-            if (Directory.Exists(moddingPath))
+            LoadPassiveDesc_MOD_Checking(dir, dic, uniqueId);
+            if (dir.GetDirectories().Length != 0)
             {
-                LoadPassiveDesc_MOD_Checking(new DirectoryInfo(moddingPath), dic, uniqueId);
+                DirectoryInfo[] directories = dir.GetDirectories();
+                for (int i = 0; i < directories.Length; i++)
+                {
+                    LoadPassiveDesc_MOD(directories[i], dic, uniqueId);
+                }
             }
         }
         private static void LoadPassiveDesc_MOD_Checking(DirectoryInfo dir, Dictionary<LorId, PassiveDesc> dic, string uniqueId)
@@ -492,10 +590,14 @@ namespace BaseMod
         }
         private static void LoadGiftDesc_MOD(DirectoryInfo dir, Dictionary<string, GiftText> dic)
         {
-            string moddingPath = GetModdingPath(dir, "GiftTexts");
-            if (Directory.Exists(moddingPath))
+            LoadGiftDesc_MOD_Checking(dir, dic);
+            if (dir.GetDirectories().Length != 0)
             {
-                LoadGiftDesc_MOD_Checking(new DirectoryInfo(moddingPath), dic);
+                DirectoryInfo[] directories = dir.GetDirectories();
+                for (int i = 0; i < directories.Length; i++)
+                {
+                    LoadGiftDesc_MOD(directories[i], dic);
+                }
             }
         }
         private static void LoadGiftDesc_MOD_Checking(DirectoryInfo dir, Dictionary<string, GiftText> dic)
@@ -516,10 +618,14 @@ namespace BaseMod
         }
         private static void LoadBattleCardDescriptions_MOD(DirectoryInfo dir, Dictionary<LorId, BattleCardDesc> dic, string uniqueId)
         {
-            string moddingPath = GetModdingPath(dir, "BattlesCards");
-            if (Directory.Exists(moddingPath))
+            LoadBattleCardDescriptions_MOD_Checking(dir, dic, uniqueId);
+            if (dir.GetDirectories().Length != 0)
             {
-                LoadBattleCardDescriptions_MOD_Checking(new DirectoryInfo(moddingPath), dic, uniqueId);
+                DirectoryInfo[] directories = dir.GetDirectories();
+                for (int i = 0; i < directories.Length; i++)
+                {
+                    LoadBattleCardDescriptions_MOD(directories[i], dic, uniqueId);
+                }
             }
         }
         private static void LoadBattleCardDescriptions_MOD_Checking(DirectoryInfo dir, Dictionary<LorId, BattleCardDesc> dic, string uniqueId)
@@ -544,10 +650,14 @@ namespace BaseMod
         }
         private static void LoadBattleCardAbilityDescriptions_MOD(DirectoryInfo dir, Dictionary<string, BattleCardAbilityDesc> root)
         {
-            string moddingPath = GetModdingPath(dir, "BattleCardAbilities");
-            if (Directory.Exists(moddingPath))
+            LoadBattleCardAbilityDescriptions_MOD_Checking(dir, root);
+            if (dir.GetDirectories().Length != 0)
             {
-                LoadBattleCardAbilityDescriptions_MOD_Checking(new DirectoryInfo(moddingPath), root);
+                DirectoryInfo[] directories = dir.GetDirectories();
+                for (int i = 0; i < directories.Length; i++)
+                {
+                    LoadBattleCardAbilityDescriptions_MOD(directories[i], root);
+                }
             }
         }
         private static void LoadBattleCardAbilityDescriptions_MOD_Checking(DirectoryInfo dir, Dictionary<string, BattleCardAbilityDesc> root)
@@ -572,10 +682,14 @@ namespace BaseMod
         }
         private static void LoadBattleEffectTexts_MOD(DirectoryInfo dir, Dictionary<string, BattleEffectText> root)
         {
-            string moddingPath = GetModdingPath(dir, "EffectTexts");
-            if (Directory.Exists(moddingPath))
+            LoadBattleEffectTexts_MOD_Checking(dir, root);
+            if (dir.GetDirectories().Length != 0)
             {
-                LoadBattleEffectTexts_MOD_Checking(new DirectoryInfo(moddingPath), root);
+                DirectoryInfo[] directories = dir.GetDirectories();
+                for (int i = 0; i < directories.Length; i++)
+                {
+                    LoadBattleEffectTexts_MOD(directories[i], root);
+                }
             }
         }
         private static void LoadBattleEffectTexts_MOD_Checking(DirectoryInfo dir, Dictionary<string, BattleEffectText> root)
@@ -600,10 +714,14 @@ namespace BaseMod
         }
         private static void LoadAbnormalityCardDescriptions_MOD(DirectoryInfo dir, Dictionary<string, AbnormalityCard> root)
         {
-            string moddingPath = GetModdingPath(dir, "AbnormalityCards");
-            if (Directory.Exists(moddingPath))
+            LoadAbnormalityCardDescriptions_MOD_Checking(dir, root);
+            if (dir.GetDirectories().Length != 0)
             {
-                LoadAbnormalityCardDescriptions_MOD_Checking(new DirectoryInfo(moddingPath), root);
+                DirectoryInfo[] directories = dir.GetDirectories();
+                for (int i = 0; i < directories.Length; i++)
+                {
+                    LoadAbnormalityCardDescriptions_MOD(directories[i], root);
+                }
             }
         }
         private static void LoadAbnormalityCardDescriptions_MOD_Checking(DirectoryInfo dir, Dictionary<string, AbnormalityCard> root)
@@ -629,10 +747,14 @@ namespace BaseMod
         }
         private static void LoadAbnormalityAbilityDescription_MOD(DirectoryInfo dir, Dictionary<string, AbnormalityAbilityText> root)
         {
-            string moddingPath = GetModdingPath(dir, "AbnormalityAbilities");
-            if (Directory.Exists(moddingPath))
+            LoadAbnormalityAbilityDescription_MOD_Checking(dir, root);
+            if (dir.GetDirectories().Length != 0)
             {
-                LoadAbnormalityAbilityDescription_MOD_Checking(new DirectoryInfo(moddingPath), root);
+                DirectoryInfo[] directories = dir.GetDirectories();
+                for (int i = 0; i < directories.Length; i++)
+                {
+                    LoadAbnormalityAbilityDescription_MOD(directories[i], root);
+                }
             }
         }
         private static void LoadAbnormalityAbilityDescription_MOD_Checking(DirectoryInfo dir, Dictionary<string, AbnormalityAbilityText> root)
@@ -655,10 +777,13 @@ namespace BaseMod
         }
         private static void LoadBookDescriptions_MOD(DirectoryInfo dir, Dictionary<string, List<BookDesc>> _dic, Dictionary<int, BookDesc> BookDescOrigin, string uniqueId)
         {
-            string moddingPath = GetModdingPath(dir, "Books");
-            if (Directory.Exists(moddingPath))
+            if (dir.GetDirectories().Length != 0)
             {
-                LoadBookDescriptions_MOD_Checking(new DirectoryInfo(moddingPath), _dic, BookDescOrigin, uniqueId);
+                DirectoryInfo[] directories = dir.GetDirectories();
+                for (int i = 0; i < directories.Length; i++)
+                {
+                    LoadBookDescriptions_MOD(directories[i], _dic, BookDescOrigin, uniqueId);
+                }
             }
         }
         private static void LoadBookDescriptions_MOD_Checking(DirectoryInfo dir, Dictionary<string, List<BookDesc>> _dic, Dictionary<int, BookDesc> BookDescOrigin, string uniqueId)

@@ -17,6 +17,9 @@ namespace BaseMod
 {
     public static class Tools
     {
+        /// <summary>
+        /// 生成LorId
+        /// </summary>
         public static LorId MakeLorId(int id)
         {
             Assembly callingAssembly = Assembly.GetCallingAssembly();

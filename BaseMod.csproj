@@ -24,6 +24,8 @@
     <WarningLevel>4</WarningLevel>
     <CodeAnalysisRuleSet>ConcurrencyRules.ruleset</CodeAnalysisRuleSet>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <DocumentationFile>
+    </DocumentationFile>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -146,6 +148,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="BaseMod\BaseModInitializerHP.cs" />
     <Compile Include="BaseMod\BaseModInitializer.cs" />
     <Compile Include="BaseMod\CustomGiftAppearance.cs" />
     <Compile Include="BaseMod\CustomMapManager.cs" />
