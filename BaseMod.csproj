@@ -179,6 +179,13 @@
     <Compile Include="ExtendedLoader\SpriteUtilExtension.cs" />
     <Compile Include="ExtendedLoader\LorName.cs" />
     <Compile Include="ExtendedLoader\SkinChangeExtensions.cs" />
+    <Compile Include="GTMDProjectMoon\DeckXml_New.cs" />
+    <Compile Include="GTMDProjectMoon\DropBookXml_New.cs" />
+    <Compile Include="GTMDProjectMoon\GiftXml_New.cs" />
+    <Compile Include="GTMDProjectMoon\EmotionCardXml_New.cs" />
+    <Compile Include="GTMDProjectMoon\FormationXml_New.cs" />
+    <Compile Include="GTMDProjectMoon\Xml_New - 复制.cs" />
+    <Compile Include="GTMDProjectMoon\PassiveXml_New.cs" />
     <Compile Include="GTMDProjectMoon\BookXml_New.cs" />
     <Compile Include="GTMDProjectMoon\BattleDialogXml_New.cs" />
     <Compile Include="GTMDProjectMoon\CardXml_New.cs" />

@@ -56,7 +56,7 @@ namespace ModSettingTool
             UIAlarmPopup.instance.anim.updateMode = AnimatorUpdateMode.Normal;
             TextMeshProUGUI txt_alarm = UIAlarmPopup.instance.txt_alarm;
             txt_alarm.text = TextDataModel.GetText(alarmtype, args);
-            if (string.IsNullOrEmpty(txt_alarm.text))
+            if (string.IsNullOrWhiteSpace(txt_alarm.text))
             {
                 txt_alarm.text = string.Format(alarmtype, args);
             }

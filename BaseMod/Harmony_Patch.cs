@@ -102,6 +102,7 @@ namespace BaseMod
                 ModStoryCG = new Dictionary<LorId, ModStroyCG>();
                 ModWorkShopId = new Dictionary<Assembly, string>();
                 IsModStorySelected = false;
+                OrcTools.LoadDefaultBookCategories();
                 try
                 {
                     CreateShortcuts();
@@ -469,7 +470,7 @@ namespace BaseMod
                         string text2 = array[array.Length - 1];
                         workshopAppearanceInfo.path = text;
                         workshopAppearanceInfo.uniqueId = text2;
-                        if (string.IsNullOrEmpty(workshopAppearanceInfo.bookName))
+                        if (string.IsNullOrWhiteSpace(workshopAppearanceInfo.bookName))
                         {
                             workshopAppearanceInfo.bookName = text2;
                         }
@@ -492,7 +493,7 @@ namespace BaseMod
                         string text2 = array[array.Length - 1];
                         workshopAppearanceInfo.path = text;
                         workshopAppearanceInfo.uniqueId = text2;
-                        if (string.IsNullOrEmpty(workshopAppearanceInfo.bookName))
+                        if (string.IsNullOrWhiteSpace(workshopAppearanceInfo.bookName))
                         {
                             workshopAppearanceInfo.bookName = text2;
                         }
@@ -503,7 +504,7 @@ namespace BaseMod
         }
         private static Workshop.WorkshopAppearanceInfo LoadCustomAppearanceInfo(string rootPath, string xml)
         {
-            if (string.IsNullOrEmpty(xml))
+            if (string.IsNullOrWhiteSpace(xml))
             {
                 return null;
             }
@@ -558,7 +559,7 @@ namespace BaseMod
                 {
                     workshopAppearanceInfo.isClothCustom = true;
                     string innerText2 = xmlNode3.SelectSingleNode("Name").InnerText;
-                    if (!string.IsNullOrEmpty(innerText2))
+                    if (!string.IsNullOrWhiteSpace(innerText2))
                     {
                         workshopAppearanceInfo.bookName = innerText2;
                     }
@@ -1071,7 +1072,7 @@ namespace BaseMod
         {
             try
             {
-                if (!string.IsNullOrEmpty(unit.workshopSkin))
+                if (!string.IsNullOrWhiteSpace(unit.workshopSkin))
                 {
                     return true;
                 }
@@ -1644,7 +1645,7 @@ namespace BaseMod
             try
             {
                 string bookName = Singleton<BookDescXmlList>.Instance.GetBookName(new LorId(__instance.workshopID, __instance.TextId));
-                if (!string.IsNullOrEmpty(bookName))
+                if (!string.IsNullOrWhiteSpace(bookName))
                 {
                     __result = bookName;
                     return false;
@@ -1894,7 +1895,7 @@ namespace BaseMod
             try
             {
                 string dropBookName = TextDataModel.GetText(__instance._targetText, Array.Empty<object>());
-                if (!string.IsNullOrEmpty(dropBookName))
+                if (!string.IsNullOrWhiteSpace(dropBookName))
                 {
                     __result = dropBookName;
                     return false;
@@ -2008,7 +2009,7 @@ namespace BaseMod
                         return true;
                     }
                     BattleDialogCharacter characterData = null;
-                    if (!string.IsNullOrEmpty(dialogDetail.GroupName))
+                    if (!string.IsNullOrWhiteSpace(dialogDetail.GroupName))
                     {
                         characterData = Singleton<BattleDialogXmlList>.Instance.GetCharacterData(dialogDetail.GroupName, dialogDetail.CharacterID.id.ToString());
                     }
@@ -2040,11 +2041,11 @@ namespace BaseMod
         }
         public static Type FindBattleDialogueModel(string name, string id, bool isMod)
         {
-            if (!string.IsNullOrEmpty(name) && CustomBattleDialogModel.TryGetValue(name, out Type type))
+            if (!string.IsNullOrWhiteSpace(name) && CustomBattleDialogModel.TryGetValue(name, out Type type))
             {
                 return type;
             }
-            if (!string.IsNullOrEmpty(id) && CustomBattleDialogModel.TryGetValue(id, out Type type2))
+            if (!string.IsNullOrWhiteSpace(id) && CustomBattleDialogModel.TryGetValue(id, out Type type2))
             {
                 return type2;
             }
@@ -2246,7 +2247,7 @@ namespace BaseMod
             return cardArtwork;
         }
         //If has script and is not creating a new playingcard,return _script
-        [HarmonyPatch(typeof(BattleDiceCardModel), "CreateDiceCardSelfAbilityScript")]
+        /*[HarmonyPatch(typeof(BattleDiceCardModel), "CreateDiceCardSelfAbilityScript")]
         [HarmonyPrefix]
         private static bool BattleDiceCardModel_CreateDiceCardSelfAbilityScript_Pre(ref DiceCardSelfAbilityBase __result, DiceCardSelfAbilityBase ____script)
         {
@@ -2268,7 +2269,7 @@ namespace BaseMod
                 File.WriteAllText(Application.dataPath + "/Mods/ScriptFixPreerror.txt", ex.Message + Environment.NewLine + ex.StackTrace);
             }
             return true;
-        }
+        }*/
         //If has script,create a playingcard for cardModel in hand
         [HarmonyPatch(typeof(BattleDiceCardModel), "CreateDiceCardSelfAbilityScript")]
         [HarmonyPostfix]
@@ -2289,23 +2290,13 @@ namespace BaseMod
                         cardAbility = __result
                     };
                     __result.card = card;
-                    return;
                 }
-                if (__result.card.owner == null)
+                else
                 {
                     __result.card.owner = __instance.owner;
-                    return;
-                }
-                if (__result.card.card == null)
-                {
                     __result.card.card = __instance;
-                    return;
                 }
-                if (__result.card.card.owner == null)
-                {
-                    __result.card.card.owner = __instance.owner;
-                    return;
-                }
+                return;
             }
             catch (Exception ex)
             {
@@ -2356,7 +2347,7 @@ namespace BaseMod
         {
             try
             {
-                if (string.IsNullOrEmpty(scriptName))
+                if (string.IsNullOrWhiteSpace(scriptName))
                 {
                     return;
                 }
@@ -2422,7 +2413,7 @@ namespace BaseMod
                 try
                 {
                     string keywordIconId = __instance.keywordIconId;
-                    if (!string.IsNullOrEmpty(keywordIconId) && ArtWorks.TryGetValue("CardBuf_" + keywordIconId, out Sprite sprite) && sprite != null)
+                    if (!string.IsNullOrWhiteSpace(keywordIconId) && ArtWorks.TryGetValue("CardBuf_" + keywordIconId, out Sprite sprite) && sprite != null)
                     {
                         ____iconInit = true;
                         ____bufIcon = sprite;
@@ -2452,10 +2443,13 @@ namespace BaseMod
                     baseCost = battleDiceCardBuf.GetCost(baseCost);
                 }
                 int abilityCostAdder = 0;
-                if (__instance.owner != null && !__instance.XmlData.IsPersonal())
+                if (__instance.owner != null)
                 {
-                    abilityCostAdder += __instance.owner.emotionDetail.GetCardCostAdder(__instance);
-                    abilityCostAdder += __instance.owner.bufListDetail.GetCardCostAdder(__instance);
+                    if (!__instance.XmlData.IsPersonal())
+                    {
+                        abilityCostAdder += __instance.owner.emotionDetail.GetCardCostAdder(__instance);
+                        abilityCostAdder += __instance.owner.bufListDetail.GetCardCostAdder(__instance);
+                    }
                     if (____script != null)
                     {
                         abilityCostAdder += ____script.GetCostAdder(__instance.owner, __instance);
@@ -2500,7 +2494,7 @@ namespace BaseMod
             try
             {
                 string passiveName = Singleton<PassiveDescXmlList>.Instance.GetName(__instance.passive.id);
-                if (!string.IsNullOrEmpty(passiveName))
+                if (!string.IsNullOrWhiteSpace(passiveName))
                 {
                     __result = passiveName;
                     return false;
@@ -2517,7 +2511,7 @@ namespace BaseMod
             try
             {
                 string passiveDesc = Singleton<PassiveDescXmlList>.Instance.GetDesc(__instance.passive.id);
-                if (!string.IsNullOrEmpty(passiveDesc))
+                if (!string.IsNullOrWhiteSpace(passiveDesc))
                 {
                     __result = passiveDesc;
                     return false;
@@ -2640,7 +2634,7 @@ namespace BaseMod
                 }
             }
             string keywordIconId = __instance.keywordIconId;
-            if (!string.IsNullOrEmpty(keywordIconId) && !BattleUnitBuf._bufIconDictionary.ContainsKey(keywordIconId) && ArtWorks.TryGetValue(keywordIconId, out Sprite sprite))
+            if (!string.IsNullOrWhiteSpace(keywordIconId) && !BattleUnitBuf._bufIconDictionary.ContainsKey(keywordIconId) && ArtWorks.TryGetValue(keywordIconId, out Sprite sprite))
             {
                 BattleUnitBuf._bufIconDictionary[keywordIconId] = sprite;
             }
@@ -2699,7 +2693,7 @@ namespace BaseMod
         }
         public static EmotionCardAbilityBase FindEmotionCardAbility(string name)
         {
-            if (!string.IsNullOrEmpty(name) && CustomEmotionCardAbility.TryGetValue(name, out Type type))
+            if (!string.IsNullOrWhiteSpace(name) && CustomEmotionCardAbility.TryGetValue(name, out Type type))
             {
                 return Activator.CreateInstance(type) as EmotionCardAbilityBase;
             }
@@ -3061,7 +3055,7 @@ namespace BaseMod
         }
         //EpisodeSlotName
         [HarmonyPatch(typeof(UIBookStoryPanel), "OnSelectEpisodeSlot")]
-        [HarmonyPrefix]
+        [HarmonyPostfix]
         private static void UIBookStoryPanel_OnSelectEpisodeSlot_Post(UIBookStoryEpisodeSlot slot, TextMeshProUGUI ___selectedEpisodeText)
         {
             try
@@ -3308,7 +3302,7 @@ namespace BaseMod
                 return false;
             }
             string modPath = Singleton<ModContentManager>.Instance.GetModPath(stageClassInfo.GetStartStory().packageId);
-            if (string.IsNullOrEmpty(modPath) || string.IsNullOrEmpty(stageClassInfo.GetStartStory().story))
+            if (string.IsNullOrWhiteSpace(modPath) || string.IsNullOrWhiteSpace(stageClassInfo.GetStartStory().story))
             {
                 return false;
             }
@@ -3333,7 +3327,7 @@ namespace BaseMod
                     cg = ((SceneEffect)new XmlSerializer(typeof(SceneEffect)).Deserialize(streamReader2)).cg.src;
                 }
             }
-            if (string.IsNullOrEmpty(cg))
+            if (string.IsNullOrWhiteSpace(cg))
             {
                 return false;
             }
@@ -3348,7 +3342,7 @@ namespace BaseMod
             try
             {
                 string stroycg = ModSaveTool.GetModSaveData("BaseMod").GetString("ModLastStroyCG");
-                if (!string.IsNullOrEmpty(stroycg) && File.Exists(stroycg))
+                if (!string.IsNullOrWhiteSpace(stroycg) && File.Exists(stroycg))
                 {
                     Texture2D texture2D = new Texture2D(1, 1);
                     texture2D.LoadImage(File.ReadAllBytes(stroycg));
@@ -3966,7 +3960,7 @@ namespace BaseMod
                         {
                             foreach (string text in mapInfo)
                             {
-                                if (string.IsNullOrEmpty(text))
+                                if (string.IsNullOrWhiteSpace(text))
                                 {
                                     continue;
                                 }
@@ -4338,7 +4332,7 @@ namespace BaseMod
         {
             try
             {
-                if (resource == null || string.IsNullOrEmpty(resource))
+                if (resource == null || string.IsNullOrWhiteSpace(resource))
                 {
                     __result = null;
                     return false;
@@ -4956,7 +4950,7 @@ namespace BaseMod
         }
         public static PassiveAbilityBase FindGiftPassiveAbility(string name)
         {
-            if (!string.IsNullOrEmpty(name) && CustomGiftPassive.TryGetValue(name, out Type type))
+            if (!string.IsNullOrWhiteSpace(name) && CustomGiftPassive.TryGetValue(name, out Type type))
             {
                 return Activator.CreateInstance(type) as PassiveAbilityBase;
             }
@@ -5313,6 +5307,60 @@ namespace BaseMod
             }
             catch { }
             return list;
+        }
+        [HarmonyPatch(typeof(BattleActionTypoSlot), "SetData")]
+        [HarmonyPostfix]
+        private static void BattleActionTypoSlot_SetData_Post(BattleActionTypoSlot __instance, EffectTypoData data)
+        {
+            try
+            {
+                if (data != null && data is EffectTypoData_New)
+                {
+                    if ((data as EffectTypoData_New).battleUIPassiveSet != null)
+                    {
+                        EffectTypoData_New.BattleUIPassiveSet newBattleUIPassiveSet = (data as EffectTypoData_New).battleUIPassiveSet;
+                        BattleUIPassiveSet uIPassiveSet = new BattleUIPassiveSet()
+                        {
+                            type = (data as EffectTypoData_New).type,
+                            frame = newBattleUIPassiveSet.frame,
+                            Icon = newBattleUIPassiveSet.Icon,
+                            IconGlow = newBattleUIPassiveSet.IconGlow,
+                            textColor = newBattleUIPassiveSet.textColor,
+                            IconColor = newBattleUIPassiveSet.IconColor,
+                            IconGlowColor = newBattleUIPassiveSet.IconGlowColor,
+                        };
+                        UISpriteDataManager.instance.BattleUIEffectSetDic[uIPassiveSet.type] = uIPassiveSet;
+                    }
+                    if (UISpriteDataManager.instance.BattleUIEffectSetDic.TryGetValue((data as EffectTypoData_New).type, out BattleUIPassiveSet battleUIPassiveSet))
+                    {
+                        __instance.img_Icon.sprite = battleUIPassiveSet.Icon;
+                        __instance.img_Icon.color = battleUIPassiveSet.IconColor;
+                        if (battleUIPassiveSet.IconGlow != null)
+                        {
+                            __instance.img_IconGlow.enabled = true;
+                            __instance.img_IconGlow.sprite = battleUIPassiveSet.IconGlow;
+                            __instance.img_IconGlow.color = battleUIPassiveSet.IconGlowColor;
+                        }
+                        else
+                        {
+                            __instance.img_IconGlow.enabled = false;
+                        }
+                        __instance.img_Frame.sprite = battleUIPassiveSet.frame;
+                        __instance.txt_desc.color = battleUIPassiveSet.textColor;
+                        __instance.txt_title.color = battleUIPassiveSet.textColor;
+                        Color underlayColor = SingletonBehavior<DirectingDataSetter>.Instance.OnGrayScale ? (battleUIPassiveSet.textColor * battleUIPassiveSet.textColor.grayscale) : (battleUIPassiveSet.textColor * SingletonBehavior<DirectingDataSetter>.Instance.graycolor);
+                        __instance.msetter_title.underlayColor = underlayColor;
+
+                        Vector2 sizeDelta2 = __instance.img_Frame.rectTransform.sizeDelta;
+                        sizeDelta2.y = ((data.Title != "") ? __instance.TitleFrameHeight : __instance.defaultFrameHeight);
+                        __instance.img_Frame.rectTransform.sizeDelta = sizeDelta2;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                File.WriteAllText(Application.dataPath + "/Mods/CustomEffectUISeterror.log", ex.Message + Environment.NewLine + ex.StackTrace);
+            }
         }
 
         //Skeleton

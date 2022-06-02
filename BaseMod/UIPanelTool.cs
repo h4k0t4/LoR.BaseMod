@@ -220,7 +220,7 @@ namespace BaseMod
         }
         public static void SetParent(Transform Target, string input)
         {
-            if (string.IsNullOrEmpty(input))
+            if (string.IsNullOrWhiteSpace(input))
             {
                 DoSetParent(Target, null);
                 return;

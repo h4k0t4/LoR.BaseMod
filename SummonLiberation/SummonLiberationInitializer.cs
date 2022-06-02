@@ -396,7 +396,7 @@ namespace SummonLiberation
                                 break;
                         }
                         bool isCustom = false;
-                        if (!string.IsNullOrEmpty(unit.workshopSkin))
+                        if (!string.IsNullOrWhiteSpace(unit.workshopSkin))
                         {
                             WorkshopSkinData workshopSkinData = Singleton<CustomizingResourceLoader>.Instance.GetWorkshopSkinData(unit.workshopSkin);
                             GameObject original = XLRoot.UICustomAppearancePrefab;

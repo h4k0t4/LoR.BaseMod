@@ -98,11 +98,11 @@ namespace ModSettingTool
         }
         public static SaveData GetModSaveData(string WorkshopId = "")
         {
-            if (string.IsNullOrEmpty(WorkshopId))
+            if (string.IsNullOrWhiteSpace(WorkshopId))
             {
                 WorkshopId = Tools.GetModId(Assembly.GetCallingAssembly());
             }
-            if (string.IsNullOrEmpty(WorkshopId))
+            if (string.IsNullOrWhiteSpace(WorkshopId))
             {
                 return null;
             }
@@ -114,11 +114,11 @@ namespace ModSettingTool
         }
         public static void SaveString(string name, string value, string WorkshopId = "")
         {
-            if (string.IsNullOrEmpty(WorkshopId))
+            if (string.IsNullOrWhiteSpace(WorkshopId))
             {
                 WorkshopId = Tools.GetModId(Assembly.GetCallingAssembly());
             }
-            if (string.IsNullOrEmpty(WorkshopId))
+            if (string.IsNullOrWhiteSpace(WorkshopId))
             {
                 return;
             }
@@ -126,11 +126,11 @@ namespace ModSettingTool
         }
         public static void Saveint(string name, int value, string WorkshopId = "")
         {
-            if (string.IsNullOrEmpty(WorkshopId))
+            if (string.IsNullOrWhiteSpace(WorkshopId))
             {
                 WorkshopId = Tools.GetModId(Assembly.GetCallingAssembly());
             }
-            if (string.IsNullOrEmpty(WorkshopId))
+            if (string.IsNullOrWhiteSpace(WorkshopId))
             {
                 return;
             }
@@ -138,11 +138,11 @@ namespace ModSettingTool
         }
         public static void Saveulong(string name, ulong value, string WorkshopId = "")
         {
-            if (string.IsNullOrEmpty(WorkshopId))
+            if (string.IsNullOrWhiteSpace(WorkshopId))
             {
                 WorkshopId = Tools.GetModId(Assembly.GetCallingAssembly());
             }
-            if (string.IsNullOrEmpty(WorkshopId))
+            if (string.IsNullOrWhiteSpace(WorkshopId))
             {
                 return;
             }

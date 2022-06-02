@@ -26,7 +26,7 @@ namespace BaseMod
             //Initialize
             Harmony_Patch.Init();
             //RemoveWarnings
-            MethodInfo method = typeof(BaseModInitialize).GetMethod("NotReferenceError", AccessTools.all);
+            MethodInfo method = typeof(BaseModInitialize).GetMethod("NoReferenceError", AccessTools.all);
             baseMod.Patch(typeof(EntryScene).GetMethod("CheckModError", AccessTools.all), new HarmonyMethod(method), null, null, null, null);
             /*method = typeof(BaseModInitialize).GetMethod("ModContentManager_SaveSelectionData_Pre", AccessTools.all);
             baseMod.Patch(typeof(ModContentManager).GetMethod("SaveSelectionData", AccessTools.all), new HarmonyMethod(method), null, null, null, null);*/
@@ -37,9 +37,7 @@ namespace BaseMod
             {
             GlobalGameManager.Instance.ver,
             Environment.NewLine,
-            "BaseMod_New 2.12 ver",
-            Environment.NewLine,
-            "by Boss An's bug rasing floor"
+            "BaseMod for workshop 2.2 ver"
             });
             //Load OtherMod
             Harmony_Patch.LoadModFiles();
@@ -76,7 +74,7 @@ namespace BaseMod
                 Singleton<ModContentManager>.Instance.GetErrorLogs().Remove(errorLog);
             }
         }*/
-        private static void NotReferenceError()
+        private static void NoReferenceError()
         {
             Singleton<ModContentManager>.Instance._logs = Singleton<ModContentManager>.Instance._logs.FindAll((string x) => !x.Contains("The same assembly name already exists"));
         }

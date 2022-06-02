@@ -68,7 +68,7 @@ namespace ExtendedLoader
 
         public string Compress()
         {
-            if (string.IsNullOrEmpty(packageId))
+            if (string.IsNullOrWhiteSpace(packageId))
             {
                 return name;
             }
@@ -95,7 +95,7 @@ namespace ExtendedLoader
 
         public bool IsNone()
         {
-            return string.IsNullOrEmpty(name);
+            return string.IsNullOrWhiteSpace(name);
         }
 
         public override bool Equals(object obj)
@@ -197,12 +197,12 @@ namespace ExtendedLoader
 
         public static bool IsBasicId(string packageId)
         {
-            return string.IsNullOrEmpty(packageId);
+            return string.IsNullOrWhiteSpace(packageId);
         }
 
         public static LorName MakeLorName(LorNameXml src, string defaultPid)
         {
-            if (string.IsNullOrEmpty(src.pid))
+            if (string.IsNullOrWhiteSpace(src.pid))
             {
                 return new LorName(defaultPid, src.xmlName);
             }

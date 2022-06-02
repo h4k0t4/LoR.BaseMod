@@ -313,7 +313,7 @@ namespace ExtendedLoader
         public static LorName GetOriginalSkin(this BattleUnitModel model)
         {
             string workshopSkin = model._unitData.unitData.workshopSkin;
-            if (!string.IsNullOrEmpty(workshopSkin))
+            if (!string.IsNullOrWhiteSpace(workshopSkin))
             {
                 return new LorName(workshopSkin, true);
             }

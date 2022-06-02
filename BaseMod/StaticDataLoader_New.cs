@@ -296,14 +296,26 @@ namespace BaseMod
         {
             try
             {
-                Dictionary<string, List<DiceCardXmlInfo>> _workshopCard = ItemXmlDataList.instance._workshopDict;
-                List<DiceCardXmlInfo> _cardInfoList = ItemXmlDataList.instance._cardInfoList;
-                Dictionary<LorId, DiceCardXmlInfo> _cardInfoTable = ItemXmlDataList.instance._cardInfoTable;
-                List<DiceCardXmlInfo> _basicCardList = ItemXmlDataList.instance._basicCardList;
-                List<DeckXmlInfo> DeckXml = Singleton<DeckXmlList>.Instance._list;
-                Dictionary<string, List<BookXmlInfo>> _workshopBookDict = Singleton<BookXmlList>.Instance._workshopBookDict;
-                List<BookXmlInfo> _equiplist = Singleton<BookXmlList>.Instance._list;
-                Dictionary<LorId, BookXmlInfo> _equipdictionary = Singleton<BookXmlList>.Instance._dictionary;
+                if (ItemXmlDataList.instance._basicCardList == null)
+                {
+                    ItemXmlDataList.instance._basicCardList = new List<DiceCardXmlInfo>();
+                }
+                if (ItemXmlDataList.instance._cardInfoList == null)
+                {
+                    ItemXmlDataList.instance._cardInfoList = new List<DiceCardXmlInfo>();
+                }
+                if (ItemXmlDataList.instance._cardInfoTable == null)
+                {
+                    ItemXmlDataList.instance._cardInfoTable = new Dictionary<LorId, DiceCardXmlInfo>();
+                }
+                if (Singleton<DeckXmlList>.Instance._list == null)
+                {
+                    Singleton<DeckXmlList>.Instance._list = new List<DeckXmlInfo>();
+                }
+
+
+
+
                 Dictionary<string, List<CardDropTableXmlInfo>> _workshopCardDropDict = Singleton<CardDropTableXmlList>.Instance._workshopDict;
                 List<CardDropTableXmlInfo> _CardDroplist = Singleton<CardDropTableXmlList>.Instance._list;
                 Dictionary<string, List<DropBookXmlInfo>> _workshopDropBookDict = Singleton<DropBookXmlList>.Instance._workshopDict;
@@ -345,19 +357,19 @@ namespace BaseMod
                         directory = new DirectoryInfo(moddingPath);
                         if (Directory.Exists(moddingPath))
                         {
-                            LoadCard_MOD(directory, workshopId, _workshopCard, _cardInfoList, _cardInfoTable, _basicCardList);
+                            LoadCard_MOD(directory, workshopId);
                         }
                         moddingPath = GetModdingPath(_dirInfo, "Deck");
                         directory = new DirectoryInfo(moddingPath);
                         if (Directory.Exists(moddingPath))
                         {
-                            LoadDeck_MOD(directory, workshopId, DeckXml);
+                            LoadDeck_MOD(directory, workshopId);
                         }
                         moddingPath = GetModdingPath(_dirInfo, "EquipPage");
                         directory = new DirectoryInfo(moddingPath);
                         if (Directory.Exists(moddingPath))
                         {
-                            LoadBook_MOD(directory, workshopId, _workshopBookDict, _equiplist, _equipdictionary);
+                            LoadBook_MOD(directory, workshopId);
                         }
                         moddingPath = GetModdingPath(_dirInfo, "CardDropTable");
                         directory = new DirectoryInfo(moddingPath);
@@ -442,13 +454,13 @@ namespace BaseMod
                     catch (Exception ex)
                     {
                         Singleton<ModContentManager>.Instance.AddErrorLog(ex.Message + Environment.NewLine + ex.StackTrace);
-                        File.WriteAllText(Application.dataPath + "/Mods/" + _dirInfo.Name + "_SDLerror.log", ex.Message + Environment.NewLine + ex.StackTrace);
+                        File.WriteAllText(Application.dataPath + "/Mods/" + _dirInfo.Name + "_StaticInfoerror.log", ex.Message + Environment.NewLine + ex.StackTrace);
                     }
                 }
             }
-            catch (Exception exe)
+            catch (Exception ex2)
             {
-                File.WriteAllText(Application.dataPath + "/Mods/Loaderror.log", Environment.NewLine + exe.Message + Environment.NewLine + exe.StackTrace);
+                File.WriteAllText(Application.dataPath + "/Mods/LoadStaticInfoerror.log", Environment.NewLine + ex2.Message + Environment.NewLine + ex2.StackTrace);
             }
         }
         private static void LoadPassive_MOD(DirectoryInfo dir, string uniqueId)
@@ -465,174 +477,301 @@ namespace BaseMod
         }
         private static void LoadPassive_MOD_Checking(DirectoryInfo dir, string uniqueId)
         {
-            List<PassiveXmlInfo> list = new List<PassiveXmlInfo>();
             foreach (FileInfo fileInfo in dir.GetFiles())
             {
-                list.AddRange(LoadNewPassive(File.ReadAllText(fileInfo.FullName)).list);
+                try
+                {
+                    LoadNewPassive(File.ReadAllText(fileInfo.FullName), uniqueId);
+                }
+                catch (Exception ex)
+                {
+                    UtilTools.CreateShortcut(Application.dataPath + "/Mods/", "Error from  " + uniqueId + " " + fileInfo.Name, fileInfo.FullName, fileInfo.DirectoryName, "Error Xml Files");
+                    Singleton<ModContentManager>.Instance.AddErrorLog(ex.Message + Environment.NewLine + ex.StackTrace);
+                    File.WriteAllText(Application.dataPath + "/Mods/" + "Error in " + uniqueId + " " + fileInfo.Name + ".log", ex.Message + Environment.NewLine + ex.StackTrace);
+                }
+            }
+        }
+        private static List<PassiveXmlInfo> LoadNewPassive(string str, string uniqueId)
+        {
+            GTMDProjectMoon.PassiveXmlRoot xmlRoot;
+            string newId = uniqueId;
+            List<PassiveXmlInfo> list = new List<PassiveXmlInfo>();
+            using (StringReader stringReader = new StringReader(str))
+            {
+                xmlRoot = (GTMDProjectMoon.PassiveXmlRoot)new XmlSerializer(typeof(GTMDProjectMoon.PassiveXmlRoot)).Deserialize(stringReader);
+            }
+            if (!string.IsNullOrWhiteSpace(xmlRoot.workshopID))
+            {
+                newId = ClarifyWorkshopId(xmlRoot.workshopID);
+            }
+            foreach (PassiveXmlInfo_New passiveXmlInfo_New in xmlRoot.list)
+            {
+                passiveXmlInfo_New.workshopID = newId;
+                list.Add(passiveXmlInfo_New);
             }
             foreach (PassiveXmlInfo passiveXmlInfo in list)
             {
-                passiveXmlInfo.workshopID = uniqueId;
+                bool repeated = false;
+                PassiveXmlInfo item = null;
+                foreach (PassiveXmlInfo passiveXml in Singleton<PassiveXmlList>.Instance._list)
+                {
+                    if (passiveXml.id == passiveXmlInfo.id)
+                    {
+                        repeated = true;
+                        item = passiveXml;
+                        break;
+                    }
+                }
+                if (repeated)
+                {
+                    Singleton<PassiveXmlList>.Instance._list.Remove(item);
+                }
+                Singleton<PassiveXmlList>.Instance._list.Add(passiveXmlInfo);
             }
-            if (list != null && list.Count > 0)
-            {
-                Singleton<PassiveXmlList>.Instance.GetDataAll().RemoveAll((PassiveXmlInfo x) => list.Exists((PassiveXmlInfo y) => x.id == y.id));
-                Singleton<PassiveXmlList>.Instance.GetDataAll().AddRange(list);
-            }
+            return list;
         }
-        private static PassiveXmlRoot LoadNewPassive(string str)
+        private static void LoadCard_MOD(DirectoryInfo dir, string uniqueId)
         {
-            PassiveXmlRoot result;
-            using (StringReader stringReader = new StringReader(str))
-            {
-                result = (PassiveXmlRoot)new XmlSerializer(typeof(PassiveXmlRoot)).Deserialize(stringReader);
-            }
-            return result;
-        }
-        private static void LoadCard_MOD(DirectoryInfo dir, string uniqueId, Dictionary<string, List<DiceCardXmlInfo>> _workshopDict, List<DiceCardXmlInfo> _cardInfoList, Dictionary<LorId, DiceCardXmlInfo> _cardInfoTable, List<DiceCardXmlInfo> _basicCardList)
-        {
-            LoadCard_MOD_Checking(dir, uniqueId, _workshopDict, _cardInfoList, _cardInfoTable, _basicCardList);
+            LoadCard_MOD_Checking(dir, uniqueId);
             if (dir.GetDirectories().Length != 0)
             {
                 DirectoryInfo[] directories = dir.GetDirectories();
                 for (int i = 0; i < directories.Length; i++)
                 {
-                    LoadCard_MOD(directories[i], uniqueId, _workshopDict, _cardInfoList, _cardInfoTable, _basicCardList);
+                    LoadCard_MOD(directories[i], uniqueId);
                 }
             }
         }
-        private static void LoadCard_MOD_Checking(DirectoryInfo dir, string uniqueId, Dictionary<string, List<DiceCardXmlInfo>> _workshopDict, List<DiceCardXmlInfo> _cardInfoList, Dictionary<LorId, DiceCardXmlInfo> _cardInfoTable, List<DiceCardXmlInfo> _basicCardList)
+        private static void LoadCard_MOD_Checking(DirectoryInfo dir, string uniqueId)
         {
-            List<DiceCardXmlInfo> list = new List<DiceCardXmlInfo>();
             foreach (FileInfo fileInfo in dir.GetFiles())
             {
-                list.AddRange(LoadNewCard(File.ReadAllText(fileInfo.FullName)).cardXmlList);
-            }
-            if (_basicCardList == null)
-            {
-                _basicCardList = new List<DiceCardXmlInfo>();
-            }
-            foreach (DiceCardXmlInfo diceCardXmlInfo in list)
-            {
-                diceCardXmlInfo.workshopID = uniqueId;
-                if (diceCardXmlInfo.optionList.Contains(CardOption.Basic))
+                try
                 {
-                    _basicCardList.RemoveAll((DiceCardXmlInfo x) => x.id == diceCardXmlInfo.id);
-                    _basicCardList.Add(diceCardXmlInfo);
+                    LoadNewCard(File.ReadAllText(fileInfo.FullName), uniqueId);
+                }
+                catch (Exception ex)
+                {
+                    UtilTools.CreateShortcut(Application.dataPath + "/Mods/", "Error from  " + uniqueId + " " + fileInfo.Name, fileInfo.FullName, fileInfo.DirectoryName, "Error Xml Files");
+                    Singleton<ModContentManager>.Instance.AddErrorLog(ex.Message + Environment.NewLine + ex.StackTrace);
+                    File.WriteAllText(Application.dataPath + "/Mods/" + "Error in " + uniqueId + " " + fileInfo.Name + ".log", ex.Message + Environment.NewLine + ex.StackTrace);
                 }
             }
-            AddCardInfoByMod(uniqueId, list, _workshopDict, _cardInfoList, _cardInfoTable);
         }
-        private static void AddCardInfoByMod(string workshopId, List<DiceCardXmlInfo> list, Dictionary<string, List<DiceCardXmlInfo>> _workshopDict, List<DiceCardXmlInfo> _cardInfoList, Dictionary<LorId, DiceCardXmlInfo> _cardInfoTable)
+        private static List<DiceCardXmlInfo> LoadNewCard(string str, string uniqueId)
         {
-            if (_workshopDict == null)
+            GTMDProjectMoon.DiceCardXmlRoot xmlRoot;
+            string newId = uniqueId;
+            List<DiceCardXmlInfo> list = new List<DiceCardXmlInfo>();
+            using (StringReader stringReader = new StringReader(str))
             {
-                _workshopDict = new Dictionary<string, List<DiceCardXmlInfo>>();
+                xmlRoot = (GTMDProjectMoon.DiceCardXmlRoot)new XmlSerializer(typeof(GTMDProjectMoon.DiceCardXmlRoot)).Deserialize(stringReader);
             }
-            if (!_workshopDict.ContainsKey(workshopId))
+            if (!string.IsNullOrWhiteSpace(xmlRoot.workshopID))
             {
-                _workshopDict.Add(workshopId, list);
+                newId = ClarifyWorkshopId(xmlRoot.workshopID);
+            }
+            foreach (DiceCardXmlInfo_New diceCardXmlInfo_New in xmlRoot.cardXmlList)
+            {
+                diceCardXmlInfo_New.workshopID = newId;
+                foreach (string category in diceCardXmlInfo_New.customCategoryList)
+                {
+                    diceCardXmlInfo_New.categoryList.Add(OrcTools.GetBookCategory(category));
+                }
+                list.Add(diceCardXmlInfo_New);
+            }
+            AddCardInfoByMod(newId, list);
+            return list;
+        }
+        private static void AddCardInfoByMod(string workshopId, List<DiceCardXmlInfo> list)
+        {
+            foreach (DiceCardXmlInfo diceCardXmlInfo in list)
+            {
+                if (!diceCardXmlInfo.optionList.Contains(CardOption.Basic))
+                {
+                    continue;
+                }
+                bool repeated = false;
+                DiceCardXmlInfo item = null;
+                foreach (DiceCardXmlInfo cardXmlInfo in ItemXmlDataList.instance._basicCardList)
+                {
+                    if (cardXmlInfo.id == diceCardXmlInfo.id)
+                    {
+                        repeated = true;
+                        item = cardXmlInfo;
+                        break;
+                    }
+                }
+                if (repeated)
+                {
+                    ItemXmlDataList.instance._basicCardList.Remove(item);
+                }
+                ItemXmlDataList.instance._basicCardList.Add(diceCardXmlInfo);
+            }
+            if (!ItemXmlDataList.instance._workshopDict.ContainsKey(workshopId))
+            {
+                ItemXmlDataList.instance._workshopDict.Add(workshopId, list);
             }
             else
             {
-                _workshopDict[workshopId].RemoveAll((DiceCardXmlInfo x) => list.Exists((DiceCardXmlInfo y) => x.id == y.id));
-                _workshopDict[workshopId].AddRange(list);
-            }
-            if (_cardInfoList != null)
-            {
-                _cardInfoList.RemoveAll((DiceCardXmlInfo x) => list.Exists((DiceCardXmlInfo y) => x.id == y.id));
-                _cardInfoList.AddRange(list);
-            }
-            if (_cardInfoTable != null)
-            {
                 foreach (DiceCardXmlInfo diceCardXmlInfo in list)
                 {
-                    _cardInfoTable[diceCardXmlInfo.id] = diceCardXmlInfo;
+                    bool repeated = false;
+                    DiceCardXmlInfo item = null;
+                    foreach (DiceCardXmlInfo cardXmlInfo in ItemXmlDataList.instance._workshopDict[workshopId])
+                    {
+                        if (cardXmlInfo.id == diceCardXmlInfo.id)
+                        {
+                            repeated = true;
+                            item = cardXmlInfo;
+                            break;
+                        }
+                    }
+                    if (repeated)
+                    {
+                        ItemXmlDataList.instance._workshopDict[workshopId].Remove(item);
+                    }
+                    ItemXmlDataList.instance._workshopDict[workshopId].Add(diceCardXmlInfo);
                 }
             }
-        }
-        private static LOR_DiceSystem.DiceCardXmlRoot LoadNewCard(string str)
-        {
-            LOR_DiceSystem.DiceCardXmlRoot result = new LOR_DiceSystem.DiceCardXmlRoot()
+            foreach (DiceCardXmlInfo diceCardXmlInfo in list)
             {
-                cardXmlList = new List<LOR_DiceSystem.DiceCardXmlInfo>()
-            };
-            GTMDProjectMoon.DiceCardXmlRoot root;
-            using (StringReader stringReader = new StringReader(str))
-            {
-                root = (GTMDProjectMoon.DiceCardXmlRoot)new XmlSerializer(typeof(GTMDProjectMoon.DiceCardXmlRoot)).Deserialize(stringReader);
+                bool repeated = false;
+                DiceCardXmlInfo item = null;
+                foreach (DiceCardXmlInfo cardXmlInfo in ItemXmlDataList.instance._cardInfoList)
+                {
+                    if (cardXmlInfo.id == diceCardXmlInfo.id)
+                    {
+                        repeated = true;
+                        item = cardXmlInfo;
+                        break;
+                    }
+                }
+                if (repeated)
+                {
+                    ItemXmlDataList.instance._cardInfoList.Remove(item);
+                }
+                ItemXmlDataList.instance._cardInfoList.Add(diceCardXmlInfo);
             }
-            foreach (DiceCardXmlInfo_New cardInfo_new in root.cardXmlList)
+            foreach (DiceCardXmlInfo diceCardXmlInfo in list)
             {
-                DiceCardXmlInfo cardInfo = new DiceCardXmlInfo().CopyDiceCardXmlInfo(cardInfo_new);
-                result.cardXmlList.Add(cardInfo);
+                ItemXmlDataList.instance._cardInfoTable[diceCardXmlInfo.id] = diceCardXmlInfo;
             }
-            return result;
         }
-        private static void LoadDeck_MOD(DirectoryInfo dir, string uniqueId, List<DeckXmlInfo> DeckXml)
+        private static void LoadDeck_MOD(DirectoryInfo dir, string uniqueId)
         {
-            LoadDeck_MOD_Checking(dir, uniqueId, DeckXml);
+            LoadDeck_MOD_Checking(dir, uniqueId);
             if (dir.GetDirectories().Length != 0)
             {
                 DirectoryInfo[] directories = dir.GetDirectories();
                 for (int i = 0; i < directories.Length; i++)
                 {
-                    LoadDeck_MOD(directories[i], uniqueId, DeckXml);
+                    LoadDeck_MOD(directories[i], uniqueId);
                 }
             }
         }
-        private static void LoadDeck_MOD_Checking(DirectoryInfo dir, string uniqueId, List<DeckXmlInfo> DeckXml)
+        private static void LoadDeck_MOD_Checking(DirectoryInfo dir, string uniqueId)
         {
-            List<DeckXmlInfo> list = new List<DeckXmlInfo>();
             foreach (FileInfo fileInfo in dir.GetFiles())
             {
-                list.AddRange(LoadNewDeck(File.ReadAllText(fileInfo.FullName)).deckXmlList);
+                try
+                {
+                    LoadNewDeck(File.ReadAllText(fileInfo.FullName), uniqueId);
+                }
+                catch (Exception ex)
+                {
+                    UtilTools.CreateShortcut(Application.dataPath + "/Mods/", "Error from  " + uniqueId + " " + fileInfo.Name, fileInfo.FullName, fileInfo.DirectoryName, "Error Xml Files");
+                    Singleton<ModContentManager>.Instance.AddErrorLog(ex.Message + Environment.NewLine + ex.StackTrace);
+                    File.WriteAllText(Application.dataPath + "/Mods/" + "Error in " + uniqueId + " " + fileInfo.Name + ".log", ex.Message + Environment.NewLine + ex.StackTrace);
+                }
+            }
+        }
+        private static List<DeckXmlInfo> LoadNewDeck(string str, string uniqueId)
+        {
+            GTMDProjectMoon.DeckXmlRoot xmlRoot;
+            string newId = uniqueId;
+            List<DeckXmlInfo> list = new List<DeckXmlInfo>();
+            using (StringReader stringReader = new StringReader(str))
+            {
+                xmlRoot = (GTMDProjectMoon.DeckXmlRoot)new XmlSerializer(typeof(GTMDProjectMoon.DeckXmlRoot)).Deserialize(stringReader);
+            }
+            if (!string.IsNullOrWhiteSpace(xmlRoot.workshopID))
+            {
+                newId = ClarifyWorkshopId(xmlRoot.workshopID);
+            }
+            foreach (DeckXmlInfo deckXmlInfo in xmlRoot.deckXmlList)
+            {
+                deckXmlInfo.workshopId = newId;
+                deckXmlInfo.cardIdList.Clear();
+                LorId.InitializeLorIds(deckXmlInfo._cardIdList, deckXmlInfo.cardIdList, newId);
             }
             foreach (DeckXmlInfo deckXmlInfo in list)
             {
-                deckXmlInfo.workshopId = uniqueId;
-                deckXmlInfo.cardIdList.Clear();
-                LorId.InitializeLorIds(deckXmlInfo._cardIdList, deckXmlInfo.cardIdList, uniqueId);
+                bool repeated = false;
+                DeckXmlInfo item = null;
+                foreach (DeckXmlInfo deckXml in Singleton<DeckXmlList>.Instance._list)
+                {
+                    if (deckXml.id == deckXmlInfo.id)
+                    {
+                        repeated = true;
+                        item = deckXml;
+                        break;
+                    }
+                }
+                if (repeated)
+                {
+                    Singleton<DeckXmlList>.Instance._list.Remove(item);
+                }
+                Singleton<DeckXmlList>.Instance._list.Add(deckXmlInfo);
             }
-            if (DeckXml != null && DeckXml.Count > 0)
-            {
-                DeckXml.RemoveAll((DeckXmlInfo x) => list.Exists((DeckXmlInfo y) => x.id == y.id));
-                DeckXml.AddRange(list);
-            }
+            return list;
         }
-        private static DeckXmlRoot LoadNewDeck(string str)
+        private static void LoadBook_MOD(DirectoryInfo dir, string uniqueId)
         {
-            DeckXmlRoot result;
-            using (StringReader stringReader = new StringReader(str))
-            {
-                result = (DeckXmlRoot)new XmlSerializer(typeof(DeckXmlRoot)).Deserialize(stringReader);
-            }
-            return result;
-        }
-        private static void LoadBook_MOD(DirectoryInfo dir, string uniqueId, Dictionary<string, List<BookXmlInfo>> _workshopBookDict, List<BookXmlInfo> _list, Dictionary<LorId, BookXmlInfo> _dictionary)
-        {
-            LoadBook_MOD_Checking(dir, uniqueId, _workshopBookDict, _list, _dictionary);
+            LoadBook_MOD_Checking(dir, uniqueId);
             if (dir.GetDirectories().Length != 0)
             {
                 DirectoryInfo[] directories = dir.GetDirectories();
                 for (int i = 0; i < directories.Length; i++)
                 {
-                    LoadBook_MOD(directories[i], uniqueId, _workshopBookDict, _list, _dictionary);
+                    LoadBook_MOD(directories[i], uniqueId);
                 }
             }
         }
-        private static void LoadBook_MOD_Checking(DirectoryInfo dir, string uniqueId, Dictionary<string, List<BookXmlInfo>> _workshopBookDict, List<BookXmlInfo> _list, Dictionary<LorId, BookXmlInfo> _dictionary)
+        private static void LoadBook_MOD_Checking(DirectoryInfo dir, string uniqueId)
         {
-            List<BookXmlInfo_New> list = new List<BookXmlInfo_New>();
-            List<BookXmlInfo> list2 = new List<BookXmlInfo>();
             foreach (FileInfo fileInfo in dir.GetFiles())
             {
-                list.AddRange(LoadNewCorePage(File.ReadAllText(fileInfo.FullName)).bookXmlList);
+                try
+                {
+                    LoadNewCorePage(File.ReadAllText(fileInfo.FullName), uniqueId);
+                }
+                catch (Exception ex)
+                {
+                    UtilTools.CreateShortcut(Application.dataPath + "/Mods/", "Error from  " + uniqueId + " " + fileInfo.Name, fileInfo.FullName, fileInfo.DirectoryName, "Error Xml Files");
+                    Singleton<ModContentManager>.Instance.AddErrorLog(ex.Message + Environment.NewLine + ex.StackTrace);
+                    File.WriteAllText(Application.dataPath + "/Mods/" + "Error in " + uniqueId + " " + fileInfo.Name + ".log", ex.Message + Environment.NewLine + ex.StackTrace);
+                }
             }
-            foreach (BookXmlInfo_New bookXmlInfo_New in list)
+        }
+        private static List<BookXmlInfo> LoadNewCorePage(string str, string uniqueId)
+        {
+            GTMDProjectMoon.BookXmlRoot xmlRoot;
+            string newId = uniqueId;
+            List<BookXmlInfo> list = new List<BookXmlInfo>();
+            using (StringReader stringReader = new StringReader(str))
             {
-                bookXmlInfo_New.workshopID = uniqueId;
-                if (!string.IsNullOrEmpty(bookXmlInfo_New.skinType))
+                xmlRoot = (GTMDProjectMoon.BookXmlRoot)new XmlSerializer(typeof(GTMDProjectMoon.BookXmlRoot)).Deserialize(stringReader);
+            }
+            if (!string.IsNullOrWhiteSpace(xmlRoot.workshopID))
+            {
+                newId = ClarifyWorkshopId(xmlRoot.workshopID);
+            }
+            foreach (BookXmlInfo_New bookXmlInfo_New in xmlRoot.bookXmlList)
+            {
+                bookXmlInfo_New.workshopID = newId;
+                //SkinType
+                if (!string.IsNullOrWhiteSpace(bookXmlInfo_New.skinType))
                 {
                     if (bookXmlInfo_New.skinType == "UNKNOWN")
                     {
@@ -655,47 +794,95 @@ namespace BaseMod
                 {
                     bookXmlInfo_New.skinType = "Lor";
                 }
-                LorId.InitializeLorIds(bookXmlInfo_New.EquipEffect._PassiveList, bookXmlInfo_New.EquipEffect.PassiveList, uniqueId);
-                list2.Add(new BookXmlInfo().CopyBookXmlInfo(bookXmlInfo_New, uniqueId));
+                //PassiveList
+                LorId.InitializeLorIds(bookXmlInfo_New.EquipEffect._PassiveList, bookXmlInfo_New.EquipEffect.PassiveList, newId);
+                //OnlyCard
+                List<int> onlycard = new List<int>();
+                foreach (LorIdXml xml in bookXmlInfo_New.EquipEffect.OnlyCard)
+                {
+                    onlycard.Add(xml.xmlId);
+                }
+                ((BookXmlInfo)bookXmlInfo_New).EquipEffect.OnlyCard = onlycard;
+                LorId.InitializeLorIds(bookXmlInfo_New.EquipEffect.OnlyCard, bookXmlInfo_New.EquipEffect.OnlyCards, newId);
+                //SoulCard
+                foreach (BookSoulCardInfo_New soulCardInfo_New in bookXmlInfo_New.EquipEffect.SoulCardList)
+                {
+                    if (soulCardInfo_New.WorkshopId == "")
+                    {
+                        soulCardInfo_New.WorkshopId = newId;
+                    }
+                    if (soulCardInfo_New.WorkshopId.ToLower() == "@origin")
+                    {
+                        soulCardInfo_New.WorkshopId = "";
+                    }
+                    ((BookXmlInfo)bookXmlInfo_New).EquipEffect.CardList.Add(new BookSoulCardInfo()
+                    {
+                        cardId = soulCardInfo_New.cardId,
+                        requireLevel = soulCardInfo_New.requireLevel,
+                        emotionLevel = soulCardInfo_New.emotionLevel,
+                    });
+                }
+                //Episode
+                if (bookXmlInfo_New.episode.xmlId > 0)
+                {
+                    bookXmlInfo_New.LorEpisode = LorId.MakeLorId(bookXmlInfo_New.episode, newId);
+                }
+                list.Add(bookXmlInfo_New);
             }
-            AddEquipPageByMod(uniqueId, list2, _workshopBookDict, _list, _dictionary);
+            AddEquipPageByMod(uniqueId, list);
+            return list;
         }
-        private static void AddEquipPageByMod(string workshopId, List<BookXmlInfo> list, Dictionary<string, List<BookXmlInfo>> _workshopBookDict, List<BookXmlInfo> _list, Dictionary<LorId, BookXmlInfo> _dictionary)
+        private static void AddEquipPageByMod(string workshopId, List<BookXmlInfo> list)
         {
-            if (_workshopBookDict == null)
+            if (!Singleton<BookXmlList>.Instance._workshopBookDict.ContainsKey(workshopId))
             {
-                _workshopBookDict = new Dictionary<string, List<BookXmlInfo>>();
-            }
-            if (!_workshopBookDict.ContainsKey(workshopId))
-            {
-                _workshopBookDict.Add(workshopId, list);
+                Singleton<BookXmlList>.Instance._workshopBookDict.Add(workshopId, list);
             }
             else
             {
-                _workshopBookDict[workshopId].RemoveAll((BookXmlInfo x) => list.Exists((BookXmlInfo y) => x.id == y.id));
-                _workshopBookDict[workshopId].AddRange(list);
-            }
-            if (_list != null)
-            {
-                _list.RemoveAll((BookXmlInfo x) => list.Exists((BookXmlInfo y) => x.id == y.id));
-                _list.AddRange(list);
-            }
-            if (_dictionary != null)
-            {
                 foreach (BookXmlInfo bookXmlInfo in list)
                 {
-                    _dictionary[bookXmlInfo.id] = bookXmlInfo;
+                    bool repeated = false;
+                    BookXmlInfo item = null;
+                    foreach (BookXmlInfo bookXml in Singleton<BookXmlList>.Instance._workshopBookDict[workshopId])
+                    {
+                        if (bookXml.id == bookXmlInfo.id)
+                        {
+                            repeated = true;
+                            item = bookXml;
+                            break;
+                        }
+                    }
+                    if (repeated)
+                    {
+                        Singleton<BookXmlList>.Instance._workshopBookDict[workshopId].Remove(item);
+                    }
+                    Singleton<BookXmlList>.Instance._workshopBookDict[workshopId].Add(bookXmlInfo);
                 }
             }
-        }
-        private static GTMDProjectMoon.BookXmlRoot LoadNewCorePage(string str)
-        {
-            GTMDProjectMoon.BookXmlRoot result;
-            using (StringReader stringReader = new StringReader(str))
+            foreach (BookXmlInfo bookXmlInfo in list)
             {
-                result = (GTMDProjectMoon.BookXmlRoot)new XmlSerializer(typeof(GTMDProjectMoon.BookXmlRoot)).Deserialize(stringReader);
+                bool repeated = false;
+                BookXmlInfo item = null;
+                foreach (BookXmlInfo bookXml in Singleton<BookXmlList>.Instance._list)
+                {
+                    if (bookXml.id == bookXmlInfo.id)
+                    {
+                        repeated = true;
+                        item = bookXml;
+                        break;
+                    }
+                }
+                if (repeated)
+                {
+                    Singleton<BookXmlList>.Instance._list.Remove(item);
+                }
+                Singleton<BookXmlList>.Instance._list.Add(bookXmlInfo);
             }
-            return result;
+            foreach (BookXmlInfo bookXmlInfo in list)
+            {
+                Singleton<BookXmlList>.Instance._dictionary[bookXmlInfo.id] = bookXmlInfo;
+            }
         }
         private static void LoadCardDropTable_MOD(DirectoryInfo dir, string uniqueId, Dictionary<string, List<CardDropTableXmlInfo>> _workshopDict, List<CardDropTableXmlInfo> _list)
         {
@@ -1245,7 +1432,7 @@ namespace BaseMod
                 {
                     foreach (EnemyDropItem_New enemyDropItem_New in enemyDropItemTable_New.dropItemList)
                     {
-                        if (string.IsNullOrEmpty(enemyDropItem_New.workshopId))
+                        if (string.IsNullOrWhiteSpace(enemyDropItem_New.workshopId))
                         {
                             enemyDropItemTable_New.dropList.Add(new EnemyDropItem_ReNew()
                             {
@@ -1527,6 +1714,17 @@ namespace BaseMod
                 result = (FloorLevelXmlRoot)new XmlSerializer(typeof(FloorLevelXmlRoot)).Deserialize(stringReader);
             }
             return result;
+        }
+        private static string ClarifyWorkshopId(string uniqueId)
+        {
+            if (uniqueId == "@origin")
+            {
+                return "";
+            }
+            else
+            {
+                return uniqueId;
+            }
         }
     }
 }

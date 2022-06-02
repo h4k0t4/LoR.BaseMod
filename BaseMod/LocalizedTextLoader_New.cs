@@ -14,12 +14,26 @@ namespace BaseMod
     {
         private static string GetModdingPath(DirectoryInfo dir, string type)
         {
-            return string.Concat(new string[]
+            string path = string.Concat(new string[]
             {
                 dir.FullName,
                 "/Localize/",
                 TextDataModel.CurrentLanguage,
                 "/",
+            });
+            if (!Directory.Exists(path))
+            {
+                path = string.Concat(new string[]
+               {
+                dir.FullName,
+                "/Localize/",
+                "default",
+                "/",
+               });
+            }
+            return string.Concat(new string[]
+            {
+                path,
                 type
             });
         }
