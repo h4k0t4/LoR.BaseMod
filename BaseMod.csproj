@@ -184,6 +184,7 @@
     <Compile Include="GTMDProjectMoon\GiftXml_New.cs" />
     <Compile Include="GTMDProjectMoon\EmotionCardXml_New.cs" />
     <Compile Include="GTMDProjectMoon\FormationXml_New.cs" />
+    <Compile Include="GTMDProjectMoon\Xml_New - 复制 - 复制.cs" />
     <Compile Include="GTMDProjectMoon\Xml_New - 复制.cs" />
     <Compile Include="GTMDProjectMoon\PassiveXml_New.cs" />
     <Compile Include="GTMDProjectMoon\BookXml_New.cs" />

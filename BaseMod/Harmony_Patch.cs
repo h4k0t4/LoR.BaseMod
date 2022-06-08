@@ -281,9 +281,6 @@ namespace BaseMod
             ModStoryCG = null;
             ModWorkShopId.Clear();
             ModWorkshopBookIndex.Clear();
-            OrcTools.OnlyCardDic.Clear();
-            OrcTools.SoulCardDic.Clear();
-            OrcTools.EpisodeDic.Clear();
             OrcTools.StageNameDic.Clear();
             OrcTools.StageConditionDic.Clear();
             OrcTools.CharacterNameDic.Clear();
@@ -1786,17 +1783,17 @@ namespace BaseMod
         {
             try
             {
-                if (!OrcTools.OnlyCardDic.ContainsKey(classInfo.id))
+                if (!(classInfo is BookXmlInfo_New))
                 {
                     return;
                 }
                 ____onlyCards = new List<DiceCardXmlInfo>();
-                foreach (LorId id in OrcTools.OnlyCardDic[classInfo.id])
+                foreach (LorId id in (classInfo as BookXmlInfo_New).EquipEffect.OnlyCards)
                 {
                     DiceCardXmlInfo cardItem = ItemXmlDataList.instance.GetCardItem(id);
                     if (cardItem == null)
                     {
-                        Debug.LogError("soulcard not found");
+                        Debug.LogError("onlycard not found");
                     }
                     else
                     {
@@ -1821,11 +1818,11 @@ namespace BaseMod
                     Debug.LogError("BookXmlInfo is null");
                     return false;
                 }
-                if (!OrcTools.SoulCardDic.ContainsKey(____classInfo.id))
+                if (!(____classInfo is BookXmlInfo_New))
                 {
                     return true;
                 }
-                BookSoulCardInfo_New bookSoulCardInfo_New = OrcTools.SoulCardDic[____classInfo.id].Find((BookSoulCardInfo_New x) => x.emotionLevel == emotionLevel);
+                BookSoulCardInfo_New bookSoulCardInfo_New = (____classInfo as BookXmlInfo_New).EquipEffect.SoulCardList.Find((BookSoulCardInfo_New x) => x.emotionLevel == emotionLevel);
                 if (bookSoulCardInfo_New == null)
                 {
                     __result = null;
@@ -2954,7 +2951,7 @@ namespace BaseMod
                             ___chapterBooksData.Add(bookXmlInfo);
                         }
                     }
-                    else if (OrcTools.EpisodeDic.ContainsKey(bookXmlInfo.id))
+                    else if (bookXmlInfo is BookXmlInfo_New)
                     {
                         ___episodeBooksData.Add(bookXmlInfo);
                     }
@@ -3005,13 +3002,13 @@ namespace BaseMod
                 Dictionary<LorId, List<BookXmlInfo>> dictionary = new Dictionary<LorId, List<BookXmlInfo>>();
                 foreach (BookXmlInfo bookXmlInfo in ___panel.panel.GetEpisodeBooksDataAll())
                 {
-                    if (OrcTools.EpisodeDic.ContainsKey(bookXmlInfo.id) && Singleton<StageClassInfoList>.Instance.GetData(OrcTools.EpisodeDic[bookXmlInfo.id]).chapter == __instance.chapter && !Enum.TryParse(bookXmlInfo.BookIcon, out UIStoryLine uistoryLine))
+                    if (bookXmlInfo is BookXmlInfo_New && Singleton<StageClassInfoList>.Instance.GetData((bookXmlInfo as BookXmlInfo_New).LorEpisode).chapter == __instance.chapter && !Enum.TryParse(bookXmlInfo.BookIcon, out UIStoryLine uistoryLine))
                     {
-                        if (!dictionary.ContainsKey(OrcTools.EpisodeDic[bookXmlInfo.id]))
+                        if (!dictionary.ContainsKey((bookXmlInfo as BookXmlInfo_New).LorEpisode))
                         {
-                            dictionary[OrcTools.EpisodeDic[bookXmlInfo.id]] = new List<BookXmlInfo>();
+                            dictionary[(bookXmlInfo as BookXmlInfo_New).LorEpisode] = new List<BookXmlInfo>();
                         }
-                        dictionary[OrcTools.EpisodeDic[bookXmlInfo.id]].Add(bookXmlInfo);
+                        dictionary[(bookXmlInfo as BookXmlInfo_New).LorEpisode].Add(bookXmlInfo);
                     }
                 }
                 if (dictionary.Count > 0)
@@ -3060,7 +3057,7 @@ namespace BaseMod
         {
             try
             {
-                if (slot != null && slot.books.Count > 0 && OrcTools.EpisodeDic.ContainsKey(slot.books[0].id) && OrcTools.StageNameDic.TryGetValue(OrcTools.EpisodeDic[slot.books[0].id], out string stagename))
+                if (slot != null && slot.books.Count > 0 && slot.books[0] is BookXmlInfo_New && OrcTools.StageNameDic.TryGetValue((slot.books[0] as BookXmlInfo_New).LorEpisode, out string stagename))
                 {
                     ___selectedEpisodeText.text = stagename;
                 }
@@ -3510,7 +3507,7 @@ namespace BaseMod
         {
             try
             {
-                ModEpMatch = new Dictionary<LorId, int>();
+                ModEpMatch = new Dictionary<LorId, UIStoryLine>();
                 if (init)
                 {
                     __instance.CurrentSelectedBook = null;
@@ -3539,12 +3536,12 @@ namespace BaseMod
                     UIStoryKeyData uistoryKeyData;
                     if (bookModel.IsWorkshop || !Enum.IsDefined(typeof(UIStoryLine), bookIcon))
                     {
-                        if (OrcTools.EpisodeDic.ContainsKey(bookModel.BookId))
+                        if (bookModel.ClassInfo is BookXmlInfo_New)
                         {
-                            if (!ModEpMatch.ContainsKey(OrcTools.EpisodeDic[bookModel.BookId]))
+                            if (!ModEpMatch.ContainsKey((bookModel.ClassInfo as BookXmlInfo_New).LorEpisode))
                             {
                                 num++;
-                                ModEpMatch.Add(OrcTools.EpisodeDic[bookModel.BookId], num);
+                                ModEpMatch.Add((bookModel.ClassInfo as BookXmlInfo_New).LorEpisode, (UIStoryLine)num);
                                 uistoryKeyData = new UIStoryKeyData(bookModel.ClassInfo.Chapter, bookModel.ClassInfo.id.packageId)
                                 {
                                     StoryLine = (UIStoryLine)num
@@ -3553,7 +3550,7 @@ namespace BaseMod
                             }
                             else
                             {
-                                uistoryKeyData = ___totalkeysdata.Find((UIStoryKeyData x) => x.workshopId == bookModel.ClassInfo.id.packageId && x.chapter == bookModel.ClassInfo.Chapter && x.StoryLine == (UIStoryLine)ModEpMatch[OrcTools.EpisodeDic[bookModel.BookId]]);
+                                uistoryKeyData = ___totalkeysdata.Find((UIStoryKeyData x) => x.workshopId == bookModel.ClassInfo.id.packageId && x.chapter == bookModel.ClassInfo.Chapter && x.StoryLine == ModEpMatch[(bookModel.ClassInfo as BookXmlInfo_New).LorEpisode]);
                             }
                         }
                         else
@@ -3651,7 +3648,7 @@ namespace BaseMod
         {
             try
             {
-                ModEpMatch = new Dictionary<LorId, int>();
+                ModEpMatch = new Dictionary<LorId, UIStoryLine>();
                 if (init)
                 {
                     __instance.CurrentSelectedBook = null;
@@ -3680,12 +3677,12 @@ namespace BaseMod
                     UIStoryKeyData uistoryKeyData;
                     if (bookModel.IsWorkshop || !Enum.IsDefined(typeof(UIStoryLine), bookIcon))
                     {
-                        if (OrcTools.EpisodeDic.ContainsKey(bookModel.BookId))
+                        if (bookModel.ClassInfo is BookXmlInfo_New)
                         {
-                            if (!ModEpMatch.ContainsKey(OrcTools.EpisodeDic[bookModel.BookId]))
+                            if (!ModEpMatch.ContainsKey((bookModel.ClassInfo as BookXmlInfo_New).LorEpisode))
                             {
                                 num++;
-                                ModEpMatch.Add(OrcTools.EpisodeDic[bookModel.BookId], num);
+                                ModEpMatch.Add((bookModel.ClassInfo as BookXmlInfo_New).LorEpisode, (UIStoryLine)num);
                                 uistoryKeyData = new UIStoryKeyData(bookModel.ClassInfo.Chapter, bookModel.ClassInfo.id.packageId)
                                 {
                                     StoryLine = (UIStoryLine)num
@@ -3694,7 +3691,7 @@ namespace BaseMod
                             }
                             else
                             {
-                                uistoryKeyData = ___totalkeysdata.Find((UIStoryKeyData x) => x.workshopId == bookModel.ClassInfo.id.packageId && x.chapter == bookModel.ClassInfo.Chapter && x.StoryLine == (UIStoryLine)ModEpMatch[OrcTools.EpisodeDic[bookModel.BookId]]);
+                                uistoryKeyData = ___totalkeysdata.Find((UIStoryKeyData x) => x.workshopId == bookModel.ClassInfo.id.packageId && x.chapter == bookModel.ClassInfo.Chapter && x.StoryLine == ModEpMatch[(bookModel.ClassInfo as BookXmlInfo_New).LorEpisode]);
                             }
                         }
                         else
@@ -3802,11 +3799,11 @@ namespace BaseMod
                 }
                 if (books.Count >= 0)
                 {
-                    if (!OrcTools.EpisodeDic.ContainsKey(books[0].BookId))
+                    if (!(books[0].ClassInfo is BookXmlInfo_New))
                     {
                         return true;
                     }
-                    StageClassInfo data = Singleton<StageClassInfoList>.Instance.GetData(OrcTools.EpisodeDic[books[0].BookId]);
+                    StageClassInfo data = Singleton<StageClassInfoList>.Instance.GetData((books[0].ClassInfo as BookXmlInfo_New).LorEpisode);
                     if (data == null)
                     {
                         return true;
@@ -3886,11 +3883,11 @@ namespace BaseMod
                         return true;
                     }
                     StageClassInfo data = Singleton<StageClassInfoList>.Instance.GetData(key);*/
-                    if (!OrcTools.EpisodeDic.ContainsKey(books[0].BookId))
+                    if (!(books[0].ClassInfo is BookXmlInfo_New))
                     {
                         return true;
                     }
-                    StageClassInfo data = Singleton<StageClassInfoList>.Instance.GetData(OrcTools.EpisodeDic[books[0].BookId]);
+                    StageClassInfo data = Singleton<StageClassInfoList>.Instance.GetData((books[0].ClassInfo as BookXmlInfo_New).LorEpisode);
                     if (data == null)
                     {
                         return true;
@@ -4564,11 +4561,43 @@ namespace BaseMod
             __instance.gameObject.transform.localPosition = new Vector3(-830f, -460f);
             return false;
         }
-        /*
-        private static void DiceCardXmlInfo_Copy_Post(DiceCardXmlInfo __instance, DiceCardXmlInfo __result)
+        //CopyCheck
+        [HarmonyPatch(typeof(DiceCardXmlInfo), "Copy")]
+        [HarmonyPostfix]
+        private static void DiceCardXmlInfo_Copy_Post(DiceCardXmlInfo __instance, ref DiceCardXmlInfo __result)
         {
             __result.Keywords = __instance.Keywords;
-        }*/
+            if (__instance is DiceCardXmlInfo_New)
+            {
+                __result = new DiceCardXmlInfo_New()
+                {
+                    workshopID = __result.workshopID,
+                    workshopName = __result.workshopName,
+                    Artwork = __result.Artwork,
+                    Chapter = __result.Chapter,
+                    category = __result.category,
+                    DiceBehaviourList = __result.DiceBehaviourList,
+                    _textId = __result._textId,
+                    optionList = __result.optionList,
+                    Keywords = __result.Keywords,
+                    Priority = __result.Priority,
+                    Rarity = __result.Rarity,
+                    Script = __result.Script,
+                    ScriptDesc = __result.ScriptDesc,
+                    Spec = __result.Spec,
+                    SpecialEffect = __result.SpecialEffect,
+                    SkinChange = __result.SkinChange,
+                    SkinChangeType = __result.SkinChangeType,
+                    SkinHeight = __result.SkinHeight,
+                    MapChange = __result.MapChange,
+                    PriorityScript = __result.PriorityScript
+                };
+                foreach (BookCategory category in (__instance as DiceCardXmlInfo_New).categoryList)
+                {
+                    (__result as DiceCardXmlInfo_New).categoryList.Add(category);
+                }
+            }
+        }
         /*
         //Mod_Update
         //Using For Reload
@@ -6259,7 +6288,7 @@ namespace BaseMod
 
         private static List<string> ModPid;
 
-        public static Dictionary<LorId, int> ModEpMatch;
+        public static Dictionary<LorId, UIStoryLine> ModEpMatch;
 
         public static Dictionary<LorId, ModStroyCG> ModStoryCG = null;
 

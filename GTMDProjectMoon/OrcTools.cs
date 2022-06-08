@@ -274,12 +274,6 @@ namespace GTMDProjectMoon
 
         public static List<DialogDetail> dialogDetails = new List<DialogDetail>();
 
-        public static Dictionary<LorId, List<LorId>> OnlyCardDic = new Dictionary<LorId, List<LorId>>();
-
-        public static Dictionary<LorId, List<BookSoulCardInfo_New>> SoulCardDic = new Dictionary<LorId, List<BookSoulCardInfo_New>>();
-
-        public static Dictionary<LorId, LorId> EpisodeDic = new Dictionary<LorId, LorId>();
-
         public static Dictionary<LorId, string> StageNameDic = new Dictionary<LorId, string>();
 
         public static Dictionary<StageExtraCondition, List<LorId>> StageConditionDic = new Dictionary<StageExtraCondition, List<LorId>>();

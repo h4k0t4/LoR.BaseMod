@@ -312,15 +312,20 @@ namespace BaseMod
                 {
                     Singleton<DeckXmlList>.Instance._list = new List<DeckXmlInfo>();
                 }
+                if (Singleton<CardDropTableXmlList>.Instance._list == null)
+                {
+                    Singleton<CardDropTableXmlList>.Instance._list = new List<CardDropTableXmlInfo>();
+                }
+                if (Singleton<DropBookXmlList>.Instance._workshopDict == null)
+                {
+                    Singleton<DropBookXmlList>.Instance._workshopDict = new Dictionary<string, List<DropBookXmlInfo>>();
+                }
 
 
 
 
-                Dictionary<string, List<CardDropTableXmlInfo>> _workshopCardDropDict = Singleton<CardDropTableXmlList>.Instance._workshopDict;
-                List<CardDropTableXmlInfo> _CardDroplist = Singleton<CardDropTableXmlList>.Instance._list;
-                Dictionary<string, List<DropBookXmlInfo>> _workshopDropBookDict = Singleton<DropBookXmlList>.Instance._workshopDict;
-                List<DropBookXmlInfo> _DropBooklist = Singleton<DropBookXmlList>.Instance._list;
-                Dictionary<LorId, DropBookXmlInfo> _DropBookdictionary = Singleton<DropBookXmlList>.Instance._dict;
+
+
                 Dictionary<string, List<EnemyUnitClassInfo>> _workshopEnemyDict = Singleton<EnemyUnitClassInfoList>.Instance._workshopEnemyDict;
                 List<EnemyUnitClassInfo> _Enemylist = Singleton<EnemyUnitClassInfoList>.Instance._list;
                 List<StageClassInfo> _Stagelist = Singleton<StageClassInfoList>.Instance._list;
@@ -375,13 +380,13 @@ namespace BaseMod
                         directory = new DirectoryInfo(moddingPath);
                         if (Directory.Exists(moddingPath))
                         {
-                            LoadCardDropTable_MOD(directory, workshopId, _workshopCardDropDict, _CardDroplist);
+                            LoadCardDropTable_MOD(directory, workshopId);
                         }
                         moddingPath = GetModdingPath(_dirInfo, "DropBook");
                         directory = new DirectoryInfo(moddingPath);
                         if (Directory.Exists(moddingPath))
                         {
-                            LoadDropBook_MOD(directory, workshopId, _workshopDropBookDict, _DropBooklist, _DropBookdictionary);
+                            LoadDropBook_MOD(directory, workshopId);
                         }
                         moddingPath = GetModdingPath(_dirInfo, "GiftInfo");
                         directory = new DirectoryInfo(moddingPath);
@@ -618,12 +623,12 @@ namespace BaseMod
                 {
                     bool repeated = false;
                     DiceCardXmlInfo item = null;
-                    foreach (DiceCardXmlInfo cardXmlInfo in ItemXmlDataList.instance._workshopDict[workshopId])
+                    foreach (DiceCardXmlInfo diceCardXml in ItemXmlDataList.instance._workshopDict[workshopId])
                     {
-                        if (cardXmlInfo.id == diceCardXmlInfo.id)
+                        if (diceCardXml.id == diceCardXmlInfo.id)
                         {
                             repeated = true;
-                            item = cardXmlInfo;
+                            item = diceCardXml;
                             break;
                         }
                     }
@@ -638,12 +643,12 @@ namespace BaseMod
             {
                 bool repeated = false;
                 DiceCardXmlInfo item = null;
-                foreach (DiceCardXmlInfo cardXmlInfo in ItemXmlDataList.instance._cardInfoList)
+                foreach (DiceCardXmlInfo diceCardXml in ItemXmlDataList.instance._cardInfoList)
                 {
-                    if (cardXmlInfo.id == diceCardXmlInfo.id)
+                    if (diceCardXml.id == diceCardXmlInfo.id)
                     {
                         repeated = true;
-                        item = cardXmlInfo;
+                        item = diceCardXml;
                         break;
                     }
                 }
@@ -884,87 +889,151 @@ namespace BaseMod
                 Singleton<BookXmlList>.Instance._dictionary[bookXmlInfo.id] = bookXmlInfo;
             }
         }
-        private static void LoadCardDropTable_MOD(DirectoryInfo dir, string uniqueId, Dictionary<string, List<CardDropTableXmlInfo>> _workshopDict, List<CardDropTableXmlInfo> _list)
+        private static void LoadCardDropTable_MOD(DirectoryInfo dir, string uniqueId)
         {
-            LoadCardDropTable_MOD_Checking(dir, uniqueId, _workshopDict, _list);
+            LoadCardDropTable_MOD_Checking(dir, uniqueId);
             if (dir.GetDirectories().Length != 0)
             {
                 DirectoryInfo[] directories = dir.GetDirectories();
                 for (int i = 0; i < directories.Length; i++)
                 {
-                    LoadCardDropTable_MOD(directories[i], uniqueId, _workshopDict, _list);
+                    LoadCardDropTable_MOD(directories[i], uniqueId);
                 }
             }
         }
-        private static void LoadCardDropTable_MOD_Checking(DirectoryInfo dir, string uniqueId, Dictionary<string, List<CardDropTableXmlInfo>> _workshopDict, List<CardDropTableXmlInfo> _list)
+        private static void LoadCardDropTable_MOD_Checking(DirectoryInfo dir, string uniqueId)
         {
-            List<CardDropTableXmlInfo> list = new List<CardDropTableXmlInfo>();
             foreach (FileInfo fileInfo in dir.GetFiles())
             {
-                list.AddRange(LoadNewCardDropTable(File.ReadAllText(fileInfo.FullName)).dropTableXmlList);
+                try
+                {
+                    LoadNewCardDropTable(File.ReadAllText(fileInfo.FullName), uniqueId);
+                }
+                catch (Exception ex)
+                {
+                    UtilTools.CreateShortcut(Application.dataPath + "/Mods/", "Error from  " + uniqueId + " " + fileInfo.Name, fileInfo.FullName, fileInfo.DirectoryName, "Error Xml Files");
+                    Singleton<ModContentManager>.Instance.AddErrorLog(ex.Message + Environment.NewLine + ex.StackTrace);
+                    File.WriteAllText(Application.dataPath + "/Mods/" + "Error in " + uniqueId + " " + fileInfo.Name + ".log", ex.Message + Environment.NewLine + ex.StackTrace);
+                }
             }
-            foreach (CardDropTableXmlInfo cardDropTableXmlInfo in list)
+        }
+        private static List<CardDropTableXmlInfo> LoadNewCardDropTable(string str, string uniqueId)
+        {
+            GTMDProjectMoon.CardDropTableXmlRoot xmlRoot;
+            string newId = uniqueId;
+            List<CardDropTableXmlInfo> list = new List<CardDropTableXmlInfo>();
+            using (StringReader stringReader = new StringReader(str))
+            {
+                xmlRoot = (GTMDProjectMoon.CardDropTableXmlRoot)new XmlSerializer(typeof(GTMDProjectMoon.CardDropTableXmlRoot)).Deserialize(stringReader);
+            }
+            if (!string.IsNullOrWhiteSpace(xmlRoot.workshopID))
+            {
+                newId = ClarifyWorkshopId(xmlRoot.workshopID);
+            }
+            foreach (CardDropTableXmlInfo cardDropTableXmlInfo in xmlRoot.dropTableXmlList)
             {
                 cardDropTableXmlInfo.workshopId = uniqueId;
                 cardDropTableXmlInfo.cardIdList.Clear();
                 LorId.InitializeLorIds(cardDropTableXmlInfo._cardIdList, cardDropTableXmlInfo.cardIdList, uniqueId);
+                list.Add(cardDropTableXmlInfo);
             }
-            AddCardDropTableByMod(uniqueId, list, _workshopDict, _list);
+            AddCardDropTableByMod(uniqueId, list);
+            return list;
         }
-        private static void AddCardDropTableByMod(string uniqueId, List<CardDropTableXmlInfo> list, Dictionary<string, List<CardDropTableXmlInfo>> _workshopDict, List<CardDropTableXmlInfo> _list)
+        private static void AddCardDropTableByMod(string workshopId, List<CardDropTableXmlInfo> list)
         {
-            if (_workshopDict == null)
+            if (!Singleton<CardDropTableXmlList>.Instance._workshopDict.ContainsKey(workshopId))
             {
-                _workshopDict = new Dictionary<string, List<CardDropTableXmlInfo>>();
-            }
-            if (!_workshopDict.ContainsKey(uniqueId))
-            {
-                _workshopDict.Add(uniqueId, list);
+                Singleton<CardDropTableXmlList>.Instance._workshopDict.Add(workshopId, list);
             }
             else
             {
-                _workshopDict[uniqueId].RemoveAll((CardDropTableXmlInfo x) => list.Exists((CardDropTableXmlInfo y) => x.id == y.id));
-                _workshopDict[uniqueId].AddRange(list);
+                foreach (CardDropTableXmlInfo cardDropTableXmlInfo in list)
+                {
+                    bool repeated = false;
+                    CardDropTableXmlInfo item = null;
+                    foreach (CardDropTableXmlInfo cardDropTableXml in Singleton<CardDropTableXmlList>.Instance._workshopDict[workshopId])
+                    {
+                        if (cardDropTableXml.id == cardDropTableXmlInfo.id)
+                        {
+                            repeated = true;
+                            item = cardDropTableXml;
+                            break;
+                        }
+                    }
+                    if (repeated)
+                    {
+                        Singleton<CardDropTableXmlList>.Instance._workshopDict[workshopId].Remove(item);
+                    }
+                    Singleton<CardDropTableXmlList>.Instance._workshopDict[workshopId].Add(cardDropTableXmlInfo);
+                }
             }
-            if (_list != null)
+            foreach (CardDropTableXmlInfo cardDropTableXmlInfo in list)
             {
-                _list.RemoveAll((CardDropTableXmlInfo x) => list.Exists((CardDropTableXmlInfo y) => x.id == y.id));
-                _list.AddRange(list);
+                bool repeated = false;
+                CardDropTableXmlInfo item = null;
+                foreach (CardDropTableXmlInfo cardDropTableXml in Singleton<CardDropTableXmlList>.Instance._list)
+                {
+                    if (cardDropTableXml.id == cardDropTableXmlInfo.id)
+                    {
+                        repeated = true;
+                        item = cardDropTableXml;
+                        break;
+                    }
+                }
+                if (repeated)
+                {
+                    Singleton<CardDropTableXmlList>.Instance._list.Remove(item);
+                }
+                Singleton<CardDropTableXmlList>.Instance._list.Add(cardDropTableXmlInfo);
             }
         }
-        private static CardDropTableXmlRoot LoadNewCardDropTable(string str)
+        private static void LoadDropBook_MOD(DirectoryInfo dir, string uniqueId)
         {
-            CardDropTableXmlRoot result;
-            using (StringReader stringReader = new StringReader(str))
-            {
-                result = (CardDropTableXmlRoot)new XmlSerializer(typeof(CardDropTableXmlRoot)).Deserialize(stringReader);
-            }
-            return result;
-        }
-        private static void LoadDropBook_MOD(DirectoryInfo dir, string uniqueId, Dictionary<string, List<DropBookXmlInfo>> _workshopDict, List<DropBookXmlInfo> _list, Dictionary<LorId, DropBookXmlInfo> _dict)
-        {
-            LoadDropBook_MOD_Checking(dir, uniqueId, _workshopDict, _list, _dict);
+            LoadDropBook_MOD_Checking(dir, uniqueId);
             if (dir.GetDirectories().Length != 0)
             {
                 DirectoryInfo[] directories = dir.GetDirectories();
                 for (int i = 0; i < directories.Length; i++)
                 {
-                    LoadDropBook_MOD(directories[i], uniqueId, _workshopDict, _list, _dict);
+                    LoadDropBook_MOD(directories[i], uniqueId);
                 }
             }
         }
-        private static void LoadDropBook_MOD_Checking(DirectoryInfo dir, string uniqueId, Dictionary<string, List<DropBookXmlInfo>> _workshopDict, List<DropBookXmlInfo> _list, Dictionary<LorId, DropBookXmlInfo> _dict)
+        private static void LoadDropBook_MOD_Checking(DirectoryInfo dir, string uniqueId)
         {
-            List<DropBookXmlInfo> list = new List<DropBookXmlInfo>();
             foreach (FileInfo fileInfo in dir.GetFiles())
             {
-                list.AddRange(LoadNewDropBook(File.ReadAllText(fileInfo.FullName)).bookXmlList);
+                try
+                {
+                    LoadNewDropBook(File.ReadAllText(fileInfo.FullName), uniqueId);
+                }
+                catch (Exception ex)
+                {
+                    UtilTools.CreateShortcut(Application.dataPath + "/Mods/", "Error from  " + uniqueId + " " + fileInfo.Name, fileInfo.FullName, fileInfo.DirectoryName, "Error Xml Files");
+                    Singleton<ModContentManager>.Instance.AddErrorLog(ex.Message + Environment.NewLine + ex.StackTrace);
+                    File.WriteAllText(Application.dataPath + "/Mods/" + "Error in " + uniqueId + " " + fileInfo.Name + ".log", ex.Message + Environment.NewLine + ex.StackTrace);
+                }
             }
-            foreach (DropBookXmlInfo dropBookXmlInfo in list)
+        }
+        private static List<DropBookXmlInfo> LoadNewDropBook(string str, string uniqueId)
+        {
+            GTMDProjectMoon.BookUseXmlRoot xmlRoot;
+            string newId = uniqueId;
+            List<DropBookXmlInfo> list = new List<DropBookXmlInfo>();
+            using (StringReader stringReader = new StringReader(str))
             {
-                dropBookXmlInfo.workshopID = uniqueId;
+                xmlRoot = (GTMDProjectMoon.BookUseXmlRoot)new XmlSerializer(typeof(GTMDProjectMoon.BookUseXmlRoot)).Deserialize(stringReader);
+            }
+            if (!string.IsNullOrWhiteSpace(xmlRoot.workshopID))
+            {
+                newId = ClarifyWorkshopId(xmlRoot.workshopID);
+            }
+            foreach (DropBookXmlInfo dropBookXmlInfo in xmlRoot.bookXmlList)
+            {
+                dropBookXmlInfo.workshopID = newId;
+                dropBookXmlInfo.InitializeDropItemList(newId);
                 CardDropTableXmlInfo workshopData = Singleton<CardDropTableXmlList>.Instance.GetWorkshopData(uniqueId, dropBookXmlInfo.id.id);
-                dropBookXmlInfo.InitializeDropItemList(uniqueId);
                 if (workshopData != null)
                 {
                     foreach (LorId id in workshopData.cardIdList)
@@ -976,46 +1045,62 @@ namespace BaseMod
                     }
                 }
             }
-            AddBookByMod(uniqueId, list, _workshopDict, _list, _dict);
+            AddBookByMod(uniqueId, list);
+            return list;
         }
-        private static void AddBookByMod(string workshopId, List<DropBookXmlInfo> list, Dictionary<string, List<DropBookXmlInfo>> _workshopDict, List<DropBookXmlInfo> _list, Dictionary<LorId, DropBookXmlInfo> _dict)
+        private static void AddBookByMod(string workshopId, List<DropBookXmlInfo> list)
         {
-            if (_workshopDict == null)
+            if (!Singleton<DropBookXmlList>.Instance._workshopDict.ContainsKey(workshopId))
             {
-                _workshopDict = new Dictionary<string, List<DropBookXmlInfo>>();
-            }
-            if (!_workshopDict.ContainsKey(workshopId))
-            {
-                _workshopDict.Add(workshopId, list);
+                Singleton<DropBookXmlList>.Instance._workshopDict.Add(workshopId, list);
             }
             else
             {
-                _workshopDict[workshopId].RemoveAll((DropBookXmlInfo x) => list.Exists((DropBookXmlInfo y) => x.id == y.id));
-                _workshopDict[workshopId].AddRange(list);
-            }
-            if (_list != null)
-            {
-                _list.RemoveAll((DropBookXmlInfo x) => list.Exists((DropBookXmlInfo y) => x.id == y.id));
-                _list.AddRange(list);
-            }
-            if (_dict != null)
-            {
-                foreach (DropBookXmlInfo bookXmlInfo in list)
+                foreach (DropBookXmlInfo dropBookXmlInfo in list)
                 {
-                    _dict[bookXmlInfo.id] = bookXmlInfo;
+                    bool repeated = false;
+                    DropBookXmlInfo item = null;
+                    foreach (DropBookXmlInfo dropBookXml in Singleton<DropBookXmlList>.Instance._workshopDict[workshopId])
+                    {
+                        if (dropBookXml.id == dropBookXmlInfo.id)
+                        {
+                            repeated = true;
+                            item = dropBookXml;
+                            break;
+                        }
+                    }
+                    if (repeated)
+                    {
+                        Singleton<DropBookXmlList>.Instance._workshopDict[workshopId].Remove(item);
+                    }
+                    Singleton<DropBookXmlList>.Instance._workshopDict[workshopId].Add(dropBookXmlInfo);
                 }
             }
-        }
-        private static BookUseXmlRoot LoadNewDropBook(string str)
-        {
-            BookUseXmlRoot result;
-            using (StringReader stringReader = new StringReader(str))
+            foreach (DropBookXmlInfo dropBookXmlInfo in list)
             {
-                result = (BookUseXmlRoot)new XmlSerializer(typeof(BookUseXmlRoot)).Deserialize(stringReader);
+                bool repeated = false;
+                DropBookXmlInfo item = null;
+                foreach (DropBookXmlInfo dropBookXml in Singleton<DropBookXmlList>.Instance._list)
+                {
+                    if (dropBookXml.id == dropBookXmlInfo.id)
+                    {
+                        repeated = true;
+                        item = dropBookXml;
+                        break;
+                    }
+                }
+                if (repeated)
+                {
+                    Singleton<DropBookXmlList>.Instance._list.Remove(item);
+                }
+                Singleton<DropBookXmlList>.Instance._list.Add(dropBookXmlInfo);
             }
-            return result;
+            foreach (DropBookXmlInfo dropBookXmlInfo in list)
+            {
+                Singleton<DropBookXmlList>.Instance._dict[dropBookXmlInfo.id] = dropBookXmlInfo;
+            }
         }
-        private static void LoadGift_MOD(DirectoryInfo dir, List<GiftXmlInfo> root)
+        private static void LoadGift_MOD(DirectoryInfo dir, string uniqueId)
         {
             LoadGift_MOD_Checking(dir, root);
             if (dir.GetDirectories().Length != 0)
@@ -1027,9 +1112,8 @@ namespace BaseMod
                 }
             }
         }
-        private static void LoadGift_MOD_Checking(DirectoryInfo dir, List<GiftXmlInfo> root)
+        private static void LoadGift_MOD_Checking(DirectoryInfo dir, string uniqueId)
         {
-            List<GiftXmlInfo> list = new List<GiftXmlInfo>();
             foreach (FileInfo fileInfo in dir.GetFiles())
             {
                 list.AddRange(LoadNewGift(File.ReadAllText(fileInfo.FullName)).giftXmlList);
@@ -1054,7 +1138,7 @@ namespace BaseMod
                 root.Add(giftXmlInfo);
             }
         }
-        private static GiftXmlRoot LoadNewGift(string str)
+        private static GiftXmlRoot LoadNewGift(string str, string uniqueId)
         {
             GiftXmlRoot result;
             using (StringReader stringReader = new StringReader(str))
