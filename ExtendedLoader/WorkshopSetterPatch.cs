@@ -85,38 +85,38 @@ namespace ExtendedLoader
                 }
                 if (extendedData.atkEffectPivotDic != null)
                 {
-                    if (extendedData.atkEffectPivotDic.TryGetValue("atkEffectRoot", out Harmony_Patch.EffectPivot atkEffectRoot))
+                    if (extendedData.atkEffectPivotDic.TryGetValue("atkEffectRoot", out EffectPivot atkEffectRoot))
                     {
                         __instance.Appearance.atkEffectRoot.position = Vector3.zero;
                         __instance.Appearance.atkEffectRoot.localPosition = atkEffectRoot.localPosition;
                         __instance.Appearance.atkEffectRoot.localScale = atkEffectRoot.localScale;
                         __instance.Appearance.atkEffectRoot.localEulerAngles = atkEffectRoot.localEulerAngles;
                     }
-                    if (extendedData.atkEffectPivotDic.TryGetValue("atkEffectPivot_H", out Harmony_Patch.EffectPivot atkEffectPivot_H))
+                    if (extendedData.atkEffectPivotDic.TryGetValue("atkEffectPivot_H", out EffectPivot atkEffectPivot_H))
                     {
                         __instance.Appearance.atkEffectPivot_H = CreateTransform(__instance.Appearance.atkEffectRoot, "atkEffectPivot_H", atkEffectPivot_H.localPosition, atkEffectPivot_H.localScale, atkEffectPivot_H.localEulerAngles);
                     }
-                    if (extendedData.atkEffectPivotDic.TryGetValue("atkEffectPivot_J", out Harmony_Patch.EffectPivot atkEffectPivot_J))
+                    if (extendedData.atkEffectPivotDic.TryGetValue("atkEffectPivot_J", out EffectPivot atkEffectPivot_J))
                     {
                         __instance.Appearance.atkEffectPivot_J = CreateTransform(__instance.Appearance.atkEffectRoot, "atkEffectPivot_J", atkEffectPivot_J.localPosition, atkEffectPivot_J.localScale, atkEffectPivot_J.localEulerAngles);
                     }
-                    if (extendedData.atkEffectPivotDic.TryGetValue("atkEffectPivot_Z", out Harmony_Patch.EffectPivot atkEffectPivot_Z))
+                    if (extendedData.atkEffectPivotDic.TryGetValue("atkEffectPivot_Z", out EffectPivot atkEffectPivot_Z))
                     {
                         __instance.Appearance.atkEffectPivot_Z = CreateTransform(__instance.Appearance.atkEffectRoot, "atkEffectPivot_Z", atkEffectPivot_Z.localPosition, atkEffectPivot_Z.localScale, atkEffectPivot_Z.localEulerAngles);
                     }
-                    if (extendedData.atkEffectPivotDic.TryGetValue("atkEffectPivot_G", out Harmony_Patch.EffectPivot atkEffectPivot_G))
+                    if (extendedData.atkEffectPivotDic.TryGetValue("atkEffectPivot_G", out EffectPivot atkEffectPivot_G))
                     {
                         __instance.Appearance.atkEffectPivot_G = CreateTransform(__instance.Appearance.atkEffectRoot, "atkEffectPivot_G", atkEffectPivot_G.localPosition, atkEffectPivot_G.localScale, atkEffectPivot_G.localEulerAngles);
                     }
-                    if (extendedData.atkEffectPivotDic.TryGetValue("atkEffectPivot_E", out Harmony_Patch.EffectPivot atkEffectPivot_E))
+                    if (extendedData.atkEffectPivotDic.TryGetValue("atkEffectPivot_E", out EffectPivot atkEffectPivot_E))
                     {
                         __instance.Appearance.atkEffectPivot_E = CreateTransform(__instance.Appearance.atkEffectRoot, "atkEffectPivot_E", atkEffectPivot_E.localPosition, atkEffectPivot_E.localScale, atkEffectPivot_E.localEulerAngles);
                     }
-                    if (extendedData.atkEffectPivotDic.TryGetValue("atkEffectPivot_S", out Harmony_Patch.EffectPivot atkEffectPivot_S))
+                    if (extendedData.atkEffectPivotDic.TryGetValue("atkEffectPivot_S", out EffectPivot atkEffectPivot_S))
                     {
                         __instance.Appearance.atkEffectPivot_S = CreateTransform(__instance.Appearance.atkEffectRoot, "atkEffectPivot_S", atkEffectPivot_S.localPosition, atkEffectPivot_S.localScale, atkEffectPivot_S.localEulerAngles);
                     }
-                    if (extendedData.atkEffectPivotDic.TryGetValue("atkEffectPivot_F", out Harmony_Patch.EffectPivot atkEffectPivot_F))
+                    if (extendedData.atkEffectPivotDic.TryGetValue("atkEffectPivot_F", out EffectPivot atkEffectPivot_F))
                     {
                         __instance.Appearance.atkEffectPivot_F = CreateTransform(__instance.Appearance.atkEffectRoot, "atkEffectPivot_F", atkEffectPivot_F.localPosition, atkEffectPivot_F.localScale, atkEffectPivot_F.localEulerAngles);
                     }
@@ -128,7 +128,7 @@ namespace ExtendedLoader
                     {
                         __instance.Appearance._specialMotionPivotList = new List<CharacterAppearance.MotionPivot>();
                     }
-                    foreach (KeyValuePair<ActionDetail, Harmony_Patch.EffectPivot> keyValuePair in extendedData.specialMotionPivotDic)
+                    foreach (KeyValuePair<ActionDetail, EffectPivot> keyValuePair in extendedData.specialMotionPivotDic)
                     {
                         __instance.Appearance._specialMotionPivotList.Add(new CharacterAppearance.MotionPivot()
                         {
@@ -225,15 +225,16 @@ namespace ExtendedLoader
                     }
                     partRenderer.front = spriteRendererFront;
                 }
-                if (transformHead)
-                {
-                    transformHead.localPosition = data.headPos;
-                    transformHead.localRotation = Quaternion.Euler(0f, 0f, data.headRotation);
-                    transformHead.gameObject.SetActive(data.headEnabled);
-                }
                 if (data1 != null)
                 {
                     SkinPartRenderer partRenderer1 = (SkinPartRenderer)partRenderer;
+                    if (transformHead)
+                    {
+                        transformHead.localPosition = data1.headPivot.localPosition;
+                        transformHead.localScale = data1.headPivot.localScale;
+                        transformHead.localRotation = Quaternion.Euler(data1.headPivot.localEulerAngles);
+                        transformHead.gameObject.SetActive(data.headEnabled);
+                    }
                     SpriteRenderer spriteRendererBack = transformBack?.gameObject.GetComponent<SpriteRenderer>();
                     if (spriteRendererBack)
                     {
@@ -274,19 +275,30 @@ namespace ExtendedLoader
                         }
                         partRenderer1.frontSkin = spriteRendererFrontSkin;
                     }
-                    foreach (Vector3 pos in data1.additionalPivots)
+                    for (var i = 0; i < data1.additionalPivots.Count; i++)
                     {
-                        GameObject gameObject = new GameObject("AdditionalPivot");
+                        EffectPivot pivot = data1.additionalPivots[i];
+                        GameObject gameObject = new GameObject("AdditionalPivot_" + i);
                         Transform transform1 = gameObject.transform;
                         transform1.parent = characterMotion.transform;
-                        transform1.localPosition = new Vector2(pos.x, pos.y);
-                        transform1.localScale = new Vector3(1, 1, 1);
-                        transform1.localRotation = Quaternion.Euler(0f, 0f, pos.z);
+                        transform1.localPosition = pivot.localPosition;
+                        transform1.localScale = pivot.localScale;
+                        transform1.localRotation = Quaternion.Euler(pivot.localEulerAngles);
                         characterMotion.additionalPivotList.Add(transform1);
                     }
+                    if (characterMotion is ExtendedCharacterMotion extendedMotion)
+					{
+                        extendedMotion.faceOverride = data1.faceOverride;
+					}
                 }
                 else
                 {
+                    if (transformHead)
+                    {
+                        transformHead.localPosition = data.headPos;
+                        transformHead.localRotation = Quaternion.Euler(0f, 0f, data.headRotation);
+                        transformHead.gameObject.SetActive(data.headEnabled);
+                    }
                     SpriteRenderer spriteRendererBack = transformBack?.gameObject.GetComponent<SpriteRenderer>();
                     if (spriteRendererBack)
                     {

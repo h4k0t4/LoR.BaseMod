@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System.Collections;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using UI;
@@ -7,9 +8,9 @@ using Workshop;
 
 namespace ExtendedLoader
 {
-    public class XLRoot
+    public class XLRoot: SingletonBehavior<XLRoot>
     {
-        public const int THUMB_LAYER = 11;
+        public const int THUMB_LAYER = 23;
         public const int THUMB_MASK = 1 << THUMB_LAYER;
         public static readonly GameObject persistentRoot = CreatePersistentRoot();
         public static readonly GameObject UICustomAppearancePrefab = CreateUIAppearancePrefab();
@@ -17,6 +18,7 @@ namespace ExtendedLoader
         public static readonly Dictionary<int, Sprite> SkinThumb = new Dictionary<int, Sprite>();
         public static readonly SkinPartRenderer thumbRenderers = new SkinPartRenderer();
         static Camera thumbCamera = null;
+        static readonly Queue<ClothCustomizeData> thumbQueue = new Queue<ClothCustomizeData>();
         public static Camera ThumbCamera
         {
             get
@@ -41,7 +43,7 @@ namespace ExtendedLoader
                         original.name = "ThumbRenderer_Front";
                         original.gameObject.layer = THUMB_LAYER;
                         original.sortingOrder = 2;
-                        original.transform.localPosition = new Vector3(0f, -2f, 0f);
+                        original.transform.localPosition = new Vector3(0f, -2f, 10f);
                         original.gameObject.SetActive(false);
 
                         thumbRenderers.rear = UnityEngine.Object.Instantiate(original, camera.transform);
@@ -59,43 +61,65 @@ namespace ExtendedLoader
 
         public static Sprite MakeThumbnail(ClothCustomizeData data)
         {
-            if (ThumbCamera == null)
-                return null;
-            thumbRenderers.front.sprite = data.frontSprite;
-            thumbRenderers.rear.sprite = data.sprite;
-            thumbRenderers.rearest.sprite = (data as ExtendedClothCustomizeData)?.backSprite;
-            foreach (object obj in thumbCamera.transform)
+            if (data != null && (data.GetType() == typeof(ClothCustomizeData) || data is ExtendedClothCustomizeData))
             {
-                SpriteRenderer renderer = (obj as Transform)?.GetComponent<SpriteRenderer>();
-                if (renderer != null)
-                    renderer.gameObject.SetActive(renderer.sprite != null);
+                thumbQueue.Enqueue(data);
             }
-            RenderTexture rt = thumbCamera.targetTexture;
-            RenderTexture backup = RenderTexture.active;
-            RenderTexture.active = rt;
-            rt.Release();
-            thumbCamera.Render();
-            Texture2D tex = new Texture2D(256, 512);
-            tex.ReadPixels(new Rect(0, 0, 256, 512), 0, 0);
-            foreach (object obj in thumbCamera.transform)
-            {
-                SpriteRenderer renderer = (obj as Transform)?.GetComponent<SpriteRenderer>();
-                if (renderer != null)
-                    renderer.gameObject.SetActive(false);
-            }
-            RenderTexture.active = backup;
-            byte[] bytes = tex.EncodeToPNG();
-            string text = new DirectoryInfo(data.spritePath).Parent.Parent.FullName + "/Thumb.png";
-            File.WriteAllBytes(text, bytes);
-            Debug.Log("Saved baked thumbnail to " + text);
-            return Sprite.Create(tex, new Rect(0f, 0f, 256f, 512f), new Vector2(0.5f, 0.5f));
+            return null;
         }
 
         static GameObject CreatePersistentRoot()
         {
             GameObject root = new GameObject("ExtendedLoader_PersistentRoot");
             UnityEngine.Object.DontDestroyOnLoad(root);
+            root.AddComponent<XLRoot>();
             return root;
+        }
+
+        public void Awake()
+        {
+            if (Instance != null && Instance != this)
+            {
+                Destroy(this);
+                return;
+            }
+            else
+            {
+                StartCoroutine(MakeThumbnailCoroutine());
+            }
+        }
+
+        public static IEnumerator MakeThumbnailCoroutine()
+        {
+            while (true)
+            {
+                yield return YieldCache.waitFrame;
+                if (ThumbCamera == null) continue;
+                if (thumbQueue.Count == 0) continue;
+                ClothCustomizeData nextInQueue = thumbQueue.Dequeue();
+                thumbRenderers.front.sprite = nextInQueue.frontSprite;
+                thumbRenderers.front.gameObject.SetActive(true);
+                thumbRenderers.rear.sprite = nextInQueue.sprite;
+                thumbRenderers.rear.gameObject.SetActive(true);
+                thumbRenderers.rearest.sprite = (nextInQueue as ExtendedClothCustomizeData)?.backSprite;
+                thumbRenderers.rearest.gameObject.SetActive(true);
+                yield return YieldCache.waitFrame;
+                RenderTexture rt = thumbCamera.targetTexture;
+                RenderTexture backup = RenderTexture.active;
+                rt.Release();
+                thumbCamera.Render();
+                RenderTexture.active = rt;
+                Texture2D tex = new Texture2D(256, 512);
+                tex.ReadPixels(new Rect(0, 0, 256, 512), 0, 0);
+                thumbRenderers.front.gameObject.SetActive(false);
+                thumbRenderers.rear.gameObject.SetActive(false);
+                thumbRenderers.rearest.gameObject.SetActive(false);
+                RenderTexture.active = backup;
+                byte[] bytes = tex.EncodeToPNG();
+                string text = new DirectoryInfo(nextInQueue.spritePath).Parent.Parent.FullName + "/Thumb.png";
+                File.WriteAllBytes(text, bytes);
+                Debug.Log("Saved baked thumbnail to " + text);
+            }
         }
 
         static GameObject CreateUIAppearancePrefab()
@@ -112,12 +136,15 @@ namespace ExtendedLoader
                 }
                 else
                 {
-                    foreach (object obj in motion.transform)
+                    ExtendedCharacterMotion newMotion = CopyCharacterMotion(motion);
+                    appearance._motionList.Remove(motion);
+                    UnityEngine.Object.Destroy(motion);
+                    appearance._motionList.Add(newMotion);
+                    foreach (Transform transform in newMotion.transform)
                     {
-                        Transform transform = (Transform)obj;
                         if (transform.gameObject.name == "Customize_Renderer")
                         {
-                            AddSkinRenderers(motion, transform);
+                            AddSkinRenderers(newMotion, transform);
                         }
                     }
                 }
@@ -133,8 +160,6 @@ namespace ExtendedLoader
             GameObject proto = (GameObject)Resources.Load("Prefabs/Characters/[Prefab]Appearance_Custom");
             GameObject gameObject = UnityEngine.Object.Instantiate(proto, persistentRoot.transform);
             CharacterAppearance appearance = gameObject.GetComponent<CharacterAppearance>();
-            CharacterMotion masterMotion = appearance._motionList[0];
-            Transform masterTransform = masterMotion.transform.parent;
             for (int i = 0; i < 12; i++)
             {
                 if (i == 9)
@@ -143,15 +168,20 @@ namespace ExtendedLoader
                 }
                 ActionDetail actionDetail = (ActionDetail)i;
                 CharacterMotion oldMotion = appearance._motionList.Find((CharacterMotion motion) => motion.actionDetail == actionDetail);
-                foreach (object obj in oldMotion.transform)
+                ExtendedCharacterMotion newMotion = CopyCharacterMotion(oldMotion);
+                appearance._motionList.Remove(oldMotion);
+                UnityEngine.Object.Destroy(oldMotion);
+                appearance._motionList.Add(newMotion);
+                foreach (Transform transform in newMotion.transform)
                 {
-                    Transform transform = (Transform)obj;
                     if (transform.gameObject.name == "Customize_Renderer")
                     {
-                        AddSkinRenderers(oldMotion, transform);
+                        AddSkinRenderers(newMotion, transform);
                     }
                 }
             }
+            CharacterMotion masterMotion = appearance._motionList[0];
+            Transform masterTransform = masterMotion.transform.parent;
             ActionDetail action = (ActionDetail)9;
             CharacterMotion addedMotion = UnityEngine.Object.Instantiate(masterMotion, masterTransform);
             addedMotion.transform.position = masterMotion.transform.position;
@@ -195,6 +225,17 @@ namespace ExtendedLoader
             motion.motionSpriteSet.Add(new SpriteSet(motion.transform.GetChild(1).gameObject.GetComponent<SpriteRenderer>(), CharacterAppearanceType.Body));
             motion.motionSpriteSet.Add(new SpriteSet(motion.transform.GetChild(0).GetChild(0).gameObject.GetComponent<SpriteRenderer>(), CharacterAppearanceType.Head));
             motion.motionSpriteSet.Add(new SpriteSet(motion.transform.GetChild(2).gameObject.GetComponent<SpriteRenderer>(), CharacterAppearanceType.Body));
+        }
+
+        static ExtendedCharacterMotion CopyCharacterMotion(CharacterMotion motion)
+		{
+            ExtendedCharacterMotion motion1 = motion.gameObject.AddComponent<ExtendedCharacterMotion>();
+            motion1.actionDetail = motion.actionDetail;
+            motion1.additionalPivotList = motion.additionalPivotList;
+            motion1.customPivot = motion.customPivot;
+            motion1.motionSpriteSet = motion.motionSpriteSet;
+            motion1.giftPivotList = motion.giftPivotList;
+            return motion1;
         }
     }
 }

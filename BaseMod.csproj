@@ -163,6 +163,7 @@
     <Compile Include="BaseMod\UIPanelTool.cs" />
     <Compile Include="BaseMod\UtilTools.cs" />
     <Compile Include="BaseMod\Tools.cs" />
+    <Compile Include="ExtendedLoader\FaceOverridePatch.cs" />
     <Compile Include="ExtendedLoader\GenderInjector.cs" />
     <Compile Include="ExtendedLoader\GiftOrderPatch.cs" />
     <Compile Include="ExtendedLoader\CustomProjectionLoadPatch.cs" />
