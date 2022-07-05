@@ -5077,7 +5077,7 @@ namespace BaseMod
             }
             foreach (Type type2 in Assembly.LoadFile(Application.dataPath + "/Managed/Assembly-CSharp.dll").GetTypes())
             {
-                if (type2.Name == "PassiveAbilityBase_" + name)
+                if (type2.Name == "GiftPassiveAbility_" + name)
                 {
                     return Activator.CreateInstance(type2) as PassiveAbilityBase;
                 }
