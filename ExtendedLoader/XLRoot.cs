@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Collections;
 using System.IO;
 using System.Linq;
 using UI;
@@ -7,9 +8,9 @@ using Workshop;
 
 namespace ExtendedLoader
 {
-    public class XLRoot
+    public class XLRoot : SingletonBehavior<XLRoot>
     {
-        public const int THUMB_LAYER = 11;
+        public const int THUMB_LAYER = 23;
         public const int THUMB_MASK = 1 << THUMB_LAYER;
         public static readonly GameObject persistentRoot = CreatePersistentRoot();
         public static readonly GameObject UICustomAppearancePrefab = CreateUIAppearancePrefab();
@@ -17,6 +18,7 @@ namespace ExtendedLoader
         public static readonly Dictionary<int, Sprite> SkinThumb = new Dictionary<int, Sprite>();
         public static readonly SkinPartRenderer thumbRenderers = new SkinPartRenderer();
         static Camera thumbCamera = null;
+        static readonly Queue<ClothCustomizeData> thumbQueue = new Queue<ClothCustomizeData>();
         public static Camera ThumbCamera
         {
             get
@@ -59,43 +61,65 @@ namespace ExtendedLoader
 
         public static Sprite MakeThumbnail(ClothCustomizeData data)
         {
-            if (ThumbCamera == null)
-                return null;
-            thumbRenderers.front.sprite = data.frontSprite;
-            thumbRenderers.rear.sprite = data.sprite;
-            thumbRenderers.rearest.sprite = (data as ExtendedClothCustomizeData)?.backSprite;
-            foreach (object obj in thumbCamera.transform)
+            if (data != null && (data.GetType() == typeof(ClothCustomizeData) || data is ExtendedClothCustomizeData))
             {
-                SpriteRenderer renderer = (obj as Transform)?.GetComponent<SpriteRenderer>();
-                if (renderer != null)
-                    renderer.gameObject.SetActive(renderer.sprite != null);
+                thumbQueue.Enqueue(data);
             }
-            RenderTexture rt = thumbCamera.targetTexture;
-            RenderTexture backup = RenderTexture.active;
-            RenderTexture.active = rt;
-            rt.Release();
-            thumbCamera.Render();
-            Texture2D tex = new Texture2D(256, 512);
-            tex.ReadPixels(new Rect(0, 0, 256, 512), 0, 0);
-            foreach (object obj in thumbCamera.transform)
+            return null;
+        }
+
+        public static IEnumerator MakeThumbnailCoroutine()
+        {
+            while (true)
             {
-                SpriteRenderer renderer = (obj as Transform)?.GetComponent<SpriteRenderer>();
-                if (renderer != null)
-                    renderer.gameObject.SetActive(false);
+                yield return YieldCache.waitFrame;
+                if (ThumbCamera == null) continue;
+                if (thumbQueue.Count == 0) continue;
+                ClothCustomizeData nextInQueue = thumbQueue.Dequeue();
+                thumbRenderers.front.sprite = nextInQueue.frontSprite;
+                thumbRenderers.front.gameObject.SetActive(true);
+                thumbRenderers.rear.sprite = nextInQueue.sprite;
+                thumbRenderers.rear.gameObject.SetActive(true);
+                thumbRenderers.rearest.sprite = (nextInQueue as ExtendedClothCustomizeData)?.backSprite;
+                thumbRenderers.rearest.gameObject.SetActive(true);
+                yield return YieldCache.waitFrame;
+                RenderTexture rt = thumbCamera.targetTexture;
+                RenderTexture backup = RenderTexture.active;
+                rt.Release();
+                thumbCamera.Render();
+                RenderTexture.active = rt;
+                Texture2D tex = new Texture2D(256, 512);
+                tex.ReadPixels(new Rect(0, 0, 256, 512), 0, 0);
+                thumbRenderers.front.gameObject.SetActive(false);
+                thumbRenderers.rear.gameObject.SetActive(false);
+                thumbRenderers.rearest.gameObject.SetActive(false);
+                RenderTexture.active = backup;
+                byte[] bytes = tex.EncodeToPNG();
+                string text = new DirectoryInfo(nextInQueue.spritePath).Parent.Parent.FullName + "/Thumb.png";
+                File.WriteAllBytes(text, bytes);
+                Debug.Log("Saved baked thumbnail to " + text);
             }
-            RenderTexture.active = backup;
-            byte[] bytes = tex.EncodeToPNG();
-            string text = new DirectoryInfo(data.spritePath).Parent.Parent.FullName + "/Thumb.png";
-            File.WriteAllBytes(text, bytes);
-            Debug.Log("Saved baked thumbnail to " + text);
-            return Sprite.Create(tex, new Rect(0f, 0f, 256f, 512f), new Vector2(0.5f, 0.5f));
         }
 
         static GameObject CreatePersistentRoot()
         {
             GameObject root = new GameObject("ExtendedLoader_PersistentRoot");
             UnityEngine.Object.DontDestroyOnLoad(root);
+            root.AddComponent<XLRoot>();
             return root;
+        }
+
+        public void Awake()
+        {
+            if (Instance != null && Instance != this)
+            {
+                Destroy(this);
+                return;
+            }
+            else
+            {
+                StartCoroutine(MakeThumbnailCoroutine());
+            }
         }
 
         static GameObject CreateUIAppearancePrefab()

@@ -1,13 +1,15 @@
 ﻿using UI;
 using UnityEngine;
 using Workshop;
+using System;
+using HarmonyLib;
 
 namespace ExtendedLoader
 {
     public class ThumbPatch
     {
-        //[HarmonyPatch(typeof(UICustomizeClothsPanel), nameof(UICustomizeClothsPanel.SetPreviewPortrait), new Type[] { typeof(WorkshopSkinData) })]
-        //[HarmonyPrefix]
+        [HarmonyPatch(typeof(UICustomizeClothsPanel), nameof(UICustomizeClothsPanel.SetPreviewPortrait), new Type[] { typeof(WorkshopSkinData) })]
+        [HarmonyPrefix]
         static bool SetPreviewPortraitPrefix(WorkshopSkinData data, UICustomizeClothsPanel __instance)
         {
             Sprite customThumb = data.GetThumbSprite();

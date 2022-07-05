@@ -295,12 +295,7 @@ namespace ExtendedLoader
                             XLRoot.SkinThumb.Add(skinId, sprite);
                             return sprite;
                         }
-                        Sprite newThumb = XLRoot.MakeThumbnail(data.dic[ActionDetail.Default]);
-                        if (newThumb != null)
-                        {
-                            XLRoot.SkinThumb.Add(skinId, newThumb);
-                            return newThumb;
-                        }
+                        XLRoot.MakeThumbnail(data.dic[ActionDetail.Default]);
                     }
                 }
                 catch (Exception ex)

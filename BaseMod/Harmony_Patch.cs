@@ -1779,13 +1779,7 @@ namespace BaseMod
                         __result = bookThumb;
                         return false;
                     }
-                    /*bookThumb = XLRoot.MakeThumbnail(workshopBookSkinData.dic[ActionDetail.Default]);
-                    if (bookThumb != null)
-                    {
-                        BookThumb.Add(__instance.BookId, bookThumb);
-                        __result = bookThumb;
-                        return false;
-                    }*/
+                    XLRoot.MakeThumbnail(workshopBookSkinData.dic[ActionDetail.Default]);
                 }
             }
             catch (Exception ex)
@@ -1822,14 +1816,8 @@ namespace BaseMod
                     {
                         __result = bookThumb;
                         return false;
-                    }/*
-                    bookThumb = XLRoot.MakeThumbnail(workshopBookSkinData.dic[ActionDetail.Default]);
-                    if (bookThumb != null)
-                    {
-                        BookThumb.Add(__instance.id, bookThumb);
-                        __result = bookThumb;
-                        return false;
-                    }*/
+                    }
+                    XLRoot.MakeThumbnail(workshopBookSkinData.dic[ActionDetail.Default]);
                 }
             }
             catch (Exception ex)
