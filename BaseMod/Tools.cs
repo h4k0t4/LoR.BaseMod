@@ -12,6 +12,7 @@ using TMPro;
 using UI;
 using UnityEngine;
 using UnityEngine.Networking;
+using System.Globalization;
 
 namespace BaseMod
 {
@@ -367,6 +368,20 @@ namespace BaseMod
         {
             public T value;
         }
+        public static float ParseFloatSafe(string s)
+        {
+            try
+            {
+                return float.Parse(s.Replace(',', '.').Replace('/', '.'), invariant);
+            }
+            catch (Exception ex)
+            {
+                Debug.Log("BaseMod: could not parse float, using 0 as fallback");
+                Debug.Log(ex);
+                return 0;
+            }
+        }
+        readonly static NumberFormatInfo invariant = CultureInfo.InvariantCulture.NumberFormat;
     }
     public class EffectTypoData_New : EffectTypoData
     {
