@@ -43,7 +43,7 @@ namespace ExtendedLoader
                         original.name = "ThumbRenderer_Front";
                         original.gameObject.layer = THUMB_LAYER;
                         original.sortingOrder = 2;
-                        original.transform.localPosition = new Vector3(0f, -2f, 0f);
+                        original.transform.localPosition = new Vector3(0f, -2f, 10f);
                         original.gameObject.SetActive(false);
 
                         thumbRenderers.rear = UnityEngine.Object.Instantiate(original, camera.transform);
