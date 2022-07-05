@@ -492,11 +492,7 @@ namespace BaseMod
             string workshopDirPath = PlatformManager.Instance.GetWorkshopDirPath();
             if (Directory.Exists(workshopDirPath))
             {
-                originalEyeIndex = 0;
-                originalBrowIndex = 0;
-                originalMouthIndex = 0;
-                originalFrontHairIndex = 0;
-                originalRearHairIndex = 0;
+                SetOriginalIndexes();
                 foreach (string text in Directory.GetDirectories(workshopDirPath))
                 {
                     try
@@ -562,6 +558,24 @@ namespace BaseMod
                 }
             }
             return list;
+        }
+        private static void SetOriginalIndexes()
+        {
+            var loaderDir = Singleton<CustomizingResourceLoader>.Instance.InternalCustomDir;
+            originalEyeIndex = GetOriginalIndex(loaderDir, "/Eyes_Normal", "/Eyes_Side_Normal");
+            originalBrowIndex = GetOriginalIndex(loaderDir, "/Brows_Normal", "/Brows_Attack", "/Brows_Side_Attack", "/Brows_Hit");
+            originalMouthIndex = GetOriginalIndex(loaderDir, "/Mouths_Normal", "/Mouths_Attack", "/Mouths_Side_Attack", "/Mouths_Hit");
+            originalFrontHairIndex = GetOriginalIndex(loaderDir, "/FrontHair", "/FrontHair_Side");
+            originalRearHairIndex = GetOriginalIndex(loaderDir, "/RearHair", "/RearHair_Side", "/RearHair_Side_FrontLayer");
+        }
+        private static int GetOriginalIndex(string baseFolder, params string[] subFolders)
+        {
+            int max = 0;
+            foreach (string subFolder in subFolders)
+            {
+                max = Mathf.Max(max, Resources.LoadAll<Sprite>(Path.Combine(baseFolder, subFolder)).Length);
+            }
+            return max;
         }
         private static Workshop.WorkshopAppearanceInfo LoadCustomAppearanceInfo(string rootPath, string xml)
         {
