@@ -24,6 +24,7 @@ namespace ExtendedLoader
         public float resolution = 50f;
         public List<EffectPivot> additionalPivots = new List<EffectPivot>();
         public EffectPivot headPivot;
+        public FaceOverride faceOverride = FaceOverride.None;
 
 
         [HarmonyPatch(typeof(ClothCustomizeData), nameof(ClothCustomizeData.LoadSprite))]

@@ -685,6 +685,7 @@ namespace BaseMod
                             
                             XmlNode headNode = actionNode.SelectSingleNode("Head");
                             bool headEnabled = true;
+                            FaceOverride faceOverride = FaceOverride.None;
                             EffectPivot headPivot = GetEffectPivot(headNode);
                             if (headPivot == null)
 							{
@@ -697,6 +698,11 @@ namespace BaseMod
                                 if (headEnabledXml != null)
                                 {
                                     bool.TryParse(headEnabledXml.InnerText, out headEnabled);
+                                }
+                                XmlNode faceXml = headNode.Attributes.GetNamedItem("face");
+                                if (Enum.TryParse(faceXml?.InnerText, true, out FaceOverride faceOverride1))
+                                {
+                                    faceOverride = faceOverride1;
                                 }
                             }
                             float headRotation = headPivot.localEulerAngles.z;
@@ -826,7 +832,8 @@ namespace BaseMod
                                     hasBackSkinSprite = hasBackSkinSprite,
                                     backSkinSpritePath = backSkinSpritePath,
                                     additionalPivots = additionalPivotCoords,
-                                    headPivot = headPivot
+                                    headPivot = headPivot,
+                                    faceOverride = faceOverride
                                 };
                             }
                             else

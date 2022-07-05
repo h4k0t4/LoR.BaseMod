@@ -120,6 +120,10 @@ namespace ExtendedLoader
                             AddSkinRenderers(motion, transform);
                         }
                     }
+                    ExtendedCharacterMotion newMotion = CopyCharacterMotion(motion);
+                    appearance._motionList.Remove(motion);
+                    UnityEngine.Object.Destroy(motion);
+                    appearance._motionList.Add(newMotion);
                 }
             }
             UnityEngine.Object.Destroy(gameObject.GetComponent<WorkshopSkinDataSetter>());
@@ -133,8 +137,6 @@ namespace ExtendedLoader
             GameObject proto = (GameObject)Resources.Load("Prefabs/Characters/[Prefab]Appearance_Custom");
             GameObject gameObject = UnityEngine.Object.Instantiate(proto, persistentRoot.transform);
             CharacterAppearance appearance = gameObject.GetComponent<CharacterAppearance>();
-            CharacterMotion masterMotion = appearance._motionList[0];
-            Transform masterTransform = masterMotion.transform.parent;
             for (int i = 0; i < 12; i++)
             {
                 if (i == 9)
@@ -151,7 +153,13 @@ namespace ExtendedLoader
                         AddSkinRenderers(oldMotion, transform);
                     }
                 }
+                ExtendedCharacterMotion newMotion = CopyCharacterMotion(oldMotion);
+                appearance._motionList.Remove(oldMotion);
+                UnityEngine.Object.Destroy(oldMotion);
+                appearance._motionList.Add(newMotion);
             }
+            CharacterMotion masterMotion = appearance._motionList[0];
+            Transform masterTransform = masterMotion.transform.parent;
             ActionDetail action = (ActionDetail)9;
             CharacterMotion addedMotion = UnityEngine.Object.Instantiate(masterMotion, masterTransform);
             addedMotion.transform.position = masterMotion.transform.position;
@@ -195,6 +203,17 @@ namespace ExtendedLoader
             motion.motionSpriteSet.Add(new SpriteSet(motion.transform.GetChild(1).gameObject.GetComponent<SpriteRenderer>(), CharacterAppearanceType.Body));
             motion.motionSpriteSet.Add(new SpriteSet(motion.transform.GetChild(0).GetChild(0).gameObject.GetComponent<SpriteRenderer>(), CharacterAppearanceType.Head));
             motion.motionSpriteSet.Add(new SpriteSet(motion.transform.GetChild(2).gameObject.GetComponent<SpriteRenderer>(), CharacterAppearanceType.Body));
+        }
+
+        static ExtendedCharacterMotion CopyCharacterMotion(CharacterMotion motion)
+        {
+            ExtendedCharacterMotion motion1 = motion.gameObject.AddComponent<ExtendedCharacterMotion>();
+            motion1.actionDetail = motion.actionDetail;
+            motion1.additionalPivotList = motion.additionalPivotList;
+            motion1.customPivot = motion.customPivot;
+            motion1.motionSpriteSet = motion.motionSpriteSet;
+            motion1.giftPivotList = motion.giftPivotList;
+            return motion1;
         }
     }
 }

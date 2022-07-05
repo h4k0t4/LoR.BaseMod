@@ -288,7 +288,11 @@ namespace ExtendedLoader
 							transform1.localRotation = Quaternion.Euler(pivot.localEulerAngles);
 							characterMotion.additionalPivotList.Add(transform1);
 						}
-					}
+                    }
+                    if (characterMotion is ExtendedCharacterMotion extendedMotion)
+                    {
+                        extendedMotion.faceOverride = data1.faceOverride;
+                    }
                 }
                 else
                 {

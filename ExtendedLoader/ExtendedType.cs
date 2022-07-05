@@ -35,4 +35,15 @@ namespace ExtendedLoader
     {
 
     }
+    public class ExtendedCharacterMotion : CharacterMotion
+    {
+        public FaceOverride faceOverride = FaceOverride.None;
+    }
+    public enum FaceOverride
+    {
+        None = -1,
+        Normal = 0,
+        Attack = 4,
+        Hit = 6
+    }
 }
