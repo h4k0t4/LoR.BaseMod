@@ -1153,6 +1153,20 @@ namespace BaseMod
             }
             CoreThumbDic = dic;
         }
+        private static void LoadCoreSounds()
+		{
+            if (CharacterSound._motionSoundResources == null)
+			{
+                CharacterSound._motionSoundResources = new Dictionary<string, AudioClip>();
+			}
+            foreach (AudioClip audioClip in Resources.LoadAll<AudioClip>("Sounds/MotionSound"))
+            {
+                if (!CharacterSound._motionSoundResources.ContainsKey(audioClip.name))
+                {
+                    CharacterSound._motionSoundResources.Add(audioClip.name, audioClip);
+                }
+            }
+        }
         //Apperance
         //CreateSkin
         [HarmonyPatch(typeof(SdCharacterUtil), "CreateSkin")]
@@ -4911,6 +4925,7 @@ namespace BaseMod
             try
             {
                 LoadCoreThumbs();
+                LoadCoreSounds();
             }
             catch (Exception ex)
             {
