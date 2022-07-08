@@ -490,9 +490,10 @@ namespace BaseMod
         {
             List<Workshop.WorkshopAppearanceInfo> list = new List<Workshop.WorkshopAppearanceInfo>();
             string workshopDirPath = PlatformManager.Instance.GetWorkshopDirPath();
+            SetOriginalIndexes();
+            ReloadExternalFaceData();
             if (Directory.Exists(workshopDirPath))
             {
-                SetOriginalIndexes();
                 foreach (string text in Directory.GetDirectories(workshopDirPath))
                 {
                     try
@@ -576,6 +577,137 @@ namespace BaseMod
                 max = Mathf.Max(max, Resources.LoadAll<Sprite>(Path.Combine(baseFolder, subFolder)).Length);
             }
             return max;
+        }
+        private static void ReloadExternalFaceData()
+		{
+            var loader = Singleton<CustomizingResourceLoader>.Instance;
+            originalEyeIndex = ReloadExternalFaceSets(loader.ExternalEyeDir, originalEyeIndex, loader._eyeResources);
+            originalBrowIndex = ReloadExternalFaceSets(loader.ExternalBrowDir, originalBrowIndex, loader._browResources);
+            originalMouthIndex = ReloadExternalFaceSets(loader.ExternalMouthDir, originalMouthIndex, loader._mouthResources);
+            originalFrontHairIndex = ReloadExternalHairSets(loader.ExternalFrontHairDir, false, originalFrontHairIndex, loader._frontHairResources);
+            originalRearHairIndex = ReloadExternalHairSets(loader.ExternalRearHairDir, true, originalRearHairIndex, loader._rearHairResources);
+        }
+        private static int ReloadExternalFaceSets(string dirPath, int index, List<FaceResourceSet> resList)
+		{
+            var loader = Singleton<CustomizingResourceLoader>.Instance;
+            string[] targetName = new string[]
+            {
+                loader.ExternalFaceNormalFileName,
+                loader.ExternalFaceAttackFileName,
+                loader.ExternalFaceHitFileName,
+                loader.ExternalFaceSideAttackFileName
+            };
+            DirectoryInfo directoryInfo = new DirectoryInfo(dirPath);
+            foreach (DirectoryInfo dir in directoryInfo.GetDirectories())
+            {
+                FaceResourceSet faceResourceSet = new FaceResourceSet();
+                Dictionary<string, Sprite> externalSpriteSet = GetExternalSpriteSet(dir, targetName);
+                if (externalSpriteSet.ContainsKey(loader.ExternalFaceNormalFileName))
+                {
+                    faceResourceSet.normal = externalSpriteSet[loader.ExternalFaceNormalFileName];
+                }
+                if (externalSpriteSet.ContainsKey(loader.ExternalFaceAttackFileName))
+                {
+                    faceResourceSet.atk = externalSpriteSet[loader.ExternalFaceAttackFileName];
+                }
+                if (externalSpriteSet.ContainsKey(loader.ExternalFaceHitFileName))
+                {
+                    faceResourceSet.hit = externalSpriteSet[loader.ExternalFaceHitFileName];
+                }
+                if (externalSpriteSet.ContainsKey(loader.ExternalFaceSideAttackFileName))
+                {
+                    faceResourceSet.atk_side = externalSpriteSet[loader.ExternalFaceSideAttackFileName];
+                }
+                if (faceResourceSet.FillSprite())
+                {
+                    if (index >= 0 && index < resList.Count) {
+                        resList[index] = faceResourceSet;
+                        index++;
+                    }
+                    else
+					{
+                        resList.Add(faceResourceSet);
+                        index = -1;
+					}
+                }
+            }
+            return index;
+		}
+        private static int ReloadExternalHairSets(string dirPath, bool rear, int index, List<HairResourceSet> resList)
+        {
+            var loader = Singleton<CustomizingResourceLoader>.Instance;
+            string[] targetName = new string[]
+            {
+                loader.ExternalHairDefaultFileName,
+                loader.ExternalFrontHairSideFileName,
+                loader.ExternalRearHairSideFileName,
+                loader.ExternalRearHairSideBackFileName
+            };
+            DirectoryInfo directoryInfo = new DirectoryInfo(dirPath);
+            foreach (DirectoryInfo dir in directoryInfo.GetDirectories())
+            {
+                HairResourceSet hairResourceSet = new HairResourceSet();
+                Dictionary<string, Sprite> externalSpriteSet = GetExternalSpriteSet(dir, targetName);
+                if (externalSpriteSet.ContainsKey(loader.ExternalHairDefaultFileName))
+                {
+                    hairResourceSet.Default = externalSpriteSet[loader.ExternalHairDefaultFileName];
+                }
+                if (rear)
+                {
+                    if (externalSpriteSet.ContainsKey(loader.ExternalRearHairSideFileName))
+                    {
+                        hairResourceSet.Side_Front = externalSpriteSet[loader.ExternalRearHairSideFileName];
+                    }
+                    if (externalSpriteSet.ContainsKey(loader.ExternalRearHairSideBackFileName))
+                    {
+                        hairResourceSet.Side_Back = externalSpriteSet[loader.ExternalRearHairSideBackFileName];
+                    }
+                }
+                else if (externalSpriteSet.ContainsKey(loader.ExternalFrontHairSideFileName))
+                {
+                    hairResourceSet.Side_Front = externalSpriteSet[loader.ExternalFrontHairSideFileName];
+                }
+                if (!(hairResourceSet.Default == null))
+                {
+                    if (index >= 0 && index < resList.Count)
+                    {
+                        resList[index] = hairResourceSet;
+                        index++;
+                    }
+                    else
+                    {
+                        resList.Add(hairResourceSet);
+                        index = -1;
+                    }
+                }
+            }
+            return index;
+        }
+
+        private static Dictionary<string, Sprite> GetExternalSpriteSet(DirectoryInfo dir, string[] targetName)
+        {
+            Dictionary<string, Sprite> dictionary = new Dictionary<string, Sprite>();
+            Vector2 pivot = new Vector2(0.5f, 0.5f);
+            foreach (FileInfo fileInfo in dir.GetFiles())
+            {
+                string text = Path.GetFileNameWithoutExtension(fileInfo.Name).ToLower();
+                if (targetName.Contains(text))
+                {
+                    try
+                    {
+                        Sprite sprite = SpriteUtil.LoadSprite(fileInfo.FullName, pivot);
+                        if (sprite != null && !dictionary.ContainsKey(text))
+                        {
+                            dictionary.Add(text, sprite);
+                        }
+                    }
+                    catch (Exception)
+                    {
+                        Debug.LogError("invalid image file " + fileInfo.FullName);
+                    }
+                }
+            }
+            return dictionary;
         }
         private static Workshop.WorkshopAppearanceInfo LoadCustomAppearanceInfo(string rootPath, string xml)
         {
