@@ -59,7 +59,7 @@ namespace ExtendedLoader
                 }
                 else if (nameFound &&
                     Equals(codes[i].opcode, OpCodes.Callvirt) &&
-                    Equals(codes[i].operand, AccessTools.PropertyGetter(typeof(BookModel), nameof(BookModel.GetCharacterName))))
+                    Equals(codes[i].operand, AccessTools.Method(typeof(BookModel), nameof(BookModel.GetCharacterName))))
                 {
                     yield return new CodeInstruction(OpCodes.Pop);
                     yield return new CodeInstruction(OpCodes.Ldloc, loc);
@@ -99,7 +99,7 @@ namespace ExtendedLoader
                 }
                 else if (nameFound &&
                     Equals(codes[i].opcode, OpCodes.Callvirt) &&
-                    Equals(codes[i].operand, AccessTools.PropertyGetter(typeof(BookModel), nameof(BookModel.GetCharacterName))))
+                    Equals(codes[i].operand, AccessTools.Method(typeof(BookModel), nameof(BookModel.GetCharacterName))))
                 {
                     yield return new CodeInstruction(OpCodes.Pop);
                     yield return new CodeInstruction(OpCodes.Ldloc, loc);
