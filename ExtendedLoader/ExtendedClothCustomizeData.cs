@@ -22,7 +22,9 @@ namespace ExtendedLoader
         public string backSpritePath = "";
         public string backSkinSpritePath = "";
         public float resolution = 50f;
-        public List<Vector3> additionalPivots = new List<Vector3>();
+        public List<EffectPivot> additionalPivots = new List<EffectPivot>();
+        public EffectPivot headPivot;
+        public FaceOverride faceOverride = FaceOverride.None;
 
 
         [HarmonyPatch(typeof(ClothCustomizeData), nameof(ClothCustomizeData.LoadSprite))]

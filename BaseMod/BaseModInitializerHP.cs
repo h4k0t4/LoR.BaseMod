@@ -58,6 +58,7 @@ namespace BaseMod
             extendedLoader.PatchAll(typeof(ExtendedLoader.ThumbPatch));
             extendedLoader.PatchAll(typeof(ExtendedLoader.VanillaSkinCopyPatch));
             extendedLoader.PatchAll(typeof(ExtendedLoader.WorkshopSetterPatch));
+            extendedLoader.PatchAll(typeof(ExtendedLoader.FaceOverridePatch));
         }/*
         private static void RemoveWarnings()
         {

@@ -290,6 +290,52 @@ namespace BaseMod
         }
         private static void LoadBookSkins(Dictionary<string, List<Workshop.WorkshopSkinData>> _bookSkinData)
         {
+            var loader = Singleton<CustomizingResourceLoader>.Instance;
+            var list2 = LoadWorkshopExtendedCustomAppearance();
+            foreach (Workshop.WorkshopAppearanceInfo workshopAppearanceInfo in list2)
+            {
+                try
+                {
+                    if (workshopAppearanceInfo.isClothCustom)
+                    {
+                        Workshop.WorkshopSkinData workshopSkinData;
+                        if (workshopAppearanceInfo is ExtendedWorkshopAppearanceInfo extendedAppearanceInfo)
+                        {
+                            workshopSkinData = new ExtendedWorkshopSkinData
+                            {
+                                dic = extendedAppearanceInfo.clothCustomInfo,
+                                dataName = extendedAppearanceInfo.bookName,
+                                contentFolderIdx = extendedAppearanceInfo.uniqueId,
+                                atkEffectPivotDic = extendedAppearanceInfo.atkEffectPivotDic,
+                                specialMotionPivotDic = extendedAppearanceInfo.specialMotionPivotDic,
+                                motionSoundList = extendedAppearanceInfo.motionSoundList
+                            };
+                        }
+                        else
+                        {
+                            workshopSkinData = new Workshop.WorkshopSkinData
+                            {
+                                dic = workshopAppearanceInfo.clothCustomInfo,
+                                dataName = workshopAppearanceInfo.bookName,
+                                contentFolderIdx = workshopAppearanceInfo.uniqueId
+                            };
+                        }
+                        int num = loader._skinData.Count;
+                        if (loader._skinData.TryGetValue(workshopAppearanceInfo.uniqueId, out Workshop.WorkshopSkinData workshopSkinData1))
+                        {
+                            num = workshopSkinData1.id;
+                            loader._skinData.Remove(workshopAppearanceInfo.uniqueId);
+                        }
+                        workshopSkinData.id = num;
+                        loader._skinData.Add(workshopAppearanceInfo.uniqueId, workshopSkinData);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Debug.LogError("BaseMod XL: error loading workshop skin at " + workshopAppearanceInfo.path);
+                    Debug.LogError(ex);
+                }
+            }
             foreach (ModContent modContent in LoadedModContents)
             {
                 string modDirectory = modContent._dirInfo.FullName;
@@ -309,36 +355,58 @@ namespace BaseMod
                         string[] directories = Directory.GetDirectories(defaultCharDirectory);
                         for (int i = 0; i < directories.Length; i++)
                         {
-                            Workshop.WorkshopAppearanceInfo workshopAppearanceInfo = LoadCustomAppearance(directories[i]);
-                            if (workshopAppearanceInfo != null && workshopAppearanceInfo is ExtendedWorkshopAppearanceInfo extendedAppearanceInfo)
+                            try
                             {
-                                string[] array = directories[i].Split(new char[]
+                                Workshop.WorkshopAppearanceInfo info = LoadCustomAppearance(directories[i]);
+                                if (info != null)
                                 {
-                                    '\\'
-                                });
-                                string bookName = array[array.Length - 1];
-                                extendedAppearanceInfo.path = directories[i];
-                                extendedAppearanceInfo.uniqueId = modId;
-                                extendedAppearanceInfo.bookName = bookName;
-                                if (extendedAppearanceInfo.isClothCustom)
-                                {
-                                    var extendedData = new ExtendedWorkshopSkinData
+                                    string[] array = directories[i].Split(new char[]
+                                        {
+                                        '\\'
+                                        });
+                                    string bookName = array[array.Length - 1];
+                                    info.path = directories[i];
+                                    info.uniqueId = modName;
+                                    info.bookName = bookName;
+                                    if (info.isClothCustom)
                                     {
-                                        dic = extendedAppearanceInfo.clothCustomInfo,
-                                        dataName = extendedAppearanceInfo.bookName,
-                                        contentFolderIdx = extendedAppearanceInfo.uniqueId,
-                                        atkEffectPivotDic = extendedAppearanceInfo.atkEffectPivotDic,
-                                        specialMotionPivotDic = extendedAppearanceInfo.specialMotionPivotDic,
-                                        motionSoundList = extendedAppearanceInfo.motionSoundList,
-                                        id = i
-                                    };
-                                    var oldData = skinlist.Find((Workshop.WorkshopSkinData data) => data.id == i);
-                                    if (oldData != null)
-                                    {
-                                        skinlist.Remove(oldData);
+                                        Workshop.WorkshopSkinData newData;
+                                        if (info is ExtendedWorkshopAppearanceInfo extendedInfo)
+                                        {
+                                            newData = new ExtendedWorkshopSkinData
+                                            {
+                                                dic = extendedInfo.clothCustomInfo,
+                                                dataName = extendedInfo.bookName,
+                                                contentFolderIdx = extendedInfo.uniqueId,
+                                                atkEffectPivotDic = extendedInfo.atkEffectPivotDic,
+                                                specialMotionPivotDic = extendedInfo.specialMotionPivotDic,
+                                                motionSoundList = extendedInfo.motionSoundList,
+                                                id = i
+                                            };
+                                        }
+                                        else
+                                        {
+                                            newData = new Workshop.WorkshopSkinData
+                                            {
+                                                dic = info.clothCustomInfo,
+                                                dataName = info.bookName,
+                                                contentFolderIdx = info.uniqueId,
+                                                id = i
+                                            };
+                                        }
+                                        var oldData = skinlist.Find((Workshop.WorkshopSkinData data) => data.id == i);
+                                        if (oldData != null)
+                                        {
+                                            skinlist.Remove(oldData);
+                                        }
+                                        skinlist.Add(newData);
                                     }
-                                    skinlist.Add(extendedData);
                                 }
+                            }
+                            catch (Exception ex)
+                            {
+                                Debug.LogError("BaseMod XL: error reloading skin at " + directories[i]);
+                                Debug.LogError(ex);
                             }
                         }
                     }
@@ -350,44 +418,52 @@ namespace BaseMod
                     string[] directories = Directory.GetDirectories(charDirectory);
                     for (int i = 0; i < directories.Length; i++)
                     {
-                        Workshop.WorkshopAppearanceInfo workshopAppearanceInfo = LoadCustomAppearance(directories[i]);
-                        if (workshopAppearanceInfo != null)
+                        try
                         {
-                            string[] array = directories[i].Split(new char[]
+                            Workshop.WorkshopAppearanceInfo workshopAppearanceInfo = LoadCustomAppearance(directories[i]);
+                            if (workshopAppearanceInfo != null)
                             {
+                                string[] array = directories[i].Split(new char[]
+                                {
                                 '\\'
-                            });
-                            string str = array[array.Length - 1];
-                            workshopAppearanceInfo.path = directories[i];
-                            workshopAppearanceInfo.uniqueId = modId;
-                            workshopAppearanceInfo.bookName = "Custom_" + str;
-                            bool isClothCustom = workshopAppearanceInfo.isClothCustom;
-                            if (isClothCustom)
-                            {
-                                if (workshopAppearanceInfo is ExtendedWorkshopAppearanceInfo extendedAppearanceInfo)
+                                });
+                                string bookName = array[array.Length - 1];
+                                workshopAppearanceInfo.path = directories[i];
+                                workshopAppearanceInfo.uniqueId = modId;
+                                workshopAppearanceInfo.bookName = "Custom_" + bookName;
+                                bool isClothCustom = workshopAppearanceInfo.isClothCustom;
+                                if (isClothCustom)
                                 {
-                                    list.Add(new ExtendedWorkshopSkinData
+                                    if (workshopAppearanceInfo is ExtendedWorkshopAppearanceInfo extendedAppearanceInfo)
                                     {
-                                        dic = extendedAppearanceInfo.clothCustomInfo,
-                                        dataName = extendedAppearanceInfo.bookName,
-                                        contentFolderIdx = extendedAppearanceInfo.uniqueId,
-                                        atkEffectPivotDic = extendedAppearanceInfo.atkEffectPivotDic,
-                                        specialMotionPivotDic = extendedAppearanceInfo.specialMotionPivotDic,
-                                        motionSoundList = extendedAppearanceInfo.motionSoundList,
-                                        id = oldSkins + i
-                                    });
-                                }
-                                else
-                                {
-                                    list.Add(new Workshop.WorkshopSkinData
+                                        list.Add(new ExtendedWorkshopSkinData
+                                        {
+                                            dic = extendedAppearanceInfo.clothCustomInfo,
+                                            dataName = extendedAppearanceInfo.bookName,
+                                            contentFolderIdx = extendedAppearanceInfo.uniqueId,
+                                            atkEffectPivotDic = extendedAppearanceInfo.atkEffectPivotDic,
+                                            specialMotionPivotDic = extendedAppearanceInfo.specialMotionPivotDic,
+                                            motionSoundList = extendedAppearanceInfo.motionSoundList,
+                                            id = oldSkins + i
+                                        });
+                                    }
+                                    else
                                     {
-                                        dic = workshopAppearanceInfo.clothCustomInfo,
-                                        dataName = workshopAppearanceInfo.bookName,
-                                        contentFolderIdx = workshopAppearanceInfo.uniqueId,
-                                        id = oldSkins + i
-                                    });
+                                        list.Add(new Workshop.WorkshopSkinData
+                                        {
+                                            dic = workshopAppearanceInfo.clothCustomInfo,
+                                            dataName = workshopAppearanceInfo.bookName,
+                                            contentFolderIdx = workshopAppearanceInfo.uniqueId,
+                                            id = oldSkins + i
+                                        });
+                                    }
                                 }
                             }
+                        }
+                        catch (Exception ex)
+                        {
+                            Debug.LogError("BaseMod XL: error loading skin at " + directories[i]);
+                            Debug.LogError(ex);
                         }
                     }
                     if (_bookSkinData.ContainsKey(modId))
@@ -398,44 +474,6 @@ namespace BaseMod
                     {
                         _bookSkinData[modId] = list;
                     }
-                }
-            }
-            var loader = Singleton<CustomizingResourceLoader>.Instance;
-            var list2 = LoadWorkshopExtendedCustomAppearance();
-            foreach (Workshop.WorkshopAppearanceInfo workshopAppearanceInfo in list2)
-            {
-                if (workshopAppearanceInfo.isClothCustom)
-                {
-                    Workshop.WorkshopSkinData workshopSkinData;
-                    if (workshopAppearanceInfo is ExtendedWorkshopAppearanceInfo extendedAppearanceInfo)
-                    {
-                        workshopSkinData = new ExtendedWorkshopSkinData
-                        {
-                            dic = extendedAppearanceInfo.clothCustomInfo,
-                            dataName = extendedAppearanceInfo.bookName,
-                            contentFolderIdx = extendedAppearanceInfo.uniqueId,
-                            atkEffectPivotDic = extendedAppearanceInfo.atkEffectPivotDic,
-                            specialMotionPivotDic = extendedAppearanceInfo.specialMotionPivotDic,
-                            motionSoundList = extendedAppearanceInfo.motionSoundList
-                        };
-                    }
-                    else
-                    {
-                        workshopSkinData = new Workshop.WorkshopSkinData
-                        {
-                            dic = workshopAppearanceInfo.clothCustomInfo,
-                            dataName = workshopAppearanceInfo.bookName,
-                            contentFolderIdx = workshopAppearanceInfo.uniqueId
-                        };
-                    }
-                    int num = loader._skinData.Count;
-                    if (loader._skinData.TryGetValue(workshopAppearanceInfo.uniqueId, out Workshop.WorkshopSkinData workshopSkinData1))
-                    {
-                        num = workshopSkinData1.id;
-                        loader._skinData.Remove(workshopAppearanceInfo.uniqueId);
-                    }
-                    workshopSkinData.id = num;
-                    loader._skinData.Add(workshopAppearanceInfo.uniqueId, workshopSkinData);
                 }
             }
         }
@@ -452,52 +490,224 @@ namespace BaseMod
         {
             List<Workshop.WorkshopAppearanceInfo> list = new List<Workshop.WorkshopAppearanceInfo>();
             string workshopDirPath = PlatformManager.Instance.GetWorkshopDirPath();
+            SetOriginalIndexes();
+            ReloadExternalFaceData();
             if (Directory.Exists(workshopDirPath))
             {
                 foreach (string text in Directory.GetDirectories(workshopDirPath))
                 {
-                    Workshop.WorkshopAppearanceInfo workshopAppearanceInfo = LoadCustomAppearance(text);
-                    if (workshopAppearanceInfo != null && workshopAppearanceInfo is ExtendedWorkshopAppearanceInfo)
+                    try
                     {
-                        list.Add(workshopAppearanceInfo);
-                        string[] array = text.Split(new char[]
+                        Workshop.WorkshopAppearanceInfo info = LoadCustomAppearance(text);
+                        if (info != null)
                         {
+                            list.Add(info);
+                            string[] array = text.Split(new char[]
+                            {
                             '\\'
-                        });
-                        string text2 = array[array.Length - 1];
-                        workshopAppearanceInfo.path = text;
-                        workshopAppearanceInfo.uniqueId = text2;
-                        if (string.IsNullOrWhiteSpace(workshopAppearanceInfo.bookName))
-                        {
-                            workshopAppearanceInfo.bookName = text2;
+                            });
+                            string text2 = array[array.Length - 1];
+                            info.path = text;
+                            info.uniqueId = text2;
+                            if (string.IsNullOrWhiteSpace(info.bookName))
+                            {
+                                info.bookName = text2;
+                            }
                         }
+                    }
+                    catch (Exception ex)
+                    {
+                        Debug.LogError("BaseMod XL: error reloading skin at " + text);
+                        Debug.LogError(ex);
                     }
                 }
             }
+            originalEyeIndex = -1;
+            originalBrowIndex = -1;
+            originalMouthIndex = -1;
+            originalFrontHairIndex = -1;
+            originalRearHairIndex = -1;
             string localDirPath = Path.Combine(Application.dataPath, "Mods");
             if (Directory.Exists(localDirPath))
             {
                 foreach (string text in Directory.GetDirectories(localDirPath))
                 {
-                    Workshop.WorkshopAppearanceInfo workshopAppearanceInfo = LoadCustomAppearance(text);
-                    if (workshopAppearanceInfo != null)
+                    try
                     {
-                        list.Add(workshopAppearanceInfo);
-                        string[] array = text.Split(new char[]
+                        Workshop.WorkshopAppearanceInfo workshopAppearanceInfo = LoadCustomAppearance(text);
+                        if (workshopAppearanceInfo != null)
                         {
+                            list.Add(workshopAppearanceInfo);
+                            string[] array = text.Split(new char[]
+                            {
                             '\\'
-                        });
-                        string text2 = array[array.Length - 1];
-                        workshopAppearanceInfo.path = text;
-                        workshopAppearanceInfo.uniqueId = text2;
-                        if (string.IsNullOrWhiteSpace(workshopAppearanceInfo.bookName))
-                        {
-                            workshopAppearanceInfo.bookName = text2;
+                            });
+                            string text2 = array[array.Length - 1];
+                            workshopAppearanceInfo.path = text;
+                            workshopAppearanceInfo.uniqueId = text2;
+                            if (string.IsNullOrWhiteSpace(workshopAppearanceInfo.bookName))
+                            {
+                                workshopAppearanceInfo.bookName = text2;
+                            }
                         }
+                    }
+                    catch (Exception ex)
+                    {
+                        Debug.LogError("BaseMod XL: error loading skin at " + text);
+                        Debug.LogError(ex);
                     }
                 }
             }
             return list;
+        }
+        private static void SetOriginalIndexes()
+        {
+            var loaderDir = Singleton<CustomizingResourceLoader>.Instance.InternalCustomDir;
+            originalEyeIndex = GetOriginalIndex(loaderDir, "/Eyes_Normal", "/Eyes_Side_Normal");
+            originalBrowIndex = GetOriginalIndex(loaderDir, "/Brows_Normal", "/Brows_Attack", "/Brows_Side_Attack", "/Brows_Hit");
+            originalMouthIndex = GetOriginalIndex(loaderDir, "/Mouths_Normal", "/Mouths_Attack", "/Mouths_Side_Attack", "/Mouths_Hit");
+            originalFrontHairIndex = GetOriginalIndex(loaderDir, "/FrontHair", "/FrontHair_Side");
+            originalRearHairIndex = GetOriginalIndex(loaderDir, "/RearHair", "/RearHair_Side", "/RearHair_Side_FrontLayer");
+        }
+        private static int GetOriginalIndex(string baseFolder, params string[] subFolders)
+        {
+            int max = 0;
+            foreach (string subFolder in subFolders)
+            {
+                max = Mathf.Max(max, Resources.LoadAll<Sprite>(Path.Combine(baseFolder, subFolder)).Length);
+            }
+            return max;
+        }
+        private static void ReloadExternalFaceData()
+		{
+            var loader = Singleton<CustomizingResourceLoader>.Instance;
+            originalEyeIndex = ReloadExternalFaceSets(loader.ExternalEyeDir, originalEyeIndex, loader._eyeResources);
+            originalBrowIndex = ReloadExternalFaceSets(loader.ExternalBrowDir, originalBrowIndex, loader._browResources);
+            originalMouthIndex = ReloadExternalFaceSets(loader.ExternalMouthDir, originalMouthIndex, loader._mouthResources);
+            originalFrontHairIndex = ReloadExternalHairSets(loader.ExternalFrontHairDir, false, originalFrontHairIndex, loader._frontHairResources);
+            originalRearHairIndex = ReloadExternalHairSets(loader.ExternalRearHairDir, true, originalRearHairIndex, loader._rearHairResources);
+        }
+        private static int ReloadExternalFaceSets(string dirPath, int index, List<FaceResourceSet> resList)
+		{
+            var loader = Singleton<CustomizingResourceLoader>.Instance;
+            string[] targetName = new string[]
+            {
+                loader.ExternalFaceNormalFileName,
+                loader.ExternalFaceAttackFileName,
+                loader.ExternalFaceHitFileName,
+                loader.ExternalFaceSideAttackFileName
+            };
+            DirectoryInfo directoryInfo = new DirectoryInfo(dirPath);
+            foreach (DirectoryInfo dir in directoryInfo.GetDirectories())
+            {
+                FaceResourceSet faceResourceSet = new FaceResourceSet();
+                Dictionary<string, Sprite> externalSpriteSet = GetExternalSpriteSet(dir, targetName);
+                if (externalSpriteSet.ContainsKey(loader.ExternalFaceNormalFileName))
+                {
+                    faceResourceSet.normal = externalSpriteSet[loader.ExternalFaceNormalFileName];
+                }
+                if (externalSpriteSet.ContainsKey(loader.ExternalFaceAttackFileName))
+                {
+                    faceResourceSet.atk = externalSpriteSet[loader.ExternalFaceAttackFileName];
+                }
+                if (externalSpriteSet.ContainsKey(loader.ExternalFaceHitFileName))
+                {
+                    faceResourceSet.hit = externalSpriteSet[loader.ExternalFaceHitFileName];
+                }
+                if (externalSpriteSet.ContainsKey(loader.ExternalFaceSideAttackFileName))
+                {
+                    faceResourceSet.atk_side = externalSpriteSet[loader.ExternalFaceSideAttackFileName];
+                }
+                if (faceResourceSet.FillSprite())
+                {
+                    if (index >= 0 && index < resList.Count) {
+                        resList[index] = faceResourceSet;
+                        index++;
+                    }
+                    else
+					{
+                        resList.Add(faceResourceSet);
+                        index = -1;
+					}
+                }
+            }
+            return index;
+		}
+        private static int ReloadExternalHairSets(string dirPath, bool rear, int index, List<HairResourceSet> resList)
+        {
+            var loader = Singleton<CustomizingResourceLoader>.Instance;
+            string[] targetName = new string[]
+            {
+                loader.ExternalHairDefaultFileName,
+                loader.ExternalFrontHairSideFileName,
+                loader.ExternalRearHairSideFileName,
+                loader.ExternalRearHairSideBackFileName
+            };
+            DirectoryInfo directoryInfo = new DirectoryInfo(dirPath);
+            foreach (DirectoryInfo dir in directoryInfo.GetDirectories())
+            {
+                HairResourceSet hairResourceSet = new HairResourceSet();
+                Dictionary<string, Sprite> externalSpriteSet = GetExternalSpriteSet(dir, targetName);
+                if (externalSpriteSet.ContainsKey(loader.ExternalHairDefaultFileName))
+                {
+                    hairResourceSet.Default = externalSpriteSet[loader.ExternalHairDefaultFileName];
+                }
+                if (rear)
+                {
+                    if (externalSpriteSet.ContainsKey(loader.ExternalRearHairSideFileName))
+                    {
+                        hairResourceSet.Side_Front = externalSpriteSet[loader.ExternalRearHairSideFileName];
+                    }
+                    if (externalSpriteSet.ContainsKey(loader.ExternalRearHairSideBackFileName))
+                    {
+                        hairResourceSet.Side_Back = externalSpriteSet[loader.ExternalRearHairSideBackFileName];
+                    }
+                }
+                else if (externalSpriteSet.ContainsKey(loader.ExternalFrontHairSideFileName))
+                {
+                    hairResourceSet.Side_Front = externalSpriteSet[loader.ExternalFrontHairSideFileName];
+                }
+                if (!(hairResourceSet.Default == null))
+                {
+                    if (index >= 0 && index < resList.Count)
+                    {
+                        resList[index] = hairResourceSet;
+                        index++;
+                    }
+                    else
+                    {
+                        resList.Add(hairResourceSet);
+                        index = -1;
+                    }
+                }
+            }
+            return index;
+        }
+
+        private static Dictionary<string, Sprite> GetExternalSpriteSet(DirectoryInfo dir, string[] targetName)
+        {
+            Dictionary<string, Sprite> dictionary = new Dictionary<string, Sprite>();
+            Vector2 pivot = new Vector2(0.5f, 0.5f);
+            foreach (FileInfo fileInfo in dir.GetFiles())
+            {
+                string text = Path.GetFileNameWithoutExtension(fileInfo.Name).ToLower();
+                if (targetName.Contains(text))
+                {
+                    try
+                    {
+                        Sprite sprite = SpriteUtil.LoadSprite(fileInfo.FullName, pivot);
+                        if (sprite != null && !dictionary.ContainsKey(text))
+                        {
+                            dictionary.Add(text, sprite);
+                        }
+                    }
+                    catch (Exception)
+                    {
+                        Debug.LogError("invalid image file " + fileInfo.FullName);
+                    }
+                }
+            }
+            return dictionary;
         }
         private static Workshop.WorkshopAppearanceInfo LoadCustomAppearanceInfo(string rootPath, string xml)
         {
@@ -594,25 +804,18 @@ namespace BaseMod
                                 XmlNode resXml = actionNode.Attributes.GetNamedItem("quality");
                                 if (resXml != null)
                                 {
-                                    res = float.Parse(resXml.InnerText, CultureInfo.InvariantCulture);
+                                    res = Tools.ParseFloatSafe(resXml.InnerText);
                                 }
                                 isCustomSize = (size.x != 512 || size.y != 512 || res != 50f);
                             }
 
                             XmlNode spritePivotNode = actionNode.SelectSingleNode("Pivot");
-                            XmlNode headNode = actionNode.SelectSingleNode("Head");
                             XmlNode spritePivotXXml = null;
                             XmlNode spritePivotYXml = null;
-                            XmlNode headXXml = null;
-                            XmlNode headYXml = null;
-                            XmlNode headRXml = null;
                             if (isExtended)
                             {
                                 spritePivotXXml = spritePivotNode.Attributes.GetNamedItem("pivot_x_custom");
                                 spritePivotYXml = spritePivotNode.Attributes.GetNamedItem("pivot_y_custom");
-                                headXXml = headNode.Attributes.GetNamedItem("head_x_custom");
-                                headYXml = headNode.Attributes.GetNamedItem("head_y_custom");
-                                headRXml = headNode.Attributes.GetNamedItem("rotation_custom");
                             }
                             if (spritePivotXXml == null)
                             {
@@ -622,32 +825,34 @@ namespace BaseMod
                             {
                                 spritePivotYXml = spritePivotNode.Attributes.GetNamedItem("pivot_y");
                             }
-                            float spritePivotX = float.Parse(spritePivotXXml.InnerText, CultureInfo.InvariantCulture);
-                            float spritePivotY = float.Parse(spritePivotYXml.InnerText, CultureInfo.InvariantCulture);
+                            float spritePivotX = Tools.ParseFloatSafe(spritePivotXXml.InnerText);
+                            float spritePivotY = Tools.ParseFloatSafe(spritePivotYXml.InnerText);
                             Vector2 pivotPos = new Vector2(spritePivotX / (2 * size.x) + 0.5f, spritePivotY / (2 * size.y) + 0.5f);
-
-                            if (headXXml == null)
-                            {
-                                headXXml = headNode.Attributes.GetNamedItem("head_x");
-                            }
-                            if (headYXml == null)
-                            {
-                                headYXml = headNode.Attributes.GetNamedItem("head_y");
-                            }
-                            float headX = float.Parse(headXXml.InnerText, CultureInfo.InvariantCulture);
-                            float headY = float.Parse(headYXml.InnerText, CultureInfo.InvariantCulture);
-                            Vector2 headPos = new Vector2(headX / 100f, headY / 100f);
-                            if (headRXml == null)
-                            {
-                                headRXml = headNode.Attributes.GetNamedItem("rotation");
-                            }
-                            float headRotation = float.Parse(headRXml.InnerText, CultureInfo.InvariantCulture);
-                            XmlNode headEnabledXml = headNode.Attributes.GetNamedItem("head_enable");
+                            
+                            XmlNode headNode = actionNode.SelectSingleNode("Head");
                             bool headEnabled = true;
-                            if (headEnabledXml != null)
-                            {
-                                bool.TryParse(headEnabledXml.InnerText, out headEnabled);
+                            FaceOverride faceOverride = FaceOverride.None;
+                            EffectPivot headPivot = GetEffectPivot(headNode);
+                            if (headPivot == null)
+							{
+                                headPivot = new EffectPivot();
+                                headEnabled = false;
+							}
+                            else
+							{
+                                XmlNode headEnabledXml = headNode.Attributes.GetNamedItem("head_enable");
+                                if (headEnabledXml != null)
+                                {
+                                    bool.TryParse(headEnabledXml.InnerText, out headEnabled);
+                                }
+                                XmlNode faceXml = headNode.Attributes.GetNamedItem("face");
+                                if (Enum.TryParse(faceXml?.InnerText, true, out FaceOverride faceOverride1))
+                                {
+                                    faceOverride = faceOverride1;
+                                }
                             }
+                            float headRotation = headPivot.localEulerAngles.z;
+                            Vector2 headPos = new Vector2(headPivot.localPosition.x, headPivot.localPosition.y);
 
                             XmlNode directionNode = actionNode.SelectSingleNode("Direction");
                             CharacterMotion.MotionDirection direction = CharacterMotion.MotionDirection.FrontView;
@@ -656,21 +861,16 @@ namespace BaseMod
                                 direction = CharacterMotion.MotionDirection.SideView;
                             }
 
-                            List<Vector3> additionalPivotCoords = null;
+                            List<EffectPivot> additionalPivotCoords = null;
                             if (isExtended)
                             {
                                 XmlNodeList additionalPivotNodes = actionNode.SelectNodes("AdditionalPivot");
-                                if (additionalPivotNodes != null)
+                                if (additionalPivotNodes != null && additionalPivotNodes.Count > 0)
                                 {
-                                    additionalPivotCoords = new List<Vector3>();
+                                    additionalPivotCoords = new List<EffectPivot>();
                                     foreach (XmlNode additionalPivot in additionalPivotNodes)
                                     {
-                                        XmlNode addPivotX = additionalPivot.Attributes.GetNamedItem("pivot_x");
-                                        XmlNode addPivotY = additionalPivot.Attributes.GetNamedItem("pivot_y");
-                                        XmlNode addPivotR = additionalPivot.Attributes.GetNamedItem("rotation");
-                                        additionalPivotCoords.Add(new Vector3(float.Parse(addPivotX.InnerText, CultureInfo.InvariantCulture) / 100f,
-                                            float.Parse(addPivotY.InnerText, CultureInfo.InvariantCulture) / 100f,
-                                            float.Parse(addPivotR?.InnerText ?? "0", CultureInfo.InvariantCulture)));
+                                        additionalPivotCoords.Add(GetEffectPivot(additionalPivot));
                                     }
                                 }
                             }
@@ -777,7 +977,9 @@ namespace BaseMod
                                     backSpritePath = backSpritePath,
                                     hasBackSkinSprite = hasBackSkinSprite,
                                     backSkinSpritePath = backSkinSpritePath,
-                                    additionalPivots = additionalPivotCoords
+                                    additionalPivots = additionalPivotCoords,
+                                    headPivot = headPivot,
+                                    faceOverride = faceOverride
                                 };
                             }
                             else
@@ -888,82 +1090,59 @@ namespace BaseMod
         }
         private static EffectPivot GetEffectPivot(XmlNode effectPivotNode)
         {
-            EffectPivot atkEffectRoot = new EffectPivot();
-            if (effectPivotNode != null)
+            if (effectPivotNode == null)
             {
-                XmlNode positionNode = effectPivotNode.SelectSingleNode("localPosition");
-                if (positionNode != null)
+                return null;
+            }
+            var pivot = new EffectPivot();
+            var attr = effectPivotNode.Attributes;
+            if ((attr.GetNamedItem("x") ?? attr.GetNamedItem("pivot_x") ?? attr.GetNamedItem("head_x")) is XmlNode xnode)
+            {
+                pivot.localPosition.x = Tools.ParseFloatSafe(xnode.InnerText) / 100;
+            }
+            if ((attr.GetNamedItem("y") ?? attr.GetNamedItem("pivot_y") ?? attr.GetNamedItem("head_y")) is XmlNode ynode)
+            {
+                pivot.localPosition.x = Tools.ParseFloatSafe(ynode.InnerText) / 100;
+            }
+            if (attr.GetNamedItem("rotation") is XmlNode rnode)
+            {
+                pivot.localEulerAngles.z = Tools.ParseFloatSafe(rnode.InnerText);
+            }
+            SetPivotCoords(pivot, effectPivotNode);
+            return pivot;
+        }
+        private static void SetPivotCoords(EffectPivot pivot, XmlNode pivotNode)
+		{
+            pivot.localPosition = SetVectorCoords(pivotNode.SelectSingleNode("localPosition"), pivot.localPosition);
+            pivot.localScale = SetVectorCoords(pivotNode.SelectSingleNode("localScale"), pivot.localScale);
+            pivot.localEulerAngles = SetVectorCoords(pivotNode.SelectSingleNode("localEulerAngles"), pivot.localEulerAngles);
+        }
+        private static Vector3 SetVectorCoords(XmlNode coordsNode, Vector3 coords)
+        {
+            if (coordsNode != null)
+            {
+                if (coordsNode.Attributes.GetNamedItem("x") is XmlNode xnode)
                 {
-                    XmlNode x = positionNode.Attributes.GetNamedItem("x");
-                    if (x != null)
-                    {
-                        atkEffectRoot.localPosition.x = float.Parse(x.InnerText, CultureInfo.InvariantCulture);
-                    }
-                    XmlNode y = positionNode.Attributes.GetNamedItem("y");
-                    if (y != null)
-                    {
-                        atkEffectRoot.localPosition.y = float.Parse(y.InnerText, CultureInfo.InvariantCulture);
-                    }
-                    XmlNode z = positionNode.Attributes.GetNamedItem("z");
-                    if (z != null)
-                    {
-                        atkEffectRoot.localPosition.z = float.Parse(z.InnerText, CultureInfo.InvariantCulture);
-                    }
+                    coords.x = Tools.ParseFloatSafe(xnode.InnerText);
                 }
-                XmlNode scaleNode = effectPivotNode.SelectSingleNode("localScale");
-                if (scaleNode != null)
+                if (coordsNode.Attributes.GetNamedItem("y") is XmlNode ynode)
                 {
-                    XmlNode x = scaleNode.Attributes.GetNamedItem("x");
-                    if (x != null)
-                    {
-                        atkEffectRoot.localScale.x = float.Parse(x.InnerText, CultureInfo.InvariantCulture);
-                    }
-                    XmlNode y = scaleNode.Attributes.GetNamedItem("y");
-                    if (y != null)
-                    {
-                        atkEffectRoot.localScale.y = float.Parse(y.InnerText, CultureInfo.InvariantCulture);
-                    }
-                    XmlNode z = scaleNode.Attributes.GetNamedItem("z");
-                    if (z != null)
-                    {
-                        atkEffectRoot.localScale.z = float.Parse(z.InnerText, CultureInfo.InvariantCulture);
-                    }
+                    coords.y = Tools.ParseFloatSafe(ynode.InnerText);
                 }
-                XmlNode anglesNode = effectPivotNode.SelectSingleNode("localEulerAngles");
-                if (anglesNode != null)
+                if (coordsNode.Attributes.GetNamedItem("z") is XmlNode znode)
                 {
-                    XmlNode x = anglesNode.Attributes.GetNamedItem("x");
-                    if (x != null)
-                    {
-                        atkEffectRoot.localEulerAngles.x = float.Parse(x.InnerText, CultureInfo.InvariantCulture);
-                    }
-                    XmlNode y = anglesNode.Attributes.GetNamedItem("y");
-                    if (y != null)
-                    {
-                        atkEffectRoot.localEulerAngles.y = float.Parse(y.InnerText, CultureInfo.InvariantCulture);
-                    }
-                    XmlNode z = anglesNode.Attributes.GetNamedItem("z");
-                    if (z != null)
-                    {
-                        atkEffectRoot.localEulerAngles.z = float.Parse(z.InnerText, CultureInfo.InvariantCulture);
-                    }
+                    coords.z = Tools.ParseFloatSafe(znode.InnerText);
                 }
             }
-            return atkEffectRoot;
-        }
-        public class EffectPivot
-        {
-            public Vector3 localPosition = Vector3.zero;
-            public Vector3 localScale = new Vector3(1, 1, 1);
-            public Vector3 localEulerAngles = Vector3.zero;
+            return coords;
         }
         private static void LoadFaceCustom(Dictionary<Workshop.FaceCustomType, Sprite> faceCustomInfo)
         {
-            FaceResourceSet faceResourceSet = new FaceResourceSet();
-            FaceResourceSet faceResourceSet2 = new FaceResourceSet();
-            FaceResourceSet faceResourceSet3 = new FaceResourceSet();
-            HairResourceSet hairResourceSet = new HairResourceSet();
-            HairResourceSet hairResourceSet2 = new HairResourceSet();
+            FaceResourceSet eyeResourceSet = new FaceResourceSet();
+            FaceResourceSet browResourceSet = new FaceResourceSet();
+            FaceResourceSet mouthResourceSet = new FaceResourceSet();
+            HairResourceSet frontHairResourceSet = new HairResourceSet();
+            HairResourceSet rearHairResourceSet = new HairResourceSet();
             foreach (KeyValuePair<Workshop.FaceCustomType, Sprite> keyValuePair in faceCustomInfo)
             {
                 Workshop.FaceCustomType key = keyValuePair.Key;
@@ -971,74 +1150,119 @@ namespace BaseMod
                 switch (key)
                 {
                     case Workshop.FaceCustomType.Front_RearHair:
-                        hairResourceSet2.Default = value;
+                        rearHairResourceSet.Default = value;
                         break;
                     case Workshop.FaceCustomType.Front_FrontHair:
-                        hairResourceSet.Default = value;
+                        frontHairResourceSet.Default = value;
                         break;
                     case Workshop.FaceCustomType.Front_Eye:
-                        faceResourceSet.normal = value;
+                        eyeResourceSet.normal = value;
                         break;
                     case Workshop.FaceCustomType.Front_Brow_Normal:
-                        faceResourceSet2.normal = value;
+                        browResourceSet.normal = value;
                         break;
                     case Workshop.FaceCustomType.Front_Brow_Attack:
-                        faceResourceSet2.atk = value;
+                        browResourceSet.atk = value;
                         break;
                     case Workshop.FaceCustomType.Front_Brow_Hit:
-                        faceResourceSet2.hit = value;
+                        browResourceSet.hit = value;
                         break;
                     case Workshop.FaceCustomType.Front_Mouth_Normal:
-                        faceResourceSet3.normal = value;
+                        mouthResourceSet.normal = value;
                         break;
                     case Workshop.FaceCustomType.Front_Mouth_Attack:
-                        faceResourceSet3.atk = value;
+                        mouthResourceSet.atk = value;
                         break;
                     case Workshop.FaceCustomType.Front_Mouth_Hit:
-                        faceResourceSet3.hit = value;
+                        mouthResourceSet.hit = value;
                         break;
                     case Workshop.FaceCustomType.Side_RearHair_Rear:
-                        hairResourceSet2.Side_Back = value;
+                        rearHairResourceSet.Side_Back = value;
                         break;
                     case Workshop.FaceCustomType.Side_FrontHair:
-                        hairResourceSet.Side_Front = value;
+                        frontHairResourceSet.Side_Front = value;
                         break;
                     case Workshop.FaceCustomType.Side_RearHair_Front:
-                        hairResourceSet2.Side_Front = value;
+                        rearHairResourceSet.Side_Front = value;
                         break;
                     case Workshop.FaceCustomType.Side_Mouth:
-                        faceResourceSet3.atk_side = value;
+                        mouthResourceSet.atk_side = value;
                         break;
                     case Workshop.FaceCustomType.Side_Brow:
-                        faceResourceSet2.atk_side = value;
+                        browResourceSet.atk_side = value;
                         break;
                     case Workshop.FaceCustomType.Side_Eye:
-                        faceResourceSet.atk_side = value;
+                        eyeResourceSet.atk_side = value;
                         break;
                 }
             }
-            faceResourceSet.FillSprite();
-            faceResourceSet2.FillSprite();
-            faceResourceSet3.FillSprite();
+            eyeResourceSet.FillSprite();
+            browResourceSet.FillSprite();
+            mouthResourceSet.FillSprite();
             if (faceCustomInfo.ContainsKey(Workshop.FaceCustomType.Front_Eye) || faceCustomInfo.ContainsKey(Workshop.FaceCustomType.Side_Eye))
             {
-                Singleton<CustomizingResourceLoader>.Instance._eyeResources.Add(faceResourceSet);
+                if (originalEyeIndex >= 0 && originalEyeIndex < Singleton<CustomizingResourceLoader>.Instance._eyeResources.Count)
+                {
+                    Singleton<CustomizingResourceLoader>.Instance._eyeResources[originalEyeIndex] = eyeResourceSet;
+                    originalEyeIndex++;
+                }
+                else
+                {
+                    originalEyeIndex = -1;
+                    Singleton<CustomizingResourceLoader>.Instance._eyeResources.Add(eyeResourceSet);
+                }
             }
             if (faceCustomInfo.ContainsKey(Workshop.FaceCustomType.Front_Brow_Attack) || faceCustomInfo.ContainsKey(Workshop.FaceCustomType.Front_Brow_Hit) || faceCustomInfo.ContainsKey(Workshop.FaceCustomType.Front_Brow_Normal) || faceCustomInfo.ContainsKey(Workshop.FaceCustomType.Side_Brow))
             {
-                Singleton<CustomizingResourceLoader>.Instance._browResources.Add(faceResourceSet2);
+                if (originalBrowIndex >= 0 && originalBrowIndex < Singleton<CustomizingResourceLoader>.Instance._browResources.Count)
+                {
+                    Singleton<CustomizingResourceLoader>.Instance._browResources[originalBrowIndex] = browResourceSet;
+                    originalBrowIndex++;
+                }
+                else
+                {
+                    originalBrowIndex = -1;
+                    Singleton<CustomizingResourceLoader>.Instance._browResources.Add(browResourceSet);
+                }
             }
             if (faceCustomInfo.ContainsKey(Workshop.FaceCustomType.Front_Mouth_Attack) || faceCustomInfo.ContainsKey(Workshop.FaceCustomType.Front_Mouth_Hit) || faceCustomInfo.ContainsKey(Workshop.FaceCustomType.Front_Mouth_Normal) || faceCustomInfo.ContainsKey(Workshop.FaceCustomType.Side_Mouth))
             {
-                Singleton<CustomizingResourceLoader>.Instance._mouthResources.Add(faceResourceSet3);
+                if (originalMouthIndex >= 0 && originalMouthIndex < Singleton<CustomizingResourceLoader>.Instance._mouthResources.Count)
+                {
+                    Singleton<CustomizingResourceLoader>.Instance._mouthResources[originalMouthIndex] = mouthResourceSet;
+                    originalMouthIndex++;
+                }
+                else
+                {
+                    originalMouthIndex = -1;
+                    Singleton<CustomizingResourceLoader>.Instance._mouthResources.Add(mouthResourceSet);
+                }
             }
             if (faceCustomInfo.ContainsKey(Workshop.FaceCustomType.Front_FrontHair) || faceCustomInfo.ContainsKey(Workshop.FaceCustomType.Side_FrontHair))
             {
-                Singleton<CustomizingResourceLoader>.Instance._frontHairResources.Add(hairResourceSet);
+                if (originalFrontHairIndex >= 0 && originalFrontHairIndex < Singleton<CustomizingResourceLoader>.Instance._frontHairResources.Count)
+                {
+                    Singleton<CustomizingResourceLoader>.Instance._frontHairResources[originalFrontHairIndex] = frontHairResourceSet;
+                    originalFrontHairIndex++;
+                }
+                else
+                {
+                    originalFrontHairIndex = -1;
+                    Singleton<CustomizingResourceLoader>.Instance._frontHairResources.Add(frontHairResourceSet);
+                }
             }
             if (faceCustomInfo.ContainsKey(Workshop.FaceCustomType.Front_RearHair) || faceCustomInfo.ContainsKey(Workshop.FaceCustomType.Side_RearHair_Front) || faceCustomInfo.ContainsKey(Workshop.FaceCustomType.Side_RearHair_Rear))
             {
-                Singleton<CustomizingResourceLoader>.Instance._rearHairResources.Add(hairResourceSet2);
+                if (originalRearHairIndex >= 0 && originalRearHairIndex < Singleton<CustomizingResourceLoader>.Instance._rearHairResources.Count)
+                {
+                    Singleton<CustomizingResourceLoader>.Instance._rearHairResources[originalRearHairIndex] = rearHairResourceSet;
+                    originalRearHairIndex++;
+                }
+                else
+                {
+                    originalRearHairIndex = -1;
+                    Singleton<CustomizingResourceLoader>.Instance._rearHairResources.Add(rearHairResourceSet);
+                }
             }
         }
         private static void LoadCoreThumbs()
@@ -1060,6 +1284,20 @@ namespace BaseMod
                 }
             }
             CoreThumbDic = dic;
+        }
+        private static void LoadCoreSounds()
+		{
+            if (CharacterSound._motionSoundResources == null)
+			{
+                CharacterSound._motionSoundResources = new Dictionary<string, AudioClip>();
+			}
+            foreach (AudioClip audioClip in Resources.LoadAll<AudioClip>("Sounds/MotionSound"))
+            {
+                if (!CharacterSound._motionSoundResources.ContainsKey(audioClip.name))
+                {
+                    CharacterSound._motionSoundResources.Add(audioClip.name, audioClip);
+                }
+            }
         }
         //Apperance
         //CreateSkin
@@ -1687,13 +1925,7 @@ namespace BaseMod
                         __result = bookThumb;
                         return false;
                     }
-                    /*bookThumb = XLRoot.MakeThumbnail(workshopBookSkinData.dic[ActionDetail.Default]);
-                    if (bookThumb != null)
-                    {
-                        BookThumb.Add(__instance.BookId, bookThumb);
-                        __result = bookThumb;
-                        return false;
-                    }*/
+                    XLRoot.MakeThumbnail(workshopBookSkinData.dic[ActionDetail.Default]);
                 }
             }
             catch (Exception ex)
@@ -1730,14 +1962,8 @@ namespace BaseMod
                     {
                         __result = bookThumb;
                         return false;
-                    }/*
-                    bookThumb = XLRoot.MakeThumbnail(workshopBookSkinData.dic[ActionDetail.Default]);
-                    if (bookThumb != null)
-                    {
-                        BookThumb.Add(__instance.id, bookThumb);
-                        __result = bookThumb;
-                        return false;
-                    }*/
+                    }
+                    XLRoot.MakeThumbnail(workshopBookSkinData.dic[ActionDetail.Default]);
                 }
             }
             catch (Exception ex)
@@ -4831,6 +5057,7 @@ namespace BaseMod
             try
             {
                 LoadCoreThumbs();
+                LoadCoreSounds();
             }
             catch (Exception ex)
             {
@@ -4985,7 +5212,7 @@ namespace BaseMod
             }
             foreach (Type type2 in Assembly.LoadFile(Application.dataPath + "/Managed/Assembly-CSharp.dll").GetTypes())
             {
-                if (type2.Name == "PassiveAbilityBase_" + name)
+                if (type2.Name == "GiftPassiveAbility_" + name)
                 {
                     return Activator.CreateInstance(type2) as PassiveAbilityBase;
                 }
@@ -6249,6 +6476,14 @@ namespace BaseMod
             public string path;
             public Sprite sprite;
         }
+
+
+
+        private static int originalEyeIndex = -1;
+        private static int originalBrowIndex = -1;
+        private static int originalMouthIndex = -1;
+        private static int originalFrontHairIndex = -1;
+        private static int originalRearHairIndex = -1;
 
         private static string path = string.Empty;
 
