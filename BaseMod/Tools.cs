@@ -12,11 +12,15 @@ using TMPro;
 using UI;
 using UnityEngine;
 using UnityEngine.Networking;
+using System.Globalization;
 
 namespace BaseMod
 {
     public static class Tools
     {
+        /// <summary>
+        /// 生成LorId
+        /// </summary>
         public static LorId MakeLorId(int id)
         {
             Assembly callingAssembly = Assembly.GetCallingAssembly();
@@ -102,6 +106,19 @@ namespace BaseMod
                 list.Sort((BattleDiceCardModel.CardIcon x, BattleDiceCardModel.CardIcon y) => y.Priority - x.Priority);
             }
         }
+        public static T GetScript<T>(this BattleDiceCardModel cardModel) where T : DiceCardSelfAbilityBase
+        {
+            if (cardModel._script != null && cardModel._script is T)
+            {
+                return cardModel._script as T;
+            }
+            return null;
+        }
+        public static DiceCardSelfAbilityBase SetScript<T>(this BattleDiceCardModel cardModel, DiceCardSelfAbilityBase selfAbilityBase)
+        {
+            cardModel._script = selfAbilityBase;
+            return selfAbilityBase;
+        }
         public static bool ContainsCategory(this BookModel book, string category)
         {
             return book._classInfo.ContainsCategory(category);
@@ -116,6 +133,10 @@ namespace BaseMod
         }
         public static bool ContainsCategory(this DiceCardXmlInfo card, string category)
         {
+            if (card is DiceCardXmlInfo_New)
+            {
+                (card as DiceCardXmlInfo_New).categoryList.Contains(OrcTools.GetBookCategory(category));
+            }
             return card.category == OrcTools.GetBookCategory(category);
         }
         public static void SetAbilityData(this BattleCardBehaviourResult battleCardBehaviourResult, EffectTypoData effectTypoData)
@@ -133,6 +154,22 @@ namespace BaseMod
                 Harmony_Patch.CustomEffectTypoData[battleCardBehaviourResult] = new List<EffectTypoData>();
             }
             Harmony_Patch.CustomEffectTypoData[battleCardBehaviourResult].Add(effectTypoData);
+        }
+        public static void SetAbilityData(this BattleCardBehaviourResult battleCardBehaviourResult, EffectTypoData_New effectTypoData_New)
+        {
+            if (Harmony_Patch.CustomEffectTypoData == null)
+            {
+                Harmony_Patch.CustomEffectTypoData = new Dictionary<BattleCardBehaviourResult, List<EffectTypoData>>();
+            }
+            if (battleCardBehaviourResult == null || effectTypoData_New == null)
+            {
+                return;
+            }
+            if (!Harmony_Patch.CustomEffectTypoData.ContainsKey(battleCardBehaviourResult))
+            {
+                Harmony_Patch.CustomEffectTypoData[battleCardBehaviourResult] = new List<EffectTypoData>();
+            }
+            Harmony_Patch.CustomEffectTypoData[battleCardBehaviourResult].Add(effectTypoData_New);
         }
         public static void SetAlarmText(string alarmtype, UIAlarmButtonType btnType = UIAlarmButtonType.Default, ConfirmEvent confirmFunc = null, params object[] args)
         {
@@ -207,7 +244,7 @@ namespace BaseMod
             {
                 Harmony_Patch.AudioClips = new Dictionary<string, AudioClip>();
             }
-            if (!string.IsNullOrEmpty(Name) && Harmony_Patch.AudioClips.ContainsKey(Name))
+            if (!string.IsNullOrWhiteSpace(Name) && Harmony_Patch.AudioClips.ContainsKey(Name))
             {
                 return Harmony_Patch.AudioClips[Name];
             }
@@ -252,7 +289,7 @@ namespace BaseMod
             {
                 File.Delete(fullname);
             }
-            if (!string.IsNullOrEmpty(Name))
+            if (!string.IsNullOrWhiteSpace(Name))
             {
                 content.name = Name;
                 Harmony_Patch.AudioClips[Name] = content;
@@ -261,7 +298,7 @@ namespace BaseMod
         }
         public static void Save<T>(this T value, string key)
         {
-            if (string.IsNullOrEmpty(GetModId(Assembly.GetCallingAssembly())))
+            if (string.IsNullOrWhiteSpace(GetModId(Assembly.GetCallingAssembly())))
             {
                 return;
             }
@@ -281,7 +318,7 @@ namespace BaseMod
         }
         public static T Load<T>(string key)
         {
-            if (string.IsNullOrEmpty(GetModId(Assembly.GetCallingAssembly())))
+            if (string.IsNullOrWhiteSpace(GetModId(Assembly.GetCallingAssembly())))
             {
                 return default;
             }
@@ -331,6 +368,41 @@ namespace BaseMod
         {
             public T value;
         }
+        public static float ParseFloatSafe(string s)
+        {
+            try
+            {
+                return float.Parse(s.Replace(',', '.').Replace('/', '.'), invariant);
+            }
+            catch (Exception ex)
+            {
+                Debug.Log("BaseMod: could not parse float, using 0 as fallback");
+                Debug.Log(ex);
+                return 0;
+            }
+        }
+        readonly static NumberFormatInfo invariant = CultureInfo.InvariantCulture.NumberFormat;
+    }
+    public class EffectTypoData_New : EffectTypoData
+    {
+        public string type;
+
+        public BattleUIPassiveSet battleUIPassiveSet = null;
+
+        public class BattleUIPassiveSet
+        {
+            public Sprite frame;
+
+            public Sprite Icon;
+
+            public Sprite IconGlow;
+
+            public Color textColor;
+
+            public Color IconColor;
+
+            public Color IconGlowColor;
+        }
     }
 }
 
@@ -375,6 +447,10 @@ namespace BaseMod
             buf._owner = unitBufListDetail._self;
             buf.stack = 0;
             BattleUnitBuf battleUnitBuf = buf.FindMatch(readyType);
+            if (battleUnitBuf == null)
+            {
+                return battleUnitBuf;
+            }
             battleUnitBuf.Modify(stack, actor, true);
             return battleUnitBuf;
         }
@@ -388,6 +464,10 @@ namespace BaseMod
             buf._owner = unitBufListDetail._self;
             buf.stack = 0;
             BattleUnitBuf battleUnitBuf = buf.FindMatch(readyType);
+            if (battleUnitBuf == null)
+            {
+                return (T)battleUnitBuf;
+            }
             battleUnitBuf.Modify(stack, actor, true);
             return (T)battleUnitBuf;
         }
@@ -404,6 +484,10 @@ namespace BaseMod
             buf._owner = unitBufListDetail._self;
             buf.stack = 0;
             BattleUnitBuf battleUnitBuf = buf.FindMatch(readyType);
+            if (battleUnitBuf == null)
+            {
+                return battleUnitBuf;
+            }
             battleUnitBuf.Modify(stack, actor, false);
             return battleUnitBuf;
         }
@@ -417,6 +501,10 @@ namespace BaseMod
             buf._owner = unitBufListDetail._self;
             buf.stack = 0;
             BattleUnitBuf battleUnitBuf = buf.FindMatch(readyType);
+            if (battleUnitBuf == null)
+            {
+                return (T)battleUnitBuf;
+            }
             battleUnitBuf.Modify(stack, actor, false);
             return (T)battleUnitBuf;
         }

@@ -10,7 +10,7 @@ namespace ExtendedLoader
         {
             string skinName;
             UnitDataModel data = __instance.model.UnitData.unitData;
-            if (!string.IsNullOrEmpty(data.workshopSkin))
+            if (!string.IsNullOrWhiteSpace(data.workshopSkin))
             {
                 skinName = new LorName(data.workshopSkin, true).Compress();
             }

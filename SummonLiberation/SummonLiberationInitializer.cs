@@ -396,17 +396,24 @@ namespace SummonLiberation
                                 break;
                         }
                         bool isCustom = false;
-                        if (!string.IsNullOrEmpty(unit.workshopSkin))
+                        if (!string.IsNullOrWhiteSpace(unit.workshopSkin))
                         {
                             WorkshopSkinData workshopSkinData = Singleton<CustomizingResourceLoader>.Instance.GetWorkshopSkinData(unit.workshopSkin);
                             GameObject original = XLRoot.UICustomAppearancePrefab;
                             uicharacter.unitModel = unit;
                             uicharacter.unitAppearance = UnityEngine.Object.Instantiate(original, __instance.characterRoot).GetComponent<CharacterAppearance>();
                             uicharacter.unitAppearance.transform.localPosition = new Vector3(num, -2f, 10f);
-                            uicharacter.unitAppearance.GetComponent<WorkshopSkinDataSetter>().SetData(workshopSkinData);
-                            uicharacter.resName = workshopSkinData.dataName;
-                            resName = workshopSkinData.dataName;
-                            isCustom = true;
+                            if (workshopSkinData != null)
+                            {
+                                uicharacter.unitAppearance.GetComponent<WorkshopSkinDataSetter>().SetData(workshopSkinData);
+                                uicharacter.resName = workshopSkinData.dataName;
+                                resName = workshopSkinData.dataName;
+                                isCustom = true;
+                            }
+                            else
+							{
+                                Debug.Log("Workshop skin not found: " + unit.workshopSkin);
+							}
                         }
                         else
                         {
@@ -423,10 +430,14 @@ namespace SummonLiberation
                                 if (workshopBookSkinData != null)
                                 {
                                     component.SetData(workshopBookSkinData);
+                                    uicharacter.resName = workshopBookSkinData.dataName;
+                                    resName = workshopBookSkinData.dataName;
                                     isCustom = true;
                                 }
-                                uicharacter.resName = workshopBookSkinData.dataName;
-                                resName = workshopBookSkinData.dataName;
+                                else
+								{
+                                    Debug.Log("Book skin not found: " + new LorName(unit.CustomBookItem.BookId.packageId, characterSkin));
+                                }
                             }
                             else
                             {
@@ -455,6 +466,10 @@ namespace SummonLiberation
                                     uicharacter.unitAppearance.transform.localPosition = new Vector3(num, -2f, 10f);
                                     uicharacter.resName = resName;
                                 }
+                                else
+								{
+                                    Debug.Log("Core skin not found: " + (string.IsNullOrWhiteSpace(resName) ? characterName : resName));
+								}
                             }
                         }
                         if (uicharacter != null)

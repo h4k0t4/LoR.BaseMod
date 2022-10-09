@@ -295,12 +295,7 @@ namespace ExtendedLoader
                             XLRoot.SkinThumb.Add(skinId, sprite);
                             return sprite;
                         }
-                        Sprite newThumb = XLRoot.MakeThumbnail(data.dic[ActionDetail.Default]);
-                        if (newThumb != null)
-                        {
-                            XLRoot.SkinThumb.Add(skinId, newThumb);
-                            return newThumb;
-                        }
+                        XLRoot.MakeThumbnail(data.dic[ActionDetail.Default]);
                     }
                 }
                 catch (Exception ex)
@@ -313,7 +308,7 @@ namespace ExtendedLoader
         public static LorName GetOriginalSkin(this BattleUnitModel model)
         {
             string workshopSkin = model._unitData.unitData.workshopSkin;
-            if (!string.IsNullOrEmpty(workshopSkin))
+            if (!string.IsNullOrWhiteSpace(workshopSkin))
             {
                 return new LorName(workshopSkin, true);
             }
@@ -334,7 +329,21 @@ namespace ExtendedLoader
             {
                 return Singleton<CustomizingResourceLoader>.Instance.GetWorkshopSkinData(name.name);
             }
-            WorkshopSkinData result = loader.GetWorkshopBookSkinData(name.packageId, name.name + gender);
+            WorkshopSkinData result;
+            try
+            {
+                result = loader.GetWorkshopBookSkinData(name.packageId, name.name + gender);
+            }
+            catch (Exception ex)
+            {
+                result = loader.GetWorkshopBookSkinData(name.packageId, name.name);
+                File.AppendAllLines(Application.dataPath + "/Mods/" + "A fucking idiot didn't check null.txt", new string[]
+                {
+                    "A fucking idiot from " + name.packageId + " use a stupid way to add special motion and didn't check null",
+                    ex.Message,
+                    ex.StackTrace,
+                });
+            }
             if (result == null)
             {
                 result = loader.GetWorkshopBookSkinData(name.packageId, name.name);

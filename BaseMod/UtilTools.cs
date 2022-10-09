@@ -379,24 +379,24 @@ namespace BaseMod
                 Singleton<ModContentManager>.Instance.AddErrorLog(ex.Message + Environment.NewLine + ex.StackTrace);
                 File.WriteAllText(Application.dataPath + "/Mods/CopyDirerror.log", ex.Message + Environment.NewLine + ex.StackTrace);
             }
-        }/*
-        public static void CreateShortcut(string shortcutDirectory, string shortcutName, string targetPath,
-             string description = null, string iconLocation = null)
+        }
+        public static Shortcut CreateShortcut(string shortcutDirectory, string shortcutName, string targetPath, string targetDirectory, string description = null, string iconLocation = null)
         {
             if (!Directory.Exists(shortcutDirectory))
             {
                 Directory.CreateDirectory(shortcutDirectory);
             }
             string shortcutPath = Path.Combine(shortcutDirectory, string.Format("{0}.lnk", shortcutName));
-            IWshRuntimeLibrary.WshShell shell = new IWshRuntimeLibrary.WshShell();
-            IWshRuntimeLibrary.IWshShortcut shortcut = (IWshRuntimeLibrary.IWshShortcut)shell.CreateShortcut(shortcutPath);
-            shortcut.TargetPath = targetPath;
-            shortcut.WorkingDirectory = Path.GetDirectoryName(targetPath);
-            shortcut.WindowStyle = 1;
-            shortcut.Description = description;
-            shortcut.IconLocation = string.IsNullOrWhiteSpace(iconLocation) ? targetPath : iconLocation;
-            shortcut.Save();
-        }*/
+            Shortcut sc = new Shortcut
+            {
+                Path = targetPath,
+                Arguments = "",
+                WorkingDirectory = targetDirectory,
+                Description = description,
+            };
+            sc.Save(shortcutPath);
+            return sc;
+        }
         public static string GetTransformPath(Transform transform, bool includeSelf = false)
         {
             StringBuilder stringBuilder = new StringBuilder();

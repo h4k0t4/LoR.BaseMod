@@ -6,6 +6,9 @@ namespace GTMDProjectMoon
 {
     public class EnemyUnitClassRoot
     {
+        [XmlElement("Pid")]
+        public string workshopID;
+
         [XmlElement("Enemy")]
         public List<EnemyUnitClassInfo_New> list;
     }

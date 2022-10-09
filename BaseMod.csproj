@@ -24,6 +24,8 @@
     <WarningLevel>4</WarningLevel>
     <CodeAnalysisRuleSet>ConcurrencyRules.ruleset</CodeAnalysisRuleSet>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <DocumentationFile>
+    </DocumentationFile>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -60,6 +62,7 @@
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
+    <Reference Include="System.Windows.Forms" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="System.Data" />
@@ -146,7 +149,9 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="BaseMod\BaseModInitializerHP.cs" />
     <Compile Include="BaseMod\BaseModInitializer.cs" />
+    <Compile Include="BaseMod\Shortcut.cs" />
     <Compile Include="BaseMod\CustomGiftAppearance.cs" />
     <Compile Include="BaseMod\CustomMapManager.cs" />
     <Compile Include="BaseMod\LocalizedTextLoader_New.cs" />
@@ -158,6 +163,7 @@
     <Compile Include="BaseMod\UIPanelTool.cs" />
     <Compile Include="BaseMod\UtilTools.cs" />
     <Compile Include="BaseMod\Tools.cs" />
+    <Compile Include="ExtendedLoader\FaceOverridePatch.cs" />
     <Compile Include="ExtendedLoader\GenderInjector.cs" />
     <Compile Include="ExtendedLoader\GiftOrderPatch.cs" />
     <Compile Include="ExtendedLoader\CustomProjectionLoadPatch.cs" />
@@ -174,6 +180,14 @@
     <Compile Include="ExtendedLoader\SpriteUtilExtension.cs" />
     <Compile Include="ExtendedLoader\LorName.cs" />
     <Compile Include="ExtendedLoader\SkinChangeExtensions.cs" />
+    <Compile Include="GTMDProjectMoon\DeckXml_New.cs" />
+    <Compile Include="GTMDProjectMoon\DropBookXml_New.cs" />
+    <Compile Include="GTMDProjectMoon\GiftXml_New.cs" />
+    <Compile Include="GTMDProjectMoon\EmotionCardXml_New.cs" />
+    <Compile Include="GTMDProjectMoon\FormationXml_New.cs" />
+    <Compile Include="GTMDProjectMoon\Xml_New - 复制 - 复制.cs" />
+    <Compile Include="GTMDProjectMoon\Xml_New - 复制.cs" />
+    <Compile Include="GTMDProjectMoon\PassiveXml_New.cs" />
     <Compile Include="GTMDProjectMoon\BookXml_New.cs" />
     <Compile Include="GTMDProjectMoon\BattleDialogXml_New.cs" />
     <Compile Include="GTMDProjectMoon\CardXml_New.cs" />

@@ -88,7 +88,7 @@ namespace BaseMod
             try
             {
                 path = Path.GetDirectoryName(Uri.UnescapeDataString(new UriBuilder(Assembly.GetExecutingAssembly().CodeBase).Path));
-                IsEditing = false;
+                //IsEditing = false;
                 AssemList = new List<Assembly>();
                 LoadedAssembly = new List<string>();
                 ArtWorks = null;
@@ -102,21 +102,26 @@ namespace BaseMod
                 ModStoryCG = new Dictionary<LorId, ModStroyCG>();
                 ModWorkShopId = new Dictionary<Assembly, string>();
                 IsModStorySelected = false;
-                //CreateShortcuts();
-                ExportDocuments();
+                OrcTools.LoadDefaultBookCategories();
+                try
+                {
+                    CreateShortcuts();
+                    ExportDocuments();
+                }
+                catch { }
             }
             catch (Exception ex)
             {
                 Singleton<ModContentManager>.Instance.AddErrorLog(ex.Message + Environment.NewLine + ex.StackTrace);
                 File.WriteAllText(Application.dataPath + "/Mods/error.log", ex.Message + Environment.NewLine + ex.StackTrace);
             }
-        }/*
+        }
         private static void CreateShortcuts()
         {
             string baseModPath = Singleton<ModContentManager>.Instance.GetModPath("BaseMod");
-            UtilTools.CreateShortcut(Application.dataPath + "/Managed/BaseMod/", "BaseMod for Workshop", baseModPath, "Way to BaseMod Files");
-            UtilTools.CreateShortcut(Application.dataPath + "/Managed/BaseMod/", "SaveFiles", SaveManager.savePath, "Way to BaseMod Files");
-        }*/
+            UtilTools.CreateShortcut(Application.dataPath + "/Managed/BaseMod/", "BaseMod for Workshop", baseModPath, baseModPath, "Way to BaseMod Files");
+            UtilTools.CreateShortcut(Application.dataPath + "/Mods/", "Player.log", SaveManager.savePath + "/Player.log", SaveManager.savePath, "Way to Player.log");
+        }
         private static void ExportDocuments()
         {
             string baseModPath = Singleton<ModContentManager>.Instance.GetModPath("BaseMod");
@@ -276,18 +281,61 @@ namespace BaseMod
             ModStoryCG = null;
             ModWorkShopId.Clear();
             ModWorkshopBookIndex.Clear();
-            OrcTools.OnlyCardDic.Clear();
-            OrcTools.SoulCardDic.Clear();
-            OrcTools.EpisodeDic.Clear();
             OrcTools.StageNameDic.Clear();
             OrcTools.StageConditionDic.Clear();
             OrcTools.CharacterNameDic.Clear();
             OrcTools.EgoDic.Clear();
             OrcTools.DropItemDic.Clear();
-            OrcTools.DialogDic.Clear();
+            OrcTools.dialogDetails.Clear();
         }
         private static void LoadBookSkins(Dictionary<string, List<Workshop.WorkshopSkinData>> _bookSkinData)
         {
+            var loader = Singleton<CustomizingResourceLoader>.Instance;
+            var list2 = LoadWorkshopExtendedCustomAppearance();
+            foreach (Workshop.WorkshopAppearanceInfo workshopAppearanceInfo in list2)
+            {
+                try
+                {
+                    if (workshopAppearanceInfo.isClothCustom)
+                    {
+                        Workshop.WorkshopSkinData workshopSkinData;
+                        if (workshopAppearanceInfo is ExtendedWorkshopAppearanceInfo extendedAppearanceInfo)
+                        {
+                            workshopSkinData = new ExtendedWorkshopSkinData
+                            {
+                                dic = extendedAppearanceInfo.clothCustomInfo,
+                                dataName = extendedAppearanceInfo.bookName,
+                                contentFolderIdx = extendedAppearanceInfo.uniqueId,
+                                atkEffectPivotDic = extendedAppearanceInfo.atkEffectPivotDic,
+                                specialMotionPivotDic = extendedAppearanceInfo.specialMotionPivotDic,
+                                motionSoundList = extendedAppearanceInfo.motionSoundList
+                            };
+                        }
+                        else
+                        {
+                            workshopSkinData = new Workshop.WorkshopSkinData
+                            {
+                                dic = workshopAppearanceInfo.clothCustomInfo,
+                                dataName = workshopAppearanceInfo.bookName,
+                                contentFolderIdx = workshopAppearanceInfo.uniqueId
+                            };
+                        }
+                        int num = loader._skinData.Count;
+                        if (loader._skinData.TryGetValue(workshopAppearanceInfo.uniqueId, out Workshop.WorkshopSkinData workshopSkinData1))
+                        {
+                            num = workshopSkinData1.id;
+                            loader._skinData.Remove(workshopAppearanceInfo.uniqueId);
+                        }
+                        workshopSkinData.id = num;
+                        loader._skinData.Add(workshopAppearanceInfo.uniqueId, workshopSkinData);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Debug.LogError("BaseMod XL: error loading workshop skin at " + workshopAppearanceInfo.path);
+                    Debug.LogError(ex);
+                }
+            }
             foreach (ModContent modContent in LoadedModContents)
             {
                 string modDirectory = modContent._dirInfo.FullName;
@@ -307,36 +355,58 @@ namespace BaseMod
                         string[] directories = Directory.GetDirectories(defaultCharDirectory);
                         for (int i = 0; i < directories.Length; i++)
                         {
-                            Workshop.WorkshopAppearanceInfo workshopAppearanceInfo = LoadCustomAppearance(directories[i]);
-                            if (workshopAppearanceInfo != null && workshopAppearanceInfo is ExtendedWorkshopAppearanceInfo extendedAppearanceInfo)
+                            try
                             {
-                                string[] array = directories[i].Split(new char[]
+                                Workshop.WorkshopAppearanceInfo info = LoadCustomAppearance(directories[i]);
+                                if (info != null)
                                 {
-                                    '\\'
-                                });
-                                string bookName = array[array.Length - 1];
-                                extendedAppearanceInfo.path = directories[i];
-                                extendedAppearanceInfo.uniqueId = modId;
-                                extendedAppearanceInfo.bookName = bookName;
-                                if (extendedAppearanceInfo.isClothCustom)
-                                {
-                                    var extendedData = new ExtendedWorkshopSkinData
+                                    string[] array = directories[i].Split(new char[]
+                                        {
+                                        '\\'
+                                        });
+                                    string bookName = array[array.Length - 1];
+                                    info.path = directories[i];
+                                    info.uniqueId = modName;
+                                    info.bookName = bookName;
+                                    if (info.isClothCustom)
                                     {
-                                        dic = extendedAppearanceInfo.clothCustomInfo,
-                                        dataName = extendedAppearanceInfo.bookName,
-                                        contentFolderIdx = extendedAppearanceInfo.uniqueId,
-                                        atkEffectPivotDic = extendedAppearanceInfo.atkEffectPivotDic,
-                                        specialMotionPivotDic = extendedAppearanceInfo.specialMotionPivotDic,
-                                        motionSoundList = extendedAppearanceInfo.motionSoundList,
-                                        id = i
-                                    };
-                                    var oldData = skinlist.Find((Workshop.WorkshopSkinData data) => data.id == i);
-                                    if (oldData != null)
-                                    {
-                                        skinlist.Remove(oldData);
+                                        Workshop.WorkshopSkinData newData;
+                                        if (info is ExtendedWorkshopAppearanceInfo extendedInfo)
+                                        {
+                                            newData = new ExtendedWorkshopSkinData
+                                            {
+                                                dic = extendedInfo.clothCustomInfo,
+                                                dataName = extendedInfo.bookName,
+                                                contentFolderIdx = extendedInfo.uniqueId,
+                                                atkEffectPivotDic = extendedInfo.atkEffectPivotDic,
+                                                specialMotionPivotDic = extendedInfo.specialMotionPivotDic,
+                                                motionSoundList = extendedInfo.motionSoundList,
+                                                id = i
+                                            };
+                                        }
+                                        else
+                                        {
+                                            newData = new Workshop.WorkshopSkinData
+                                            {
+                                                dic = info.clothCustomInfo,
+                                                dataName = info.bookName,
+                                                contentFolderIdx = info.uniqueId,
+                                                id = i
+                                            };
+                                        }
+                                        var oldData = skinlist.Find((Workshop.WorkshopSkinData data) => data.id == i);
+                                        if (oldData != null)
+                                        {
+                                            skinlist.Remove(oldData);
+                                        }
+                                        skinlist.Add(newData);
                                     }
-                                    skinlist.Add(extendedData);
                                 }
+                            }
+                            catch (Exception ex)
+                            {
+                                Debug.LogError("BaseMod XL: error reloading skin at " + directories[i]);
+                                Debug.LogError(ex);
                             }
                         }
                     }
@@ -348,44 +418,52 @@ namespace BaseMod
                     string[] directories = Directory.GetDirectories(charDirectory);
                     for (int i = 0; i < directories.Length; i++)
                     {
-                        Workshop.WorkshopAppearanceInfo workshopAppearanceInfo = LoadCustomAppearance(directories[i]);
-                        if (workshopAppearanceInfo != null)
+                        try
                         {
-                            string[] array = directories[i].Split(new char[]
+                            Workshop.WorkshopAppearanceInfo workshopAppearanceInfo = LoadCustomAppearance(directories[i]);
+                            if (workshopAppearanceInfo != null)
                             {
+                                string[] array = directories[i].Split(new char[]
+                                {
                                 '\\'
-                            });
-                            string str = array[array.Length - 1];
-                            workshopAppearanceInfo.path = directories[i];
-                            workshopAppearanceInfo.uniqueId = modId;
-                            workshopAppearanceInfo.bookName = "Custom_" + str;
-                            bool isClothCustom = workshopAppearanceInfo.isClothCustom;
-                            if (isClothCustom)
-                            {
-                                if (workshopAppearanceInfo is ExtendedWorkshopAppearanceInfo extendedAppearanceInfo)
+                                });
+                                string bookName = array[array.Length - 1];
+                                workshopAppearanceInfo.path = directories[i];
+                                workshopAppearanceInfo.uniqueId = modId;
+                                workshopAppearanceInfo.bookName = "Custom_" + bookName;
+                                bool isClothCustom = workshopAppearanceInfo.isClothCustom;
+                                if (isClothCustom)
                                 {
-                                    list.Add(new ExtendedWorkshopSkinData
+                                    if (workshopAppearanceInfo is ExtendedWorkshopAppearanceInfo extendedAppearanceInfo)
                                     {
-                                        dic = extendedAppearanceInfo.clothCustomInfo,
-                                        dataName = extendedAppearanceInfo.bookName,
-                                        contentFolderIdx = extendedAppearanceInfo.uniqueId,
-                                        atkEffectPivotDic = extendedAppearanceInfo.atkEffectPivotDic,
-                                        specialMotionPivotDic = extendedAppearanceInfo.specialMotionPivotDic,
-                                        motionSoundList = extendedAppearanceInfo.motionSoundList,
-                                        id = oldSkins + i
-                                    });
-                                }
-                                else
-                                {
-                                    list.Add(new Workshop.WorkshopSkinData
+                                        list.Add(new ExtendedWorkshopSkinData
+                                        {
+                                            dic = extendedAppearanceInfo.clothCustomInfo,
+                                            dataName = extendedAppearanceInfo.bookName,
+                                            contentFolderIdx = extendedAppearanceInfo.uniqueId,
+                                            atkEffectPivotDic = extendedAppearanceInfo.atkEffectPivotDic,
+                                            specialMotionPivotDic = extendedAppearanceInfo.specialMotionPivotDic,
+                                            motionSoundList = extendedAppearanceInfo.motionSoundList,
+                                            id = oldSkins + i
+                                        });
+                                    }
+                                    else
                                     {
-                                        dic = workshopAppearanceInfo.clothCustomInfo,
-                                        dataName = workshopAppearanceInfo.bookName,
-                                        contentFolderIdx = workshopAppearanceInfo.uniqueId,
-                                        id = oldSkins + i
-                                    });
+                                        list.Add(new Workshop.WorkshopSkinData
+                                        {
+                                            dic = workshopAppearanceInfo.clothCustomInfo,
+                                            dataName = workshopAppearanceInfo.bookName,
+                                            contentFolderIdx = workshopAppearanceInfo.uniqueId,
+                                            id = oldSkins + i
+                                        });
+                                    }
                                 }
                             }
+                        }
+                        catch (Exception ex)
+                        {
+                            Debug.LogError("BaseMod XL: error loading skin at " + directories[i]);
+                            Debug.LogError(ex);
                         }
                     }
                     if (_bookSkinData.ContainsKey(modId))
@@ -396,44 +474,6 @@ namespace BaseMod
                     {
                         _bookSkinData[modId] = list;
                     }
-                }
-            }
-            var loader = Singleton<CustomizingResourceLoader>.Instance;
-            var list2 = LoadWorkshopExtendedCustomAppearance();
-            foreach (Workshop.WorkshopAppearanceInfo workshopAppearanceInfo in list2)
-            {
-                if (workshopAppearanceInfo.isClothCustom)
-                {
-                    Workshop.WorkshopSkinData workshopSkinData;
-                    if (workshopAppearanceInfo is ExtendedWorkshopAppearanceInfo extendedAppearanceInfo)
-                    {
-                        workshopSkinData = new ExtendedWorkshopSkinData
-                        {
-                            dic = extendedAppearanceInfo.clothCustomInfo,
-                            dataName = extendedAppearanceInfo.bookName,
-                            contentFolderIdx = extendedAppearanceInfo.uniqueId,
-                            atkEffectPivotDic = extendedAppearanceInfo.atkEffectPivotDic,
-                            specialMotionPivotDic = extendedAppearanceInfo.specialMotionPivotDic,
-                            motionSoundList = extendedAppearanceInfo.motionSoundList
-                        };
-                    }
-                    else
-                    {
-                        workshopSkinData = new Workshop.WorkshopSkinData
-                        {
-                            dic = workshopAppearanceInfo.clothCustomInfo,
-                            dataName = workshopAppearanceInfo.bookName,
-                            contentFolderIdx = workshopAppearanceInfo.uniqueId
-                        };
-                    }
-                    int num = loader._skinData.Count;
-                    if (loader._skinData.TryGetValue(workshopAppearanceInfo.uniqueId, out Workshop.WorkshopSkinData workshopSkinData1))
-                    {
-                        num = workshopSkinData1.id;
-                        loader._skinData.Remove(workshopAppearanceInfo.uniqueId);
-                    }
-                    workshopSkinData.id = num;
-                    loader._skinData.Add(workshopAppearanceInfo.uniqueId, workshopSkinData);
                 }
             }
         }
@@ -450,56 +490,228 @@ namespace BaseMod
         {
             List<Workshop.WorkshopAppearanceInfo> list = new List<Workshop.WorkshopAppearanceInfo>();
             string workshopDirPath = PlatformManager.Instance.GetWorkshopDirPath();
+            SetOriginalIndexes();
+            ReloadExternalFaceData();
             if (Directory.Exists(workshopDirPath))
             {
                 foreach (string text in Directory.GetDirectories(workshopDirPath))
                 {
-                    Workshop.WorkshopAppearanceInfo workshopAppearanceInfo = LoadCustomAppearance(text);
-                    if (workshopAppearanceInfo != null && workshopAppearanceInfo is ExtendedWorkshopAppearanceInfo)
+                    try
                     {
-                        list.Add(workshopAppearanceInfo);
-                        string[] array = text.Split(new char[]
+                        Workshop.WorkshopAppearanceInfo info = LoadCustomAppearance(text);
+                        if (info != null)
                         {
+                            list.Add(info);
+                            string[] array = text.Split(new char[]
+                            {
                             '\\'
-                        });
-                        string text2 = array[array.Length - 1];
-                        workshopAppearanceInfo.path = text;
-                        workshopAppearanceInfo.uniqueId = text2;
-                        if (string.IsNullOrEmpty(workshopAppearanceInfo.bookName))
-                        {
-                            workshopAppearanceInfo.bookName = text2;
+                            });
+                            string text2 = array[array.Length - 1];
+                            info.path = text;
+                            info.uniqueId = text2;
+                            if (string.IsNullOrWhiteSpace(info.bookName))
+                            {
+                                info.bookName = text2;
+                            }
                         }
+                    }
+                    catch (Exception ex)
+                    {
+                        Debug.LogError("BaseMod XL: error reloading skin at " + text);
+                        Debug.LogError(ex);
                     }
                 }
             }
+            originalEyeIndex = -1;
+            originalBrowIndex = -1;
+            originalMouthIndex = -1;
+            originalFrontHairIndex = -1;
+            originalRearHairIndex = -1;
             string localDirPath = Path.Combine(Application.dataPath, "Mods");
             if (Directory.Exists(localDirPath))
             {
                 foreach (string text in Directory.GetDirectories(localDirPath))
                 {
-                    Workshop.WorkshopAppearanceInfo workshopAppearanceInfo = LoadCustomAppearance(text);
-                    if (workshopAppearanceInfo != null)
+                    try
                     {
-                        list.Add(workshopAppearanceInfo);
-                        string[] array = text.Split(new char[]
+                        Workshop.WorkshopAppearanceInfo workshopAppearanceInfo = LoadCustomAppearance(text);
+                        if (workshopAppearanceInfo != null)
                         {
+                            list.Add(workshopAppearanceInfo);
+                            string[] array = text.Split(new char[]
+                            {
                             '\\'
-                        });
-                        string text2 = array[array.Length - 1];
-                        workshopAppearanceInfo.path = text;
-                        workshopAppearanceInfo.uniqueId = text2;
-                        if (string.IsNullOrEmpty(workshopAppearanceInfo.bookName))
-                        {
-                            workshopAppearanceInfo.bookName = text2;
+                            });
+                            string text2 = array[array.Length - 1];
+                            workshopAppearanceInfo.path = text;
+                            workshopAppearanceInfo.uniqueId = text2;
+                            if (string.IsNullOrWhiteSpace(workshopAppearanceInfo.bookName))
+                            {
+                                workshopAppearanceInfo.bookName = text2;
+                            }
                         }
+                    }
+                    catch (Exception ex)
+                    {
+                        Debug.LogError("BaseMod XL: error loading skin at " + text);
+                        Debug.LogError(ex);
                     }
                 }
             }
             return list;
         }
+        private static void SetOriginalIndexes()
+        {
+            var loaderDir = Singleton<CustomizingResourceLoader>.Instance.InternalCustomDir;
+            originalEyeIndex = GetOriginalIndex(loaderDir, "/Eyes_Normal", "/Eyes_Side_Normal");
+            originalBrowIndex = GetOriginalIndex(loaderDir, "/Brows_Normal", "/Brows_Attack", "/Brows_Side_Attack", "/Brows_Hit");
+            originalMouthIndex = GetOriginalIndex(loaderDir, "/Mouths_Normal", "/Mouths_Attack", "/Mouths_Side_Attack", "/Mouths_Hit");
+            originalFrontHairIndex = GetOriginalIndex(loaderDir, "/FrontHair", "/FrontHair_Side");
+            originalRearHairIndex = GetOriginalIndex(loaderDir, "/RearHair", "/RearHair_Side", "/RearHair_Side_FrontLayer");
+        }
+        private static int GetOriginalIndex(string baseFolder, params string[] subFolders)
+        {
+            int max = 0;
+            foreach (string subFolder in subFolders)
+            {
+                max = Mathf.Max(max, Resources.LoadAll<Sprite>(Path.Combine(baseFolder, subFolder)).Length);
+            }
+            return max;
+        }
+        private static void ReloadExternalFaceData()
+		{
+            var loader = Singleton<CustomizingResourceLoader>.Instance;
+            originalEyeIndex = ReloadExternalFaceSets(loader.ExternalEyeDir, originalEyeIndex, loader._eyeResources);
+            originalBrowIndex = ReloadExternalFaceSets(loader.ExternalBrowDir, originalBrowIndex, loader._browResources);
+            originalMouthIndex = ReloadExternalFaceSets(loader.ExternalMouthDir, originalMouthIndex, loader._mouthResources);
+            originalFrontHairIndex = ReloadExternalHairSets(loader.ExternalFrontHairDir, false, originalFrontHairIndex, loader._frontHairResources);
+            originalRearHairIndex = ReloadExternalHairSets(loader.ExternalRearHairDir, true, originalRearHairIndex, loader._rearHairResources);
+        }
+        private static int ReloadExternalFaceSets(string dirPath, int index, List<FaceResourceSet> resList)
+		{
+            var loader = Singleton<CustomizingResourceLoader>.Instance;
+            string[] targetName = new string[]
+            {
+                loader.ExternalFaceNormalFileName,
+                loader.ExternalFaceAttackFileName,
+                loader.ExternalFaceHitFileName,
+                loader.ExternalFaceSideAttackFileName
+            };
+            DirectoryInfo directoryInfo = new DirectoryInfo(dirPath);
+            foreach (DirectoryInfo dir in directoryInfo.GetDirectories())
+            {
+                FaceResourceSet faceResourceSet = new FaceResourceSet();
+                Dictionary<string, Sprite> externalSpriteSet = GetExternalSpriteSet(dir, targetName);
+                if (externalSpriteSet.ContainsKey(loader.ExternalFaceNormalFileName))
+                {
+                    faceResourceSet.normal = externalSpriteSet[loader.ExternalFaceNormalFileName];
+                }
+                if (externalSpriteSet.ContainsKey(loader.ExternalFaceAttackFileName))
+                {
+                    faceResourceSet.atk = externalSpriteSet[loader.ExternalFaceAttackFileName];
+                }
+                if (externalSpriteSet.ContainsKey(loader.ExternalFaceHitFileName))
+                {
+                    faceResourceSet.hit = externalSpriteSet[loader.ExternalFaceHitFileName];
+                }
+                if (externalSpriteSet.ContainsKey(loader.ExternalFaceSideAttackFileName))
+                {
+                    faceResourceSet.atk_side = externalSpriteSet[loader.ExternalFaceSideAttackFileName];
+                }
+                if (faceResourceSet.FillSprite())
+                {
+                    if (index >= 0 && index < resList.Count) {
+                        resList[index] = faceResourceSet;
+                        index++;
+                    }
+                    else
+					{
+                        resList.Add(faceResourceSet);
+                        index = -1;
+					}
+                }
+            }
+            return index;
+		}
+        private static int ReloadExternalHairSets(string dirPath, bool rear, int index, List<HairResourceSet> resList)
+        {
+            var loader = Singleton<CustomizingResourceLoader>.Instance;
+            string[] targetName = new string[]
+            {
+                loader.ExternalHairDefaultFileName,
+                loader.ExternalFrontHairSideFileName,
+                loader.ExternalRearHairSideFileName,
+                loader.ExternalRearHairSideBackFileName
+            };
+            DirectoryInfo directoryInfo = new DirectoryInfo(dirPath);
+            foreach (DirectoryInfo dir in directoryInfo.GetDirectories())
+            {
+                HairResourceSet hairResourceSet = new HairResourceSet();
+                Dictionary<string, Sprite> externalSpriteSet = GetExternalSpriteSet(dir, targetName);
+                if (externalSpriteSet.ContainsKey(loader.ExternalHairDefaultFileName))
+                {
+                    hairResourceSet.Default = externalSpriteSet[loader.ExternalHairDefaultFileName];
+                }
+                if (rear)
+                {
+                    if (externalSpriteSet.ContainsKey(loader.ExternalRearHairSideFileName))
+                    {
+                        hairResourceSet.Side_Front = externalSpriteSet[loader.ExternalRearHairSideFileName];
+                    }
+                    if (externalSpriteSet.ContainsKey(loader.ExternalRearHairSideBackFileName))
+                    {
+                        hairResourceSet.Side_Back = externalSpriteSet[loader.ExternalRearHairSideBackFileName];
+                    }
+                }
+                else if (externalSpriteSet.ContainsKey(loader.ExternalFrontHairSideFileName))
+                {
+                    hairResourceSet.Side_Front = externalSpriteSet[loader.ExternalFrontHairSideFileName];
+                }
+                if (!(hairResourceSet.Default == null))
+                {
+                    if (index >= 0 && index < resList.Count)
+                    {
+                        resList[index] = hairResourceSet;
+                        index++;
+                    }
+                    else
+                    {
+                        resList.Add(hairResourceSet);
+                        index = -1;
+                    }
+                }
+            }
+            return index;
+        }
+
+        private static Dictionary<string, Sprite> GetExternalSpriteSet(DirectoryInfo dir, string[] targetName)
+        {
+            Dictionary<string, Sprite> dictionary = new Dictionary<string, Sprite>();
+            Vector2 pivot = new Vector2(0.5f, 0.5f);
+            foreach (FileInfo fileInfo in dir.GetFiles())
+            {
+                string text = Path.GetFileNameWithoutExtension(fileInfo.Name).ToLower();
+                if (targetName.Contains(text))
+                {
+                    try
+                    {
+                        Sprite sprite = SpriteUtil.LoadSprite(fileInfo.FullName, pivot);
+                        if (sprite != null && !dictionary.ContainsKey(text))
+                        {
+                            dictionary.Add(text, sprite);
+                        }
+                    }
+                    catch (Exception)
+                    {
+                        Debug.LogError("invalid image file " + fileInfo.FullName);
+                    }
+                }
+            }
+            return dictionary;
+        }
         private static Workshop.WorkshopAppearanceInfo LoadCustomAppearanceInfo(string rootPath, string xml)
         {
-            if (string.IsNullOrEmpty(xml))
+            if (string.IsNullOrWhiteSpace(xml))
             {
                 return null;
             }
@@ -554,7 +766,7 @@ namespace BaseMod
                 {
                     workshopAppearanceInfo.isClothCustom = true;
                     string innerText2 = xmlNode3.SelectSingleNode("Name").InnerText;
-                    if (!string.IsNullOrEmpty(innerText2))
+                    if (!string.IsNullOrWhiteSpace(innerText2))
                     {
                         workshopAppearanceInfo.bookName = innerText2;
                     }
@@ -592,25 +804,18 @@ namespace BaseMod
                                 XmlNode resXml = actionNode.Attributes.GetNamedItem("quality");
                                 if (resXml != null)
                                 {
-                                    res = float.Parse(resXml.InnerText, CultureInfo.InvariantCulture);
+                                    res = Tools.ParseFloatSafe(resXml.InnerText);
                                 }
                                 isCustomSize = (size.x != 512 || size.y != 512 || res != 50f);
                             }
 
                             XmlNode spritePivotNode = actionNode.SelectSingleNode("Pivot");
-                            XmlNode headNode = actionNode.SelectSingleNode("Head");
                             XmlNode spritePivotXXml = null;
                             XmlNode spritePivotYXml = null;
-                            XmlNode headXXml = null;
-                            XmlNode headYXml = null;
-                            XmlNode headRXml = null;
                             if (isExtended)
                             {
                                 spritePivotXXml = spritePivotNode.Attributes.GetNamedItem("pivot_x_custom");
                                 spritePivotYXml = spritePivotNode.Attributes.GetNamedItem("pivot_y_custom");
-                                headXXml = headNode.Attributes.GetNamedItem("head_x_custom");
-                                headYXml = headNode.Attributes.GetNamedItem("head_y_custom");
-                                headRXml = headNode.Attributes.GetNamedItem("rotation_custom");
                             }
                             if (spritePivotXXml == null)
                             {
@@ -620,32 +825,34 @@ namespace BaseMod
                             {
                                 spritePivotYXml = spritePivotNode.Attributes.GetNamedItem("pivot_y");
                             }
-                            float spritePivotX = float.Parse(spritePivotXXml.InnerText, CultureInfo.InvariantCulture);
-                            float spritePivotY = float.Parse(spritePivotYXml.InnerText, CultureInfo.InvariantCulture);
+                            float spritePivotX = Tools.ParseFloatSafe(spritePivotXXml.InnerText);
+                            float spritePivotY = Tools.ParseFloatSafe(spritePivotYXml.InnerText);
                             Vector2 pivotPos = new Vector2(spritePivotX / (2 * size.x) + 0.5f, spritePivotY / (2 * size.y) + 0.5f);
-
-                            if (headXXml == null)
-                            {
-                                headXXml = headNode.Attributes.GetNamedItem("head_x");
-                            }
-                            if (headYXml == null)
-                            {
-                                headYXml = headNode.Attributes.GetNamedItem("head_y");
-                            }
-                            float headX = float.Parse(headXXml.InnerText, CultureInfo.InvariantCulture);
-                            float headY = float.Parse(headYXml.InnerText, CultureInfo.InvariantCulture);
-                            Vector2 headPos = new Vector2(headX / 100f, headY / 100f);
-                            if (headRXml == null)
-                            {
-                                headRXml = headNode.Attributes.GetNamedItem("rotation");
-                            }
-                            float headRotation = float.Parse(headRXml.InnerText, CultureInfo.InvariantCulture);
-                            XmlNode headEnabledXml = headNode.Attributes.GetNamedItem("head_enable");
+                            
+                            XmlNode headNode = actionNode.SelectSingleNode("Head");
                             bool headEnabled = true;
-                            if (headEnabledXml != null)
-                            {
-                                bool.TryParse(headEnabledXml.InnerText, out headEnabled);
+                            FaceOverride faceOverride = FaceOverride.None;
+                            EffectPivot headPivot = GetEffectPivot(headNode);
+                            if (headPivot == null)
+							{
+                                headPivot = new EffectPivot();
+                                headEnabled = false;
+							}
+                            else
+							{
+                                XmlNode headEnabledXml = headNode.Attributes.GetNamedItem("head_enable");
+                                if (headEnabledXml != null)
+                                {
+                                    bool.TryParse(headEnabledXml.InnerText, out headEnabled);
+                                }
+                                XmlNode faceXml = headNode.Attributes.GetNamedItem("face");
+                                if (Enum.TryParse(faceXml?.InnerText, true, out FaceOverride faceOverride1))
+                                {
+                                    faceOverride = faceOverride1;
+                                }
                             }
+                            float headRotation = headPivot.localEulerAngles.z;
+                            Vector2 headPos = new Vector2(headPivot.localPosition.x, headPivot.localPosition.y);
 
                             XmlNode directionNode = actionNode.SelectSingleNode("Direction");
                             CharacterMotion.MotionDirection direction = CharacterMotion.MotionDirection.FrontView;
@@ -654,21 +861,16 @@ namespace BaseMod
                                 direction = CharacterMotion.MotionDirection.SideView;
                             }
 
-                            List<Vector3> additionalPivotCoords = null;
+                            List<EffectPivot> additionalPivotCoords = null;
                             if (isExtended)
                             {
                                 XmlNodeList additionalPivotNodes = actionNode.SelectNodes("AdditionalPivot");
-                                if (additionalPivotNodes != null)
+                                if (additionalPivotNodes != null && additionalPivotNodes.Count > 0)
                                 {
-                                    additionalPivotCoords = new List<Vector3>();
+                                    additionalPivotCoords = new List<EffectPivot>();
                                     foreach (XmlNode additionalPivot in additionalPivotNodes)
                                     {
-                                        XmlNode addPivotX = additionalPivot.Attributes.GetNamedItem("pivot_x");
-                                        XmlNode addPivotY = additionalPivot.Attributes.GetNamedItem("pivot_y");
-                                        XmlNode addPivotR = additionalPivot.Attributes.GetNamedItem("rotation");
-                                        additionalPivotCoords.Add(new Vector3(float.Parse(addPivotX.InnerText, CultureInfo.InvariantCulture) / 100f,
-                                            float.Parse(addPivotY.InnerText, CultureInfo.InvariantCulture) / 100f,
-                                            float.Parse(addPivotR?.InnerText ?? "0", CultureInfo.InvariantCulture)));
+                                        additionalPivotCoords.Add(GetEffectPivot(additionalPivot));
                                     }
                                 }
                             }
@@ -775,7 +977,9 @@ namespace BaseMod
                                     backSpritePath = backSpritePath,
                                     hasBackSkinSprite = hasBackSkinSprite,
                                     backSkinSpritePath = backSkinSpritePath,
-                                    additionalPivots = additionalPivotCoords
+                                    additionalPivots = additionalPivotCoords,
+                                    headPivot = headPivot,
+                                    faceOverride = faceOverride
                                 };
                             }
                             else
@@ -886,82 +1090,59 @@ namespace BaseMod
         }
         private static EffectPivot GetEffectPivot(XmlNode effectPivotNode)
         {
-            EffectPivot atkEffectRoot = new EffectPivot();
-            if (effectPivotNode != null)
+            if (effectPivotNode == null)
             {
-                XmlNode positionNode = effectPivotNode.SelectSingleNode("localPosition");
-                if (positionNode != null)
+                return null;
+            }
+            var pivot = new EffectPivot();
+            var attr = effectPivotNode.Attributes;
+            if ((attr.GetNamedItem("x") ?? attr.GetNamedItem("pivot_x") ?? attr.GetNamedItem("head_x")) is XmlNode xnode)
+            {
+                pivot.localPosition.x = Tools.ParseFloatSafe(xnode.InnerText) / 100;
+            }
+            if ((attr.GetNamedItem("y") ?? attr.GetNamedItem("pivot_y") ?? attr.GetNamedItem("head_y")) is XmlNode ynode)
+            {
+                pivot.localPosition.x = Tools.ParseFloatSafe(ynode.InnerText) / 100;
+            }
+            if (attr.GetNamedItem("rotation") is XmlNode rnode)
+            {
+                pivot.localEulerAngles.z = Tools.ParseFloatSafe(rnode.InnerText);
+            }
+            SetPivotCoords(pivot, effectPivotNode);
+            return pivot;
+        }
+        private static void SetPivotCoords(EffectPivot pivot, XmlNode pivotNode)
+		{
+            pivot.localPosition = SetVectorCoords(pivotNode.SelectSingleNode("localPosition"), pivot.localPosition);
+            pivot.localScale = SetVectorCoords(pivotNode.SelectSingleNode("localScale"), pivot.localScale);
+            pivot.localEulerAngles = SetVectorCoords(pivotNode.SelectSingleNode("localEulerAngles"), pivot.localEulerAngles);
+        }
+        private static Vector3 SetVectorCoords(XmlNode coordsNode, Vector3 coords)
+        {
+            if (coordsNode != null)
+            {
+                if (coordsNode.Attributes.GetNamedItem("x") is XmlNode xnode)
                 {
-                    XmlNode x = positionNode.Attributes.GetNamedItem("x");
-                    if (x != null)
-                    {
-                        atkEffectRoot.localPosition.x = float.Parse(x.InnerText, CultureInfo.InvariantCulture);
-                    }
-                    XmlNode y = positionNode.Attributes.GetNamedItem("y");
-                    if (y != null)
-                    {
-                        atkEffectRoot.localPosition.y = float.Parse(y.InnerText, CultureInfo.InvariantCulture);
-                    }
-                    XmlNode z = positionNode.Attributes.GetNamedItem("z");
-                    if (z != null)
-                    {
-                        atkEffectRoot.localPosition.z = float.Parse(z.InnerText, CultureInfo.InvariantCulture);
-                    }
+                    coords.x = Tools.ParseFloatSafe(xnode.InnerText);
                 }
-                XmlNode scaleNode = effectPivotNode.SelectSingleNode("localScale");
-                if (scaleNode != null)
+                if (coordsNode.Attributes.GetNamedItem("y") is XmlNode ynode)
                 {
-                    XmlNode x = scaleNode.Attributes.GetNamedItem("x");
-                    if (x != null)
-                    {
-                        atkEffectRoot.localScale.x = float.Parse(x.InnerText, CultureInfo.InvariantCulture);
-                    }
-                    XmlNode y = scaleNode.Attributes.GetNamedItem("y");
-                    if (y != null)
-                    {
-                        atkEffectRoot.localScale.y = float.Parse(y.InnerText, CultureInfo.InvariantCulture);
-                    }
-                    XmlNode z = scaleNode.Attributes.GetNamedItem("z");
-                    if (z != null)
-                    {
-                        atkEffectRoot.localScale.z = float.Parse(z.InnerText, CultureInfo.InvariantCulture);
-                    }
+                    coords.y = Tools.ParseFloatSafe(ynode.InnerText);
                 }
-                XmlNode anglesNode = effectPivotNode.SelectSingleNode("localEulerAngles");
-                if (anglesNode != null)
+                if (coordsNode.Attributes.GetNamedItem("z") is XmlNode znode)
                 {
-                    XmlNode x = anglesNode.Attributes.GetNamedItem("x");
-                    if (x != null)
-                    {
-                        atkEffectRoot.localEulerAngles.x = float.Parse(x.InnerText, CultureInfo.InvariantCulture);
-                    }
-                    XmlNode y = anglesNode.Attributes.GetNamedItem("y");
-                    if (y != null)
-                    {
-                        atkEffectRoot.localEulerAngles.y = float.Parse(y.InnerText, CultureInfo.InvariantCulture);
-                    }
-                    XmlNode z = anglesNode.Attributes.GetNamedItem("z");
-                    if (z != null)
-                    {
-                        atkEffectRoot.localEulerAngles.z = float.Parse(z.InnerText, CultureInfo.InvariantCulture);
-                    }
+                    coords.z = Tools.ParseFloatSafe(znode.InnerText);
                 }
             }
-            return atkEffectRoot;
-        }
-        public class EffectPivot
-        {
-            public Vector3 localPosition = Vector3.zero;
-            public Vector3 localScale = new Vector3(1, 1, 1);
-            public Vector3 localEulerAngles = Vector3.zero;
+            return coords;
         }
         private static void LoadFaceCustom(Dictionary<Workshop.FaceCustomType, Sprite> faceCustomInfo)
         {
-            FaceResourceSet faceResourceSet = new FaceResourceSet();
-            FaceResourceSet faceResourceSet2 = new FaceResourceSet();
-            FaceResourceSet faceResourceSet3 = new FaceResourceSet();
-            HairResourceSet hairResourceSet = new HairResourceSet();
-            HairResourceSet hairResourceSet2 = new HairResourceSet();
+            FaceResourceSet eyeResourceSet = new FaceResourceSet();
+            FaceResourceSet browResourceSet = new FaceResourceSet();
+            FaceResourceSet mouthResourceSet = new FaceResourceSet();
+            HairResourceSet frontHairResourceSet = new HairResourceSet();
+            HairResourceSet rearHairResourceSet = new HairResourceSet();
             foreach (KeyValuePair<Workshop.FaceCustomType, Sprite> keyValuePair in faceCustomInfo)
             {
                 Workshop.FaceCustomType key = keyValuePair.Key;
@@ -969,74 +1150,119 @@ namespace BaseMod
                 switch (key)
                 {
                     case Workshop.FaceCustomType.Front_RearHair:
-                        hairResourceSet2.Default = value;
+                        rearHairResourceSet.Default = value;
                         break;
                     case Workshop.FaceCustomType.Front_FrontHair:
-                        hairResourceSet.Default = value;
+                        frontHairResourceSet.Default = value;
                         break;
                     case Workshop.FaceCustomType.Front_Eye:
-                        faceResourceSet.normal = value;
+                        eyeResourceSet.normal = value;
                         break;
                     case Workshop.FaceCustomType.Front_Brow_Normal:
-                        faceResourceSet2.normal = value;
+                        browResourceSet.normal = value;
                         break;
                     case Workshop.FaceCustomType.Front_Brow_Attack:
-                        faceResourceSet2.atk = value;
+                        browResourceSet.atk = value;
                         break;
                     case Workshop.FaceCustomType.Front_Brow_Hit:
-                        faceResourceSet2.hit = value;
+                        browResourceSet.hit = value;
                         break;
                     case Workshop.FaceCustomType.Front_Mouth_Normal:
-                        faceResourceSet3.normal = value;
+                        mouthResourceSet.normal = value;
                         break;
                     case Workshop.FaceCustomType.Front_Mouth_Attack:
-                        faceResourceSet3.atk = value;
+                        mouthResourceSet.atk = value;
                         break;
                     case Workshop.FaceCustomType.Front_Mouth_Hit:
-                        faceResourceSet3.hit = value;
+                        mouthResourceSet.hit = value;
                         break;
                     case Workshop.FaceCustomType.Side_RearHair_Rear:
-                        hairResourceSet2.Side_Back = value;
+                        rearHairResourceSet.Side_Back = value;
                         break;
                     case Workshop.FaceCustomType.Side_FrontHair:
-                        hairResourceSet.Side_Front = value;
+                        frontHairResourceSet.Side_Front = value;
                         break;
                     case Workshop.FaceCustomType.Side_RearHair_Front:
-                        hairResourceSet2.Side_Front = value;
+                        rearHairResourceSet.Side_Front = value;
                         break;
                     case Workshop.FaceCustomType.Side_Mouth:
-                        faceResourceSet3.atk_side = value;
+                        mouthResourceSet.atk_side = value;
                         break;
                     case Workshop.FaceCustomType.Side_Brow:
-                        faceResourceSet2.atk_side = value;
+                        browResourceSet.atk_side = value;
                         break;
                     case Workshop.FaceCustomType.Side_Eye:
-                        faceResourceSet.atk_side = value;
+                        eyeResourceSet.atk_side = value;
                         break;
                 }
             }
-            faceResourceSet.FillSprite();
-            faceResourceSet2.FillSprite();
-            faceResourceSet3.FillSprite();
+            eyeResourceSet.FillSprite();
+            browResourceSet.FillSprite();
+            mouthResourceSet.FillSprite();
             if (faceCustomInfo.ContainsKey(Workshop.FaceCustomType.Front_Eye) || faceCustomInfo.ContainsKey(Workshop.FaceCustomType.Side_Eye))
             {
-                Singleton<CustomizingResourceLoader>.Instance._eyeResources.Add(faceResourceSet);
+                if (originalEyeIndex >= 0 && originalEyeIndex < Singleton<CustomizingResourceLoader>.Instance._eyeResources.Count)
+                {
+                    Singleton<CustomizingResourceLoader>.Instance._eyeResources[originalEyeIndex] = eyeResourceSet;
+                    originalEyeIndex++;
+                }
+                else
+                {
+                    originalEyeIndex = -1;
+                    Singleton<CustomizingResourceLoader>.Instance._eyeResources.Add(eyeResourceSet);
+                }
             }
             if (faceCustomInfo.ContainsKey(Workshop.FaceCustomType.Front_Brow_Attack) || faceCustomInfo.ContainsKey(Workshop.FaceCustomType.Front_Brow_Hit) || faceCustomInfo.ContainsKey(Workshop.FaceCustomType.Front_Brow_Normal) || faceCustomInfo.ContainsKey(Workshop.FaceCustomType.Side_Brow))
             {
-                Singleton<CustomizingResourceLoader>.Instance._browResources.Add(faceResourceSet2);
+                if (originalBrowIndex >= 0 && originalBrowIndex < Singleton<CustomizingResourceLoader>.Instance._browResources.Count)
+                {
+                    Singleton<CustomizingResourceLoader>.Instance._browResources[originalBrowIndex] = browResourceSet;
+                    originalBrowIndex++;
+                }
+                else
+                {
+                    originalBrowIndex = -1;
+                    Singleton<CustomizingResourceLoader>.Instance._browResources.Add(browResourceSet);
+                }
             }
             if (faceCustomInfo.ContainsKey(Workshop.FaceCustomType.Front_Mouth_Attack) || faceCustomInfo.ContainsKey(Workshop.FaceCustomType.Front_Mouth_Hit) || faceCustomInfo.ContainsKey(Workshop.FaceCustomType.Front_Mouth_Normal) || faceCustomInfo.ContainsKey(Workshop.FaceCustomType.Side_Mouth))
             {
-                Singleton<CustomizingResourceLoader>.Instance._mouthResources.Add(faceResourceSet3);
+                if (originalMouthIndex >= 0 && originalMouthIndex < Singleton<CustomizingResourceLoader>.Instance._mouthResources.Count)
+                {
+                    Singleton<CustomizingResourceLoader>.Instance._mouthResources[originalMouthIndex] = mouthResourceSet;
+                    originalMouthIndex++;
+                }
+                else
+                {
+                    originalMouthIndex = -1;
+                    Singleton<CustomizingResourceLoader>.Instance._mouthResources.Add(mouthResourceSet);
+                }
             }
             if (faceCustomInfo.ContainsKey(Workshop.FaceCustomType.Front_FrontHair) || faceCustomInfo.ContainsKey(Workshop.FaceCustomType.Side_FrontHair))
             {
-                Singleton<CustomizingResourceLoader>.Instance._frontHairResources.Add(hairResourceSet);
+                if (originalFrontHairIndex >= 0 && originalFrontHairIndex < Singleton<CustomizingResourceLoader>.Instance._frontHairResources.Count)
+                {
+                    Singleton<CustomizingResourceLoader>.Instance._frontHairResources[originalFrontHairIndex] = frontHairResourceSet;
+                    originalFrontHairIndex++;
+                }
+                else
+                {
+                    originalFrontHairIndex = -1;
+                    Singleton<CustomizingResourceLoader>.Instance._frontHairResources.Add(frontHairResourceSet);
+                }
             }
             if (faceCustomInfo.ContainsKey(Workshop.FaceCustomType.Front_RearHair) || faceCustomInfo.ContainsKey(Workshop.FaceCustomType.Side_RearHair_Front) || faceCustomInfo.ContainsKey(Workshop.FaceCustomType.Side_RearHair_Rear))
             {
-                Singleton<CustomizingResourceLoader>.Instance._rearHairResources.Add(hairResourceSet2);
+                if (originalRearHairIndex >= 0 && originalRearHairIndex < Singleton<CustomizingResourceLoader>.Instance._rearHairResources.Count)
+                {
+                    Singleton<CustomizingResourceLoader>.Instance._rearHairResources[originalRearHairIndex] = rearHairResourceSet;
+                    originalRearHairIndex++;
+                }
+                else
+                {
+                    originalRearHairIndex = -1;
+                    Singleton<CustomizingResourceLoader>.Instance._rearHairResources.Add(rearHairResourceSet);
+                }
             }
         }
         private static void LoadCoreThumbs()
@@ -1059,6 +1285,20 @@ namespace BaseMod
             }
             CoreThumbDic = dic;
         }
+        private static void LoadCoreSounds()
+		{
+            if (CharacterSound._motionSoundResources == null)
+			{
+                CharacterSound._motionSoundResources = new Dictionary<string, AudioClip>();
+			}
+            foreach (AudioClip audioClip in Resources.LoadAll<AudioClip>("Sounds/MotionSound"))
+            {
+                if (!CharacterSound._motionSoundResources.ContainsKey(audioClip.name))
+                {
+                    CharacterSound._motionSoundResources.Add(audioClip.name, audioClip);
+                }
+            }
+        }
         //Apperance
         //CreateSkin
         [HarmonyPatch(typeof(SdCharacterUtil), "CreateSkin")]
@@ -1067,7 +1307,7 @@ namespace BaseMod
         {
             try
             {
-                if (!string.IsNullOrEmpty(unit.workshopSkin))
+                if (!string.IsNullOrWhiteSpace(unit.workshopSkin))
                 {
                     return true;
                 }
@@ -1640,7 +1880,7 @@ namespace BaseMod
             try
             {
                 string bookName = Singleton<BookDescXmlList>.Instance.GetBookName(new LorId(__instance.workshopID, __instance.TextId));
-                if (!string.IsNullOrEmpty(bookName))
+                if (!string.IsNullOrWhiteSpace(bookName))
                 {
                     __result = bookName;
                     return false;
@@ -1685,13 +1925,7 @@ namespace BaseMod
                         __result = bookThumb;
                         return false;
                     }
-                    /*bookThumb = XLRoot.MakeThumbnail(workshopBookSkinData.dic[ActionDetail.Default]);
-                    if (bookThumb != null)
-                    {
-                        BookThumb.Add(__instance.BookId, bookThumb);
-                        __result = bookThumb;
-                        return false;
-                    }*/
+                    XLRoot.MakeThumbnail(workshopBookSkinData.dic[ActionDetail.Default]);
                 }
             }
             catch (Exception ex)
@@ -1728,14 +1962,8 @@ namespace BaseMod
                     {
                         __result = bookThumb;
                         return false;
-                    }/*
-                    bookThumb = XLRoot.MakeThumbnail(workshopBookSkinData.dic[ActionDetail.Default]);
-                    if (bookThumb != null)
-                    {
-                        BookThumb.Add(__instance.id, bookThumb);
-                        __result = bookThumb;
-                        return false;
-                    }*/
+                    }
+                    XLRoot.MakeThumbnail(workshopBookSkinData.dic[ActionDetail.Default]);
                 }
             }
             catch (Exception ex)
@@ -1781,17 +2009,17 @@ namespace BaseMod
         {
             try
             {
-                if (!OrcTools.OnlyCardDic.ContainsKey(classInfo.id))
+                if (!(classInfo is BookXmlInfo_New))
                 {
                     return;
                 }
                 ____onlyCards = new List<DiceCardXmlInfo>();
-                foreach (LorId id in OrcTools.OnlyCardDic[classInfo.id])
+                foreach (LorId id in (classInfo as BookXmlInfo_New).EquipEffect.OnlyCards)
                 {
                     DiceCardXmlInfo cardItem = ItemXmlDataList.instance.GetCardItem(id);
                     if (cardItem == null)
                     {
-                        Debug.LogError("soulcard not found");
+                        Debug.LogError("onlycard not found");
                     }
                     else
                     {
@@ -1816,11 +2044,11 @@ namespace BaseMod
                     Debug.LogError("BookXmlInfo is null");
                     return false;
                 }
-                if (!OrcTools.SoulCardDic.ContainsKey(____classInfo.id))
+                if (!(____classInfo is BookXmlInfo_New))
                 {
                     return true;
                 }
-                BookSoulCardInfo_New bookSoulCardInfo_New = OrcTools.SoulCardDic[____classInfo.id].Find((BookSoulCardInfo_New x) => x.emotionLevel == emotionLevel);
+                BookSoulCardInfo_New bookSoulCardInfo_New = (____classInfo as BookXmlInfo_New).EquipEffect.SoulCardList.Find((BookSoulCardInfo_New x) => x.emotionLevel == emotionLevel);
                 if (bookSoulCardInfo_New == null)
                 {
                     __result = null;
@@ -1890,7 +2118,7 @@ namespace BaseMod
             try
             {
                 string dropBookName = TextDataModel.GetText(__instance._targetText, Array.Empty<object>());
-                if (!string.IsNullOrEmpty(dropBookName))
+                if (!string.IsNullOrWhiteSpace(dropBookName))
                 {
                     __result = dropBookName;
                     return false;
@@ -1994,31 +2222,37 @@ namespace BaseMod
                 }
                 else
                 {
-                    if (OrcTools.DialogDic.TryGetValue(lorId, out string characterName))
+                    OrcTools.DialogDetail dialogDetail = OrcTools.DialogDetail.FindDialogInBookID(lorId);
+                    if (dialogDetail == null)
                     {
-                        BattleDialogCharacter characterData = null;
-                        if (!string.IsNullOrEmpty(characterName) && OrcTools.DialogRelationDic.TryGetValue(lorId, out string groupID))
+                        dialogDetail = OrcTools.DialogDetail.FindDialogInCharacterID(lorId);
+                    }
+                    if (dialogDetail == null)
+                    {
+                        return true;
+                    }
+                    BattleDialogCharacter characterData = null;
+                    if (!string.IsNullOrWhiteSpace(dialogDetail.GroupName))
+                    {
+                        characterData = Singleton<BattleDialogXmlList>.Instance.GetCharacterData(dialogDetail.GroupName, dialogDetail.CharacterID.id.ToString());
+                    }
+                    if (characterData == null)
+                    {
+                        characterData = Singleton<BattleDialogXmlList>.Instance.GetCharacterData_Mod(lorId.packageId, dialogDetail.CharacterID.id);
+                    }
+                    Type type = FindBattleDialogueModel(dialogDetail.CharacterName, characterData.characterID, lorId.IsWorkshop());
+                    if (type == null)
+                    {
+                        __instance.battleDialogModel = new BattleDialogueModel(characterData);
+                        return false;
+                    }
+                    else
+                    {
+                        __instance.battleDialogModel = Activator.CreateInstance(type, new object[]
                         {
-                            characterData = Singleton<BattleDialogXmlList>.Instance.GetCharacterData(groupID, lorId.id.ToString());
-                        }
-                        if (characterData == null)
-                        {
-                            characterData = Singleton<BattleDialogXmlList>.Instance.GetCharacterData_Mod(lorId.packageId, lorId.id);
-                        }
-                        Type type = FindBattleDialogueModel(characterName, characterData.characterID);
-                        if (type == null)
-                        {
-                            __instance.battleDialogModel = new BattleDialogueModel(characterData);
-                            return false;
-                        }
-                        else
-                        {
-                            __instance.battleDialogModel = Activator.CreateInstance(type, new object[]
-                            {
                                 characterData
-                            }) as BattleDialogueModel;
-                            return false;
-                        }
+                        }) as BattleDialogueModel;
+                        return false;
                     }
                 }
             }
@@ -2028,21 +2262,24 @@ namespace BaseMod
             }
             return true;
         }
-        public static Type FindBattleDialogueModel(string name, string id)
+        public static Type FindBattleDialogueModel(string name, string id, bool isMod)
         {
-            if (!string.IsNullOrEmpty(name) && CustomBattleDialogModel.TryGetValue(name, out Type type))
+            if (!string.IsNullOrWhiteSpace(name) && CustomBattleDialogModel.TryGetValue(name, out Type type))
             {
                 return type;
             }
-            if (!string.IsNullOrEmpty(id) && CustomBattleDialogModel.TryGetValue(id, out Type type2))
+            if (!string.IsNullOrWhiteSpace(id) && CustomBattleDialogModel.TryGetValue(id, out Type type2))
             {
                 return type2;
             }
-            foreach (Type type3 in Assembly.LoadFile(Application.dataPath + "/Managed/Assembly-CSharp.dll").GetTypes())
+            if (!isMod)
             {
-                if (type3.Name == "BattleDialogueModel_" + id.Trim())
+                foreach (Type type3 in Assembly.LoadFile(Application.dataPath + "/Managed/Assembly-CSharp.dll").GetTypes())
                 {
-                    return type3;
+                    if (type3.Name == "BattleDialogueModel_" + id.Trim())
+                    {
+                        return type3;
+                    }
                 }
             }
             return null;
@@ -2233,7 +2470,7 @@ namespace BaseMod
             return cardArtwork;
         }
         //If has script and is not creating a new playingcard,return _script
-        [HarmonyPatch(typeof(BattleDiceCardModel), "CreateDiceCardSelfAbilityScript")]
+        /*[HarmonyPatch(typeof(BattleDiceCardModel), "CreateDiceCardSelfAbilityScript")]
         [HarmonyPrefix]
         private static bool BattleDiceCardModel_CreateDiceCardSelfAbilityScript_Pre(ref DiceCardSelfAbilityBase __result, DiceCardSelfAbilityBase ____script)
         {
@@ -2255,7 +2492,7 @@ namespace BaseMod
                 File.WriteAllText(Application.dataPath + "/Mods/ScriptFixPreerror.txt", ex.Message + Environment.NewLine + ex.StackTrace);
             }
             return true;
-        }
+        }*/
         //If has script,create a playingcard for cardModel in hand
         [HarmonyPatch(typeof(BattleDiceCardModel), "CreateDiceCardSelfAbilityScript")]
         [HarmonyPostfix]
@@ -2276,23 +2513,13 @@ namespace BaseMod
                         cardAbility = __result
                     };
                     __result.card = card;
-                    return;
                 }
-                if (__result.card.owner == null)
+                else
                 {
                     __result.card.owner = __instance.owner;
-                    return;
-                }
-                if (__result.card.card == null)
-                {
                     __result.card.card = __instance;
-                    return;
                 }
-                if (__result.card.card.owner == null)
-                {
-                    __result.card.card.owner = __instance.owner;
-                    return;
-                }
+                return;
             }
             catch (Exception ex)
             {
@@ -2343,7 +2570,7 @@ namespace BaseMod
         {
             try
             {
-                if (string.IsNullOrEmpty(scriptName))
+                if (string.IsNullOrWhiteSpace(scriptName))
                 {
                     return;
                 }
@@ -2409,7 +2636,7 @@ namespace BaseMod
                 try
                 {
                     string keywordIconId = __instance.keywordIconId;
-                    if (!string.IsNullOrEmpty(keywordIconId) && ArtWorks.TryGetValue("CardBuf_" + keywordIconId, out Sprite sprite) && sprite != null)
+                    if (!string.IsNullOrWhiteSpace(keywordIconId) && ArtWorks.TryGetValue("CardBuf_" + keywordIconId, out Sprite sprite) && sprite != null)
                     {
                         ____iconInit = true;
                         ____bufIcon = sprite;
@@ -2439,10 +2666,13 @@ namespace BaseMod
                     baseCost = battleDiceCardBuf.GetCost(baseCost);
                 }
                 int abilityCostAdder = 0;
-                if (__instance.owner != null && !__instance.XmlData.IsPersonal())
+                if (__instance.owner != null)
                 {
-                    abilityCostAdder += __instance.owner.emotionDetail.GetCardCostAdder(__instance);
-                    abilityCostAdder += __instance.owner.bufListDetail.GetCardCostAdder(__instance);
+                    if (!__instance.XmlData.IsPersonal())
+                    {
+                        abilityCostAdder += __instance.owner.emotionDetail.GetCardCostAdder(__instance);
+                        abilityCostAdder += __instance.owner.bufListDetail.GetCardCostAdder(__instance);
+                    }
                     if (____script != null)
                     {
                         abilityCostAdder += ____script.GetCostAdder(__instance.owner, __instance);
@@ -2487,7 +2717,7 @@ namespace BaseMod
             try
             {
                 string passiveName = Singleton<PassiveDescXmlList>.Instance.GetName(__instance.passive.id);
-                if (!string.IsNullOrEmpty(passiveName))
+                if (!string.IsNullOrWhiteSpace(passiveName))
                 {
                     __result = passiveName;
                     return false;
@@ -2504,7 +2734,7 @@ namespace BaseMod
             try
             {
                 string passiveDesc = Singleton<PassiveDescXmlList>.Instance.GetDesc(__instance.passive.id);
-                if (!string.IsNullOrEmpty(passiveDesc))
+                if (!string.IsNullOrWhiteSpace(passiveDesc))
                 {
                     __result = passiveDesc;
                     return false;
@@ -2627,7 +2857,7 @@ namespace BaseMod
                 }
             }
             string keywordIconId = __instance.keywordIconId;
-            if (!string.IsNullOrEmpty(keywordIconId) && !BattleUnitBuf._bufIconDictionary.ContainsKey(keywordIconId) && ArtWorks.TryGetValue(keywordIconId, out Sprite sprite))
+            if (!string.IsNullOrWhiteSpace(keywordIconId) && !BattleUnitBuf._bufIconDictionary.ContainsKey(keywordIconId) && ArtWorks.TryGetValue(keywordIconId, out Sprite sprite))
             {
                 BattleUnitBuf._bufIconDictionary[keywordIconId] = sprite;
             }
@@ -2686,7 +2916,7 @@ namespace BaseMod
         }
         public static EmotionCardAbilityBase FindEmotionCardAbility(string name)
         {
-            if (!string.IsNullOrEmpty(name) && CustomEmotionCardAbility.TryGetValue(name, out Type type))
+            if (!string.IsNullOrWhiteSpace(name) && CustomEmotionCardAbility.TryGetValue(name, out Type type))
             {
                 return Activator.CreateInstance(type) as EmotionCardAbilityBase;
             }
@@ -2947,7 +3177,7 @@ namespace BaseMod
                             ___chapterBooksData.Add(bookXmlInfo);
                         }
                     }
-                    else if (OrcTools.EpisodeDic.ContainsKey(bookXmlInfo.id))
+                    else if (bookXmlInfo is BookXmlInfo_New)
                     {
                         ___episodeBooksData.Add(bookXmlInfo);
                     }
@@ -2998,13 +3228,13 @@ namespace BaseMod
                 Dictionary<LorId, List<BookXmlInfo>> dictionary = new Dictionary<LorId, List<BookXmlInfo>>();
                 foreach (BookXmlInfo bookXmlInfo in ___panel.panel.GetEpisodeBooksDataAll())
                 {
-                    if (OrcTools.EpisodeDic.ContainsKey(bookXmlInfo.id) && Singleton<StageClassInfoList>.Instance.GetData(OrcTools.EpisodeDic[bookXmlInfo.id]).chapter == __instance.chapter && !Enum.TryParse(bookXmlInfo.BookIcon, out UIStoryLine uistoryLine))
+                    if (bookXmlInfo is BookXmlInfo_New && Singleton<StageClassInfoList>.Instance.GetData((bookXmlInfo as BookXmlInfo_New).LorEpisode).chapter == __instance.chapter && !Enum.TryParse(bookXmlInfo.BookIcon, out UIStoryLine uistoryLine))
                     {
-                        if (!dictionary.ContainsKey(OrcTools.EpisodeDic[bookXmlInfo.id]))
+                        if (!dictionary.ContainsKey((bookXmlInfo as BookXmlInfo_New).LorEpisode))
                         {
-                            dictionary[OrcTools.EpisodeDic[bookXmlInfo.id]] = new List<BookXmlInfo>();
+                            dictionary[(bookXmlInfo as BookXmlInfo_New).LorEpisode] = new List<BookXmlInfo>();
                         }
-                        dictionary[OrcTools.EpisodeDic[bookXmlInfo.id]].Add(bookXmlInfo);
+                        dictionary[(bookXmlInfo as BookXmlInfo_New).LorEpisode].Add(bookXmlInfo);
                     }
                 }
                 if (dictionary.Count > 0)
@@ -3048,12 +3278,12 @@ namespace BaseMod
         }
         //EpisodeSlotName
         [HarmonyPatch(typeof(UIBookStoryPanel), "OnSelectEpisodeSlot")]
-        [HarmonyPrefix]
+        [HarmonyPostfix]
         private static void UIBookStoryPanel_OnSelectEpisodeSlot_Post(UIBookStoryEpisodeSlot slot, TextMeshProUGUI ___selectedEpisodeText)
         {
             try
             {
-                if (slot != null && slot.books.Count > 0 && OrcTools.EpisodeDic.ContainsKey(slot.books[0].id) && OrcTools.StageNameDic.TryGetValue(OrcTools.EpisodeDic[slot.books[0].id], out string stagename))
+                if (slot != null && slot.books.Count > 0 && slot.books[0] is BookXmlInfo_New && OrcTools.StageNameDic.TryGetValue((slot.books[0] as BookXmlInfo_New).LorEpisode, out string stagename))
                 {
                     ___selectedEpisodeText.text = stagename;
                 }
@@ -3295,7 +3525,7 @@ namespace BaseMod
                 return false;
             }
             string modPath = Singleton<ModContentManager>.Instance.GetModPath(stageClassInfo.GetStartStory().packageId);
-            if (string.IsNullOrEmpty(modPath) || string.IsNullOrEmpty(stageClassInfo.GetStartStory().story))
+            if (string.IsNullOrWhiteSpace(modPath) || string.IsNullOrWhiteSpace(stageClassInfo.GetStartStory().story))
             {
                 return false;
             }
@@ -3320,7 +3550,7 @@ namespace BaseMod
                     cg = ((SceneEffect)new XmlSerializer(typeof(SceneEffect)).Deserialize(streamReader2)).cg.src;
                 }
             }
-            if (string.IsNullOrEmpty(cg))
+            if (string.IsNullOrWhiteSpace(cg))
             {
                 return false;
             }
@@ -3335,7 +3565,7 @@ namespace BaseMod
             try
             {
                 string stroycg = ModSaveTool.GetModSaveData("BaseMod").GetString("ModLastStroyCG");
-                if (!string.IsNullOrEmpty(stroycg) && File.Exists(stroycg))
+                if (!string.IsNullOrWhiteSpace(stroycg) && File.Exists(stroycg))
                 {
                     Texture2D texture2D = new Texture2D(1, 1);
                     texture2D.LoadImage(File.ReadAllBytes(stroycg));
@@ -3503,7 +3733,7 @@ namespace BaseMod
         {
             try
             {
-                ModEpMatch = new Dictionary<LorId, int>();
+                ModEpMatch = new Dictionary<LorId, UIStoryLine>();
                 if (init)
                 {
                     __instance.CurrentSelectedBook = null;
@@ -3532,12 +3762,12 @@ namespace BaseMod
                     UIStoryKeyData uistoryKeyData;
                     if (bookModel.IsWorkshop || !Enum.IsDefined(typeof(UIStoryLine), bookIcon))
                     {
-                        if (OrcTools.EpisodeDic.ContainsKey(bookModel.BookId))
+                        if (bookModel.ClassInfo is BookXmlInfo_New)
                         {
-                            if (!ModEpMatch.ContainsKey(OrcTools.EpisodeDic[bookModel.BookId]))
+                            if (!ModEpMatch.ContainsKey((bookModel.ClassInfo as BookXmlInfo_New).LorEpisode))
                             {
                                 num++;
-                                ModEpMatch.Add(OrcTools.EpisodeDic[bookModel.BookId], num);
+                                ModEpMatch.Add((bookModel.ClassInfo as BookXmlInfo_New).LorEpisode, (UIStoryLine)num);
                                 uistoryKeyData = new UIStoryKeyData(bookModel.ClassInfo.Chapter, bookModel.ClassInfo.id.packageId)
                                 {
                                     StoryLine = (UIStoryLine)num
@@ -3546,7 +3776,7 @@ namespace BaseMod
                             }
                             else
                             {
-                                uistoryKeyData = ___totalkeysdata.Find((UIStoryKeyData x) => x.workshopId == bookModel.ClassInfo.id.packageId && x.chapter == bookModel.ClassInfo.Chapter && x.StoryLine == (UIStoryLine)ModEpMatch[OrcTools.EpisodeDic[bookModel.BookId]]);
+                                uistoryKeyData = ___totalkeysdata.Find((UIStoryKeyData x) => x.workshopId == bookModel.ClassInfo.id.packageId && x.chapter == bookModel.ClassInfo.Chapter && x.StoryLine == ModEpMatch[(bookModel.ClassInfo as BookXmlInfo_New).LorEpisode]);
                             }
                         }
                         else
@@ -3644,7 +3874,7 @@ namespace BaseMod
         {
             try
             {
-                ModEpMatch = new Dictionary<LorId, int>();
+                ModEpMatch = new Dictionary<LorId, UIStoryLine>();
                 if (init)
                 {
                     __instance.CurrentSelectedBook = null;
@@ -3673,12 +3903,12 @@ namespace BaseMod
                     UIStoryKeyData uistoryKeyData;
                     if (bookModel.IsWorkshop || !Enum.IsDefined(typeof(UIStoryLine), bookIcon))
                     {
-                        if (OrcTools.EpisodeDic.ContainsKey(bookModel.BookId))
+                        if (bookModel.ClassInfo is BookXmlInfo_New)
                         {
-                            if (!ModEpMatch.ContainsKey(OrcTools.EpisodeDic[bookModel.BookId]))
+                            if (!ModEpMatch.ContainsKey((bookModel.ClassInfo as BookXmlInfo_New).LorEpisode))
                             {
                                 num++;
-                                ModEpMatch.Add(OrcTools.EpisodeDic[bookModel.BookId], num);
+                                ModEpMatch.Add((bookModel.ClassInfo as BookXmlInfo_New).LorEpisode, (UIStoryLine)num);
                                 uistoryKeyData = new UIStoryKeyData(bookModel.ClassInfo.Chapter, bookModel.ClassInfo.id.packageId)
                                 {
                                     StoryLine = (UIStoryLine)num
@@ -3687,7 +3917,7 @@ namespace BaseMod
                             }
                             else
                             {
-                                uistoryKeyData = ___totalkeysdata.Find((UIStoryKeyData x) => x.workshopId == bookModel.ClassInfo.id.packageId && x.chapter == bookModel.ClassInfo.Chapter && x.StoryLine == (UIStoryLine)ModEpMatch[OrcTools.EpisodeDic[bookModel.BookId]]);
+                                uistoryKeyData = ___totalkeysdata.Find((UIStoryKeyData x) => x.workshopId == bookModel.ClassInfo.id.packageId && x.chapter == bookModel.ClassInfo.Chapter && x.StoryLine == ModEpMatch[(bookModel.ClassInfo as BookXmlInfo_New).LorEpisode]);
                             }
                         }
                         else
@@ -3795,11 +4025,11 @@ namespace BaseMod
                 }
                 if (books.Count >= 0)
                 {
-                    if (!OrcTools.EpisodeDic.ContainsKey(books[0].BookId))
+                    if (!(books[0].ClassInfo is BookXmlInfo_New))
                     {
                         return true;
                     }
-                    StageClassInfo data = Singleton<StageClassInfoList>.Instance.GetData(OrcTools.EpisodeDic[books[0].BookId]);
+                    StageClassInfo data = Singleton<StageClassInfoList>.Instance.GetData((books[0].ClassInfo as BookXmlInfo_New).LorEpisode);
                     if (data == null)
                     {
                         return true;
@@ -3879,11 +4109,11 @@ namespace BaseMod
                         return true;
                     }
                     StageClassInfo data = Singleton<StageClassInfoList>.Instance.GetData(key);*/
-                    if (!OrcTools.EpisodeDic.ContainsKey(books[0].BookId))
+                    if (!(books[0].ClassInfo is BookXmlInfo_New))
                     {
                         return true;
                     }
-                    StageClassInfo data = Singleton<StageClassInfoList>.Instance.GetData(OrcTools.EpisodeDic[books[0].BookId]);
+                    StageClassInfo data = Singleton<StageClassInfoList>.Instance.GetData((books[0].ClassInfo as BookXmlInfo_New).LorEpisode);
                     if (data == null)
                     {
                         return true;
@@ -3953,7 +4183,7 @@ namespace BaseMod
                         {
                             foreach (string text in mapInfo)
                             {
-                                if (string.IsNullOrEmpty(text))
+                                if (string.IsNullOrWhiteSpace(text))
                                 {
                                     continue;
                                 }
@@ -3965,10 +4195,9 @@ namespace BaseMod
                                 {
                                     string mapName = text.Substring("custom_".Length).Trim();
                                     string resourcePath = Singleton<ModContentManager>.Instance.GetModPath(__instance.GetStageModel().ClassInfo.workshopID) + "/CustomMap_" + mapName;
-                                    Debug.LogError("resourcePath:" + resourcePath);
-                                    if (CustomMapManager.TryGetValue(mapName, out Type mapmanager))
+                                    if (CustomMapManager.TryGetValue(mapName + "MapManager", out Type mapmanager))
                                     {
-                                        Debug.LogError("Find MapManager:" + mapName);
+                                        Debug.Log("Find MapManager:" + mapName);
                                         if (mapmanager == null)
                                         {
                                             return true;
@@ -3989,6 +4218,7 @@ namespace BaseMod
                                     }
                                     else if (Directory.Exists(resourcePath))
                                     {
+                                        Debug.Log("Find SimpleMap:" + resourcePath);
                                         GameObject gameObject = Util.LoadPrefab("LibraryMaps/KETHER_Map", SingletonBehavior<BattleSceneRoot>.Instance.transform);
                                         GameObject borderFrame = gameObject.GetComponent<MapManager>().borderFrame;
                                         GameObject backgroundRoot = gameObject.GetComponent<MapManager>().backgroundRoot;
@@ -4290,7 +4520,7 @@ namespace BaseMod
         //ChangeLanguage
         [HarmonyPatch(typeof(TextDataModel), "InitTextData")]
         [HarmonyPostfix]
-        private static void TextDataModel_InitTextData_Post(string currentLanguage)
+        private static void TextDataModel_InitTextData_Post()
         {
             try
             {
@@ -4325,7 +4555,7 @@ namespace BaseMod
         {
             try
             {
-                if (resource == null || string.IsNullOrEmpty(resource))
+                if (resource == null || string.IsNullOrWhiteSpace(resource))
                 {
                     __result = null;
                     return false;
@@ -4557,11 +4787,43 @@ namespace BaseMod
             __instance.gameObject.transform.localPosition = new Vector3(-830f, -460f);
             return false;
         }
-        /*
-        private static void DiceCardXmlInfo_Copy_Post(DiceCardXmlInfo __instance, DiceCardXmlInfo __result)
+        //CopyCheck
+        [HarmonyPatch(typeof(DiceCardXmlInfo), "Copy")]
+        [HarmonyPostfix]
+        private static void DiceCardXmlInfo_Copy_Post(DiceCardXmlInfo __instance, ref DiceCardXmlInfo __result)
         {
             __result.Keywords = __instance.Keywords;
-        }*/
+            if (__instance is DiceCardXmlInfo_New)
+            {
+                __result = new DiceCardXmlInfo_New()
+                {
+                    workshopID = __result.workshopID,
+                    workshopName = __result.workshopName,
+                    Artwork = __result.Artwork,
+                    Chapter = __result.Chapter,
+                    category = __result.category,
+                    DiceBehaviourList = __result.DiceBehaviourList,
+                    _textId = __result._textId,
+                    optionList = __result.optionList,
+                    Keywords = __result.Keywords,
+                    Priority = __result.Priority,
+                    Rarity = __result.Rarity,
+                    Script = __result.Script,
+                    ScriptDesc = __result.ScriptDesc,
+                    Spec = __result.Spec,
+                    SpecialEffect = __result.SpecialEffect,
+                    SkinChange = __result.SkinChange,
+                    SkinChangeType = __result.SkinChangeType,
+                    SkinHeight = __result.SkinHeight,
+                    MapChange = __result.MapChange,
+                    PriorityScript = __result.PriorityScript
+                };
+                foreach (BookCategory category in (__instance as DiceCardXmlInfo_New).categoryList)
+                {
+                    (__result as DiceCardXmlInfo_New).categoryList.Add(category);
+                }
+            }
+        }
         /*
         //Mod_Update
         //Using For Reload
@@ -4772,7 +5034,7 @@ namespace BaseMod
         {
             try
             {
-                ModSaveTool.SaveModSaveData();
+                ModSaveTool.SaveModSaveData();/*
                 if (File.Exists(SaveManager.savePath + "/Player.log"))
                 {
                     if (File.Exists(Application.dataPath + "/Mods/Player.log"))
@@ -4780,7 +5042,7 @@ namespace BaseMod
                         File.Delete(Application.dataPath + "/Mods/Player.log");
                     }
                     File.Copy(SaveManager.savePath + "/Player.log", Application.dataPath + "/Mods/Player.log");
-                }
+                }*/
             }
             catch (Exception ex)
             {
@@ -4795,6 +5057,7 @@ namespace BaseMod
             try
             {
                 LoadCoreThumbs();
+                LoadCoreSounds();
             }
             catch (Exception ex)
             {
@@ -4943,13 +5206,13 @@ namespace BaseMod
         }
         public static PassiveAbilityBase FindGiftPassiveAbility(string name)
         {
-            if (!string.IsNullOrEmpty(name) && CustomGiftPassive.TryGetValue(name, out Type type))
+            if (!string.IsNullOrWhiteSpace(name) && CustomGiftPassive.TryGetValue(name, out Type type))
             {
                 return Activator.CreateInstance(type) as PassiveAbilityBase;
             }
             foreach (Type type2 in Assembly.LoadFile(Application.dataPath + "/Managed/Assembly-CSharp.dll").GetTypes())
             {
-                if (type2.Name == "PassiveAbilityBase_" + name)
+                if (type2.Name == "GiftPassiveAbility_" + name)
                 {
                     return Activator.CreateInstance(type2) as PassiveAbilityBase;
                 }
@@ -5300,6 +5563,60 @@ namespace BaseMod
             }
             catch { }
             return list;
+        }
+        [HarmonyPatch(typeof(BattleActionTypoSlot), "SetData")]
+        [HarmonyPostfix]
+        private static void BattleActionTypoSlot_SetData_Post(BattleActionTypoSlot __instance, EffectTypoData data)
+        {
+            try
+            {
+                if (data != null && data is EffectTypoData_New)
+                {
+                    if ((data as EffectTypoData_New).battleUIPassiveSet != null)
+                    {
+                        EffectTypoData_New.BattleUIPassiveSet newBattleUIPassiveSet = (data as EffectTypoData_New).battleUIPassiveSet;
+                        BattleUIPassiveSet uIPassiveSet = new BattleUIPassiveSet()
+                        {
+                            type = (data as EffectTypoData_New).type,
+                            frame = newBattleUIPassiveSet.frame,
+                            Icon = newBattleUIPassiveSet.Icon,
+                            IconGlow = newBattleUIPassiveSet.IconGlow,
+                            textColor = newBattleUIPassiveSet.textColor,
+                            IconColor = newBattleUIPassiveSet.IconColor,
+                            IconGlowColor = newBattleUIPassiveSet.IconGlowColor,
+                        };
+                        UISpriteDataManager.instance.BattleUIEffectSetDic[uIPassiveSet.type] = uIPassiveSet;
+                    }
+                    if (UISpriteDataManager.instance.BattleUIEffectSetDic.TryGetValue((data as EffectTypoData_New).type, out BattleUIPassiveSet battleUIPassiveSet))
+                    {
+                        __instance.img_Icon.sprite = battleUIPassiveSet.Icon;
+                        __instance.img_Icon.color = battleUIPassiveSet.IconColor;
+                        if (battleUIPassiveSet.IconGlow != null)
+                        {
+                            __instance.img_IconGlow.enabled = true;
+                            __instance.img_IconGlow.sprite = battleUIPassiveSet.IconGlow;
+                            __instance.img_IconGlow.color = battleUIPassiveSet.IconGlowColor;
+                        }
+                        else
+                        {
+                            __instance.img_IconGlow.enabled = false;
+                        }
+                        __instance.img_Frame.sprite = battleUIPassiveSet.frame;
+                        __instance.txt_desc.color = battleUIPassiveSet.textColor;
+                        __instance.txt_title.color = battleUIPassiveSet.textColor;
+                        Color underlayColor = SingletonBehavior<DirectingDataSetter>.Instance.OnGrayScale ? (battleUIPassiveSet.textColor * battleUIPassiveSet.textColor.grayscale) : (battleUIPassiveSet.textColor * SingletonBehavior<DirectingDataSetter>.Instance.graycolor);
+                        __instance.msetter_title.underlayColor = underlayColor;
+
+                        Vector2 sizeDelta2 = __instance.img_Frame.rectTransform.sizeDelta;
+                        sizeDelta2.y = ((data.Title != "") ? __instance.TitleFrameHeight : __instance.defaultFrameHeight);
+                        __instance.img_Frame.rectTransform.sizeDelta = sizeDelta2;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                File.WriteAllText(Application.dataPath + "/Mods/CustomEffectUISeterror.log", ex.Message + Environment.NewLine + ex.StackTrace);
+            }
         }
 
         //Skeleton
@@ -6160,6 +6477,14 @@ namespace BaseMod
             public Sprite sprite;
         }
 
+
+
+        private static int originalEyeIndex = -1;
+        private static int originalBrowIndex = -1;
+        private static int originalMouthIndex = -1;
+        private static int originalFrontHairIndex = -1;
+        private static int originalRearHairIndex = -1;
+
         private static string path = string.Empty;
 
         private static string Staticpath;
@@ -6198,13 +6523,13 @@ namespace BaseMod
 
         private static List<string> ModPid;
 
-        public static Dictionary<LorId, int> ModEpMatch;
+        public static Dictionary<LorId, UIStoryLine> ModEpMatch;
 
         public static Dictionary<LorId, ModStroyCG> ModStoryCG = null;
 
         public static Dictionary<Assembly, string> ModWorkShopId;
 
-        private static bool IsEditing = false;
+        //private static bool IsEditing = false;
 
         private static DiceCardXmlInfo errNullCard = null;
 
