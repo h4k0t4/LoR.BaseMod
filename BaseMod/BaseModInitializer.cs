@@ -1,5 +1,6 @@
 ﻿using GameSave;
 using Mod;
+using System.Linq;
 using System.Collections.Generic;
 using System.IO;
 using UnityEngine;
@@ -22,28 +23,34 @@ namespace BaseMod
         {
             try
             {
-                List<string> list = new List<string>();
-                foreach (ModContentInfo modContentInfo in Singleton<ModContentManager>.Instance.GetAllMods())
+                List<string> names = new List<string>();
+                List<ModContentInfo> originList = Singleton<ModContentManager>.Instance._allMods;
+                foreach (ModContentInfo modContentInfo in originList.ToList())
                 {
-                    list.Add(modContentInfo.invInfo.workshopInfo.uniqueId);
+                    names.Add(modContentInfo.invInfo.workshopInfo.uniqueId);
+                    if (modContentInfo.invInfo.workshopInfo.uniqueId == "BaseMod")
+					{
+                        originList.Remove(modContentInfo);
+                        originList.Insert(0, modContentInfo);
+					}
                 }
-                list.Remove("BaseMod");
-                list.Insert(0, "BaseMod");
-                list.Remove("UnityExplorer");
-                list.Insert(0, "UnityExplorer");
-                SaveData saveData = new SaveData();
-                SaveData saveData2 = new SaveData(SaveDataType.List);
-                foreach (string value in list)
+                names.Remove("BaseMod");
+                names.Insert(0, "BaseMod");
+                names.Remove("UnityExplorer");
+                names.Insert(0, "UnityExplorer");
+                SaveData modSettingData = new SaveData();
+                SaveData modOrderData = new SaveData(SaveDataType.List);
+                foreach (string name in names)
                 {
-                    saveData2.AddToList(new SaveData(value));
+                    modOrderData.AddToList(new SaveData(name));
                 }
-                saveData.AddData("orders", saveData2);
+                modSettingData.AddData("orders", modOrderData);
                 SaveData oldData = Singleton<SaveManager>.Instance.LoadData(Singleton<ModContentManager>.Instance.savePath);
                 if (oldData != null && oldData.GetData("lastActivated") != null)
                 {
-                    saveData.AddData("lastActivated", oldData.GetData("lastActivated"));
+                    modSettingData.AddData("lastActivated", oldData.GetData("lastActivated"));
                 }
-                Singleton<SaveManager>.Instance.SaveData(Path.Combine(SaveManager.savePath, "ModSetting.save"), saveData);
+                Singleton<SaveManager>.Instance.SaveData(Path.Combine(SaveManager.savePath, "ModSetting.save"), modSettingData);
             }
             catch { }
         }

@@ -216,7 +216,7 @@ namespace BaseMod
             {
                 txt_alarm.text = TextDataModel.GetText(alarmtype, args);
             }
-            typeof(UIAlarmPopup).GetField("_confirmEvent", AccessTools.all).SetValue(UIAlarmPopup.instance, confirmFunc);
+            UIAlarmPopup.instance._confirmEvent = confirmFunc;
             ButtonRoots[(int)btnType].gameObject.SetActive(true);
             UIAlarmPopup.instance.Open();
             if (btnType == UIAlarmButtonType.Default)

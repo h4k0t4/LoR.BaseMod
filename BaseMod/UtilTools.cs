@@ -1,5 +1,4 @@
 ﻿using GameSave;
-using HarmonyLib;
 using Mod;
 using System;
 using System.Collections;
@@ -35,6 +34,7 @@ namespace BaseMod
                 return DefFontColor;
             }
         }
+
         public static InputField CreateInputField(Transform parent, string Imagepath, Vector2 position, TextAnchor tanchor, int fsize, Color tcolor, Font font)
         {
             GameObject gameObject = CreateImage(parent, Imagepath, new Vector2(1f, 1f), position).gameObject;
@@ -58,10 +58,7 @@ namespace BaseMod
         }
         public static IEnumerator RenderCam_2(int index, UICharacterRenderer renderer)
         {
-            yield return YieldCache.waitFrame;
-            renderer.cameraList[index].targetTexture.Release();
-            renderer.cameraList[index].Render();
-            yield break;
+            return renderer.RenderCam(index);
         }
         public static Button AddButton(Image target)
         {
@@ -160,119 +157,15 @@ namespace BaseMod
         }
         public static UIOriginEquipPageSlot DuplicateEquipPageSlot(UIOriginEquipPageSlot origin, UIOriginEquipPageList parent)
         {
-            UIOriginEquipPageSlot uioriginEquipPageSlot;
             if (origin is UISettingInvenEquipPageSlot slot)
             {
-                uioriginEquipPageSlot = UnityEngine.Object.Instantiate(slot, origin.transform.parent);
+                return UnityEngine.Object.Instantiate(slot, origin.transform.parent);
             }
             else
             {
-                uioriginEquipPageSlot = UnityEngine.Object.Instantiate((UIInvenEquipPageSlot)origin, origin.transform.parent);
+                return UnityEngine.Object.Instantiate((UIInvenEquipPageSlot)origin, origin.transform.parent);
             }
-            Type typeFromHandle = typeof(UIOriginEquipPageSlot);
-            RectTransform value = (RectTransform)uioriginEquipPageSlot.transform.GetChild(0);
-            typeFromHandle.GetField("Pivot", AccessTools.all).SetValue(uioriginEquipPageSlot, value);
-            CanvasGroup component = uioriginEquipPageSlot.GetComponent<CanvasGroup>();
-            typeFromHandle.GetField("cg", AccessTools.all).SetValue(uioriginEquipPageSlot, component);
-            if (uioriginEquipPageSlot is UISettingInvenEquipPageSlot)
-            {
-                Image component2 = uioriginEquipPageSlot.transform.GetChild(0).GetChild(0).GetChild(1).GetChild(1).gameObject.GetComponent<Image>();
-                uioriginEquipPageSlot.GetType().GetField("Frame", AccessTools.all).SetValue(uioriginEquipPageSlot, component2);
-            }
-            else
-            {
-                Image component2 = uioriginEquipPageSlot.transform.GetChild(0).GetChild(0).GetChild(2).GetChild(1).gameObject.GetComponent<Image>();
-                uioriginEquipPageSlot.GetType().GetField("Frame", AccessTools.all).SetValue(uioriginEquipPageSlot, component2);
-            }
-            if (uioriginEquipPageSlot is UISettingInvenEquipPageSlot)
-            {
-                Image component3 = uioriginEquipPageSlot.transform.GetChild(0).GetChild(0).GetChild(1).GetChild(0).gameObject.GetComponent<Image>();
-                uioriginEquipPageSlot.GetType().GetField("FrameGlow", AccessTools.all).SetValue(uioriginEquipPageSlot, component3);
-            }
-            else
-            {
-                Image component3 = uioriginEquipPageSlot.transform.GetChild(0).GetChild(0).GetChild(2).GetChild(0).gameObject.GetComponent<Image>();
-                uioriginEquipPageSlot.GetType().GetField("FrameGlow", AccessTools.all).SetValue(uioriginEquipPageSlot, component3);
-            }
-            Image component4 = uioriginEquipPageSlot.transform.GetChild(0).GetChild(2).GetChild(1).gameObject.GetComponent<Image>();
-            uioriginEquipPageSlot.GetType().GetField("Icon", AccessTools.all).SetValue(uioriginEquipPageSlot, component4);
-            Image component5 = uioriginEquipPageSlot.transform.GetChild(0).GetChild(2).GetChild(0).gameObject.GetComponent<Image>();
-            uioriginEquipPageSlot.GetType().GetField("IconGlow", AccessTools.all).SetValue(uioriginEquipPageSlot, component5);
-            TextMeshProUGUI component6 = uioriginEquipPageSlot.transform.GetChild(0).GetChild(3).gameObject.GetComponent<TextMeshProUGUI>();
-            uioriginEquipPageSlot.GetType().GetField("BookName", AccessTools.all).SetValue(uioriginEquipPageSlot, component6);
-            TextMeshProMaterialSetter component7 = uioriginEquipPageSlot.transform.GetChild(0).GetChild(3).gameObject.GetComponent<TextMeshProMaterialSetter>();
-            uioriginEquipPageSlot.GetType().GetField("setter_BookName", AccessTools.all).SetValue(uioriginEquipPageSlot, component7);
-            if (uioriginEquipPageSlot is UISettingInvenEquipPageSlot)
-            {
-                UISettingInvenEquipPageSlot uisettingInvenEquipPageSlot = uioriginEquipPageSlot as UISettingInvenEquipPageSlot;
-                Button component8 = uisettingInvenEquipPageSlot.transform.GetChild(0).GetChild(4).GetChild(2).GetChild(0).GetChild(0).gameObject.GetComponent<UIEquipPageOperatingButton>();
-                uisettingInvenEquipPageSlot.GetType().GetField("button_BookMark", AccessTools.all).SetValue(uisettingInvenEquipPageSlot, component8);
-                Button component9 = uisettingInvenEquipPageSlot.transform.GetChild(0).GetChild(4).GetChild(2).GetChild(4).GetChild(0).gameObject.GetComponent<UIEquipPageOperatingButton>();
-                uisettingInvenEquipPageSlot.GetType().GetField("button_EmptyDeck", AccessTools.all).SetValue(uisettingInvenEquipPageSlot, component9);
-                Button component10 = uisettingInvenEquipPageSlot.transform.GetChild(0).GetChild(4).GetChild(2).GetChild(2).GetChild(0).gameObject.GetComponent<UIEquipPageOperatingButton>();
-                uisettingInvenEquipPageSlot.GetType().GetField("button_Equip", AccessTools.all).SetValue(uisettingInvenEquipPageSlot, component10);
-                CanvasGroup component11 = uisettingInvenEquipPageSlot.transform.GetChild(0).GetChild(1).gameObject.GetComponent<CanvasGroup>();
-                uisettingInvenEquipPageSlot.GetType().GetField("cg_equiproot", AccessTools.all).SetValue(uisettingInvenEquipPageSlot, component11);
-                CanvasGroup component12 = uisettingInvenEquipPageSlot.transform.GetChild(0).GetChild(4).gameObject.GetComponent<CanvasGroup>();
-                uisettingInvenEquipPageSlot.GetType().GetField("cg_operatingPanel", AccessTools.all).SetValue(uisettingInvenEquipPageSlot, component12);
-                FaceEditor component13 = uisettingInvenEquipPageSlot.transform.GetChild(0).GetChild(1).GetChild(0).GetChild(0).GetChild(0).gameObject.GetComponent<FaceEditor>();
-                uisettingInvenEquipPageSlot.GetType().GetField("faceEditor", AccessTools.all).SetValue(uisettingInvenEquipPageSlot, component13);
-                Image component14 = uisettingInvenEquipPageSlot.transform.GetChild(0).GetChild(4).GetChild(2).GetChild(0).GetChild(0).GetChild(0).gameObject.GetComponent<Image>();
-                uisettingInvenEquipPageSlot.GetType().GetField("img_bookmarkbuttonIcon", AccessTools.all).SetValue(uisettingInvenEquipPageSlot, component14);
-                Image component15 = uisettingInvenEquipPageSlot.transform.GetChild(0).GetChild(4).GetChild(2).GetChild(2).GetChild(0).GetChild(0).gameObject.GetComponent<Image>();
-                uisettingInvenEquipPageSlot.GetType().GetField("img_equipbuttonIcon", AccessTools.all).SetValue(uisettingInvenEquipPageSlot, component15);
-                Image component16 = uisettingInvenEquipPageSlot.transform.GetChild(0).GetChild(1).GetChild(0).gameObject.GetComponent<Image>();
-                uisettingInvenEquipPageSlot.GetType().GetField("img_equipFrame", AccessTools.all).SetValue(uisettingInvenEquipPageSlot, component16);
-                UISettingEquipPageScrollList value2 = (UISettingEquipPageScrollList)origin.GetType().GetField("listRoot", AccessTools.all).GetValue(origin);
-                uisettingInvenEquipPageSlot.GetType().GetField("listRoot", AccessTools.all).SetValue(uisettingInvenEquipPageSlot, value2);
-                GameObject gameObject = uisettingInvenEquipPageSlot.transform.GetChild(0).GetChild(1).gameObject;
-                uisettingInvenEquipPageSlot.GetType().GetField("ob_equipRoot", AccessTools.all).SetValue(uisettingInvenEquipPageSlot, gameObject);
-                GameObject gameObject2 = uisettingInvenEquipPageSlot.transform.GetChild(0).GetChild(4).gameObject;
-                uisettingInvenEquipPageSlot.GetType().GetField("ob_OperatingPanel", AccessTools.all).SetValue(uisettingInvenEquipPageSlot, gameObject2);
-                TextMeshProUGUI component17 = uisettingInvenEquipPageSlot.transform.GetChild(0).GetChild(4).GetChild(2).GetChild(0).GetChild(0).GetChild(2).gameObject.GetComponent<TextMeshProUGUI>();
-                uisettingInvenEquipPageSlot.GetType().GetField("txt_bookmarkButton", AccessTools.all).SetValue(uisettingInvenEquipPageSlot, component17);
-                TextMeshProUGUI component18 = uisettingInvenEquipPageSlot.transform.GetChild(0).GetChild(4).GetChild(2).GetChild(2).GetChild(0).GetChild(2).gameObject.GetComponent<TextMeshProUGUI>();
-                uisettingInvenEquipPageSlot.GetType().GetField("txt_equipButton", AccessTools.all).SetValue(uisettingInvenEquipPageSlot, component18);
-            }
-            else
-            {
-                UIInvenEquipPageSlot uiinvenEquipPageSlot = uioriginEquipPageSlot as UIInvenEquipPageSlot;
-                object component19 = uiinvenEquipPageSlot.transform.GetChild(0).GetChild(5).GetChild(2).GetChild(0).GetChild(0).gameObject.GetComponent<UICustomGraphicObject>();
-                uiinvenEquipPageSlot.GetType().GetField("button_BookMark", AccessTools.all).SetValue(uiinvenEquipPageSlot, component19);
-                object component20 = uiinvenEquipPageSlot.transform.GetChild(0).GetChild(5).GetChild(2).GetChild(4).GetChild(0).gameObject.GetComponent<UICustomGraphicObject>();
-                uiinvenEquipPageSlot.GetType().GetField("button_EmptyDeck", AccessTools.all).SetValue(uiinvenEquipPageSlot, component20);
-                object component21 = uiinvenEquipPageSlot.transform.GetChild(0).GetChild(5).GetChild(2).GetChild(2).GetChild(0).gameObject.GetComponent<UICustomGraphicObject>();
-                uiinvenEquipPageSlot.GetType().GetField("button_Equip", AccessTools.all).SetValue(uiinvenEquipPageSlot, component21);
-                object component22 = uiinvenEquipPageSlot.transform.GetChild(0).GetChild(5).GetChild(2).GetChild(1).GetChild(0).gameObject.GetComponent<UICustomGraphicObject>();
-                uiinvenEquipPageSlot.GetType().GetField("button_PassiveSuccession", AccessTools.all).SetValue(uiinvenEquipPageSlot, component22);
-                object component23 = uiinvenEquipPageSlot.transform.GetChild(0).GetChild(5).GetChild(2).GetChild(3).GetChild(0).gameObject.GetComponent<UICustomGraphicObject>();
-                uiinvenEquipPageSlot.GetType().GetField("button_ReleaseButton", AccessTools.all).SetValue(uiinvenEquipPageSlot, component23);
-                CanvasGroup component24 = uiinvenEquipPageSlot.transform.GetChild(0).GetChild(1).gameObject.GetComponent<CanvasGroup>();
-                uiinvenEquipPageSlot.GetType().GetField("cg_equiproot", AccessTools.all).SetValue(uiinvenEquipPageSlot, component24);
-                CanvasGroup component25 = uiinvenEquipPageSlot.transform.GetChild(0).GetChild(5).gameObject.GetComponent<CanvasGroup>();
-                uiinvenEquipPageSlot.GetType().GetField("cg_operatingPanel", AccessTools.all).SetValue(uiinvenEquipPageSlot, component25);
-                FaceEditor component26 = uiinvenEquipPageSlot.transform.GetChild(0).GetChild(1).GetChild(0).GetChild(0).GetChild(0).gameObject.GetComponent<FaceEditor>();
-                uiinvenEquipPageSlot.GetType().GetField("faceEditor", AccessTools.all).SetValue(uiinvenEquipPageSlot, component26);
-                Image component27 = uiinvenEquipPageSlot.transform.GetChild(0).GetChild(5).GetChild(2).GetChild(0).GetChild(0).GetChild(1).gameObject.GetComponent<Image>();
-                uiinvenEquipPageSlot.GetType().GetField("img_bookmarkbuttonIcon", AccessTools.all).SetValue(uiinvenEquipPageSlot, component27);
-                Image component28 = uiinvenEquipPageSlot.transform.GetChild(0).GetChild(5).GetChild(2).GetChild(2).GetChild(0).GetChild(1).gameObject.GetComponent<Image>();
-                uiinvenEquipPageSlot.GetType().GetField("img_equipbuttonIcon", AccessTools.all).SetValue(uiinvenEquipPageSlot, component28);
-                Image component29 = uiinvenEquipPageSlot.transform.GetChild(0).GetChild(1).GetChild(0).gameObject.GetComponent<Image>();
-                uiinvenEquipPageSlot.GetType().GetField("img_equipFrame", AccessTools.all).SetValue(uiinvenEquipPageSlot, component29);
-                UIEquipPageScrollList value3 = (UIEquipPageScrollList)origin.GetType().GetField("listRoot", AccessTools.all).GetValue(origin);
-                uiinvenEquipPageSlot.GetType().GetField("listRoot", AccessTools.all).SetValue(uiinvenEquipPageSlot, value3);
-                GameObject gameObject3 = uiinvenEquipPageSlot.transform.GetChild(0).GetChild(1).gameObject;
-                uiinvenEquipPageSlot.GetType().GetField("ob_equipRoot", AccessTools.all).SetValue(uiinvenEquipPageSlot, gameObject3);
-                GameObject gameObject4 = uiinvenEquipPageSlot.transform.GetChild(0).GetChild(5).gameObject;
-                uiinvenEquipPageSlot.GetType().GetField("ob_OperatingPanel", AccessTools.all).SetValue(uiinvenEquipPageSlot, gameObject4);
-                TextMeshProUGUI component30 = uiinvenEquipPageSlot.transform.GetChild(0).GetChild(5).GetChild(2).GetChild(0).GetChild(0).GetChild(3).GetChild(0).gameObject.GetComponent<TextMeshProUGUI>();
-                uiinvenEquipPageSlot.GetType().GetField("txt_bookmarkButton", AccessTools.all).SetValue(uiinvenEquipPageSlot, component30);
-                TextMeshProUGUI component31 = uiinvenEquipPageSlot.transform.GetChild(0).GetChild(5).GetChild(2).GetChild(2).GetChild(0).GetChild(3).GetChild(0).gameObject.GetComponent<TextMeshProUGUI>();
-                uiinvenEquipPageSlot.GetType().GetField("txt_equipButton", AccessTools.all).SetValue(uiinvenEquipPageSlot, component31);
-                TextMeshProUGUI component32 = uiinvenEquipPageSlot.transform.GetChild(0).GetChild(5).GetChild(2).GetChild(3).GetChild(0).GetChild(3).GetChild(0).gameObject.GetComponent<TextMeshProUGUI>();
-                uiinvenEquipPageSlot.GetType().GetField("txt_releaseButton", AccessTools.all).SetValue(uiinvenEquipPageSlot, component32);
-            }
-            return uioriginEquipPageSlot;
+            //Instantiate copies all relative paths anyway, so there's no need to assign them manually
         }
         public static void LoadFromSaveData_GiftInventory(GiftInventory __instance, SaveData data)
         {

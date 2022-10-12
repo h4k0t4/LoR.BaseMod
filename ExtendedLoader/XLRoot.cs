@@ -210,23 +210,22 @@ namespace ExtendedLoader
         static void AddSkinRenderers(CharacterMotion motion, Transform transform)
         {
             motion.motionSpriteSet.Clear();
+            motion.motionSpriteSet.Add(new SpriteSet(motion.transform.Find("Customize_Renderer").gameObject.GetComponent<SpriteRenderer>(), CharacterAppearanceType.Body));
+            motion.motionSpriteSet.Add(new SpriteSet(motion.transform.Find("CustomizePivot").Find("DummyHead").gameObject.GetComponent<SpriteRenderer>(), CharacterAppearanceType.Head));
+            motion.motionSpriteSet.Add(new SpriteSet(motion.transform.Find("Customize_Renderer_Back").gameObject.GetComponent<SpriteRenderer>(), CharacterAppearanceType.Body));
 
-            Transform transform1 = UnityEngine.Object.Instantiate(transform, transform.parent);
+            Transform transform1 = Instantiate(transform, transform.parent);
             transform1.gameObject.name = "Customize_Renderer_Back";
             motion.motionSpriteSet.Add(new SpriteSet(transform1.GetComponent<SpriteRenderer>(), CharacterAppearanceType.Body));
-            transform1 = UnityEngine.Object.Instantiate(transform, transform.parent);
+            transform1 = Instantiate(transform, transform.parent);
             transform1.gameObject.name = "Customize_Renderer_Back_Skin";
             motion.motionSpriteSet.Add(new SpriteSet(transform1.GetComponent<SpriteRenderer>(), CharacterAppearanceType.Skin));
-            transform1 = UnityEngine.Object.Instantiate(transform, transform.parent);
+            transform1 = Instantiate(transform, transform.parent);
             transform1.gameObject.name = "Customize_Renderer_Skin";
             motion.motionSpriteSet.Add(new SpriteSet(transform1.GetComponent<SpriteRenderer>(), CharacterAppearanceType.Skin));
-            transform1 = UnityEngine.Object.Instantiate(transform, transform.parent);
+            transform1 = Instantiate(transform, transform.parent);
             transform1.gameObject.name = "Customize_Renderer_Front_Skin";
             motion.motionSpriteSet.Add(new SpriteSet(transform1.GetComponent<SpriteRenderer>(), CharacterAppearanceType.Skin));
-
-            motion.motionSpriteSet.Add(new SpriteSet(motion.transform.GetChild(1).gameObject.GetComponent<SpriteRenderer>(), CharacterAppearanceType.Body));
-            motion.motionSpriteSet.Add(new SpriteSet(motion.transform.GetChild(0).GetChild(0).gameObject.GetComponent<SpriteRenderer>(), CharacterAppearanceType.Head));
-            motion.motionSpriteSet.Add(new SpriteSet(motion.transform.GetChild(2).gameObject.GetComponent<SpriteRenderer>(), CharacterAppearanceType.Body));
         }
 
         static ExtendedCharacterMotion CopyCharacterMotion(CharacterMotion motion)

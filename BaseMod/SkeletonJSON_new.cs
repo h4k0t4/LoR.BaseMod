@@ -1122,11 +1122,7 @@ namespace BaseMod
                             if (string4 != null)
                             {
                                 SlotData slotData = skeletonData.FindSlot(string4);
-                                if (slotData == null)
-                                {
-                                    throw new Exception("Clipping end slot not found: " + string4);
-                                }
-                                clippingAttachment.EndSlot = slotData;
+								clippingAttachment.EndSlot = slotData ?? throw new Exception("Clipping end slot not found: " + string4);
                             }
                             ReadVertices(__instance, map, clippingAttachment, GetInt(map, "vertexCount", 0) << 1);
                             result = clippingAttachment;
@@ -1288,11 +1284,7 @@ namespace BaseMod
                             if (string4 != null)
                             {
                                 SlotData slotData = skeletonData.FindSlot(string4);
-                                if (slotData == null)
-                                {
-                                    throw new Exception("Clipping end slot not found: " + string4);
-                                }
-                                clippingAttachment.EndSlot = slotData;
+								clippingAttachment.EndSlot = slotData ?? throw new Exception("Clipping end slot not found: " + string4);
                             }
                             ReadVertices(__instance, map, clippingAttachment, GetInt(map, "vertexCount", 0) << 1);
                             result = clippingAttachment;

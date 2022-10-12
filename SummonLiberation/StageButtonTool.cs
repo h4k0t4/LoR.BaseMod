@@ -44,30 +44,28 @@ namespace SummonLiberation
         {
             currentEnemyUnitIndex = 0;
             currentLibrarianUnitIndex = 0;
-            Sprite sprite = BaseMod.UIPanelTool.GetEnemyCharacterListPanel().transform.GetChild(0).GetChild(3).GetChild(1).GetChild(0).GetComponent<Image>().sprite;
+            var enemyPanelRoot = BaseMod.UIPanelTool.GetEnemyCharacterListPanel().transform.Find("PanelActiveController");
+            var librarianPanelRoot = BaseMod.UIPanelTool.GetLibrarianCharacterListPanel().transform.Find("PanelActiveController");
+            Sprite sprite = enemyPanelRoot.Find("[Rect]StageEnemyList/[Button]Left/Image").GetComponent<Image>().sprite;
             ButtonColor.OnEnterColor = new Color(0.13333334f, 1f, 0.89411765f);
-            EnemyUP = BaseMod.UtilTools.CreateButton(BaseMod.UIPanelTool.GetEnemyCharacterListPanel().transform.GetChild(0).transform, sprite, new Vector2(0.07f, 0.07f), new Vector2(550f, -105f));
+            EnemyUP = BaseMod.UtilTools.CreateButton(enemyPanelRoot, sprite, new Vector2(0.07f, 0.07f), new Vector2(550f, -105f));
             EnemyUP.name = "[Button]up";
             EnemyUP.image.color = new Color(1f, 1f, 1f);
             EnemyUP.transform.rotation = new Quaternion(0f, 0f, 180f, 0f);
-            ButtonColor buttonColor = EnemyUP.gameObject.AddComponent<ButtonColor>();
-            buttonColor.Image = EnemyUP.image;
-            LibrarianUP = BaseMod.UtilTools.CreateButton(BaseMod.UIPanelTool.GetLibrarianCharacterListPanel().transform.GetChild(0).transform, sprite, new Vector2(0.07f, 0.07f), new Vector2(-550f, -95f));
+            EnemyUP.gameObject.AddComponent<ButtonColor>().Image = EnemyUP.image;
+            LibrarianUP = BaseMod.UtilTools.CreateButton(librarianPanelRoot, sprite, new Vector2(0.07f, 0.07f), new Vector2(-550f, -95f));
             LibrarianUP.name = "[Button]up";
             LibrarianUP.image.color = new Color(1f, 1f, 1f);
             LibrarianUP.transform.rotation = new Quaternion(0f, 0f, 180f, 0f);
-            ButtonColor buttonColor2 = LibrarianUP.gameObject.AddComponent<ButtonColor>();
-            buttonColor2.Image = LibrarianUP.image;
-            EnemyDown = BaseMod.UtilTools.CreateButton(BaseMod.UIPanelTool.GetEnemyCharacterListPanel().transform.GetChild(0).transform, sprite, new Vector2(0.07f, 0.07f), new Vector2(550f, -270f));
+            LibrarianUP.gameObject.AddComponent<ButtonColor>().Image = LibrarianUP.image;
+            EnemyDown = BaseMod.UtilTools.CreateButton(enemyPanelRoot, sprite, new Vector2(0.07f, 0.07f), new Vector2(550f, -270f));
             EnemyDown.name = "[Button]down";
             EnemyDown.image.color = new Color(1f, 1f, 1f);
-            ButtonColor buttonColor3 = EnemyDown.gameObject.AddComponent<ButtonColor>();
-            buttonColor3.Image = EnemyDown.image;
-            LibrarianDown = BaseMod.UtilTools.CreateButton(BaseMod.UIPanelTool.GetLibrarianCharacterListPanel().transform.GetChild(0).transform, sprite, new Vector2(0.07f, 0.07f), new Vector2(-550f, -260f));
+            EnemyDown.gameObject.AddComponent<ButtonColor>().Image = EnemyDown.image;
+            LibrarianDown = BaseMod.UtilTools.CreateButton(librarianPanelRoot, sprite, new Vector2(0.07f, 0.07f), new Vector2(-550f, -260f));
             LibrarianDown.name = "[Button]down";
             LibrarianDown.image.color = new Color(1f, 1f, 1f);
-            ButtonColor buttonColor4 = LibrarianDown.gameObject.AddComponent<ButtonColor>();
-            buttonColor4.Image = LibrarianDown.image;
+            LibrarianDown.gameObject.AddComponent<ButtonColor>().Image = LibrarianDown.image;
             Init();
             EnemyUP.gameObject.SetActive(false);
             EnemyDown.gameObject.SetActive(false);
@@ -85,10 +83,10 @@ namespace SummonLiberation
         {
             if (enemyCharacterList == null)
             {
-                enemyCharacterList = (UICharacterList)typeof(UICharacterListPanel).GetField("CharacterList", AccessTools.all).GetValue(BaseMod.UIPanelTool.GetEnemyCharacterListPanel());
+                enemyCharacterList = BaseMod.UIPanelTool.GetEnemyCharacterListPanel().CharacterList;
             }
-            /*currentEnemyStageinfo = (StageClassInfo)BaseMod.UIPanelTool.GetEnemyCharacterListPanel().GetType().GetField("currentEnemyStageinfo", AccessTools.all).GetValue(BaseMod.UIPanelTool.GetEnemyCharacterListPanel());
-            currentWave = (int)BaseMod.UIPanelTool.GetEnemyCharacterListPanel().GetType().GetField("currentWave", AccessTools.all).GetValue(BaseMod.UIPanelTool.GetEnemyCharacterListPanel());*/
+            /*currentEnemyStageinfo = BaseMod.UIPanelTool.GetEnemyCharacterListPanel().currentEnemyStageinfo;
+            currentWave = BaseMod.UIPanelTool.GetEnemyCharacterListPanel().currentWave;*/
             currentEnemyUnitIndex = 0;
             Color color = UIColorManager.Manager.EnemyUIColor;
             if (Enum.IsDefined(typeof(UIStoryLine), Singleton<StageController>.Instance.GetStageModel().ClassInfo.storyType))
@@ -119,7 +117,6 @@ namespace SummonLiberation
             EnemyUP.gameObject.GetComponent<ButtonColor>().DefaultColor = color;
             EnemyDown.gameObject.GetComponent<ButtonColor>().DefaultColor = color;
             EnemyUP.gameObject.SetActive(false);
-            EnemyDown.gameObject.SetActive(false);
             if (UIPanel.Controller.CurrentUIPhase == UIPhase.BattleSetting)
             {
                 if (Singleton<StageController>.Instance.GetStageModel() != null && Singleton<StageController>.Instance.GetCurrentWaveModel().UnitList.Count > 5)
@@ -136,7 +133,7 @@ namespace SummonLiberation
         {
             if (librarianCharacterList == null)
             {
-                librarianCharacterList = (UICharacterList)typeof(UICharacterListPanel).GetField("CharacterList", AccessTools.all).GetValue(BaseMod.UIPanelTool.GetLibrarianCharacterListPanel());
+                librarianCharacterList = BaseMod.UIPanelTool.GetLibrarianCharacterListPanel().CharacterList;
             }
             Color color = UIColorManager.Manager.GetSephirahColor(UIPanel.Controller.CurrentSephirah);
             LibrarianUP.gameObject.GetComponent<ButtonColor>().Image.color = color;
@@ -145,7 +142,6 @@ namespace SummonLiberation
             LibrarianDown.gameObject.GetComponent<ButtonColor>().DefaultColor = color;
             currentLibrarianUnitIndex = 0;
             LibrarianUP.gameObject.SetActive(false);
-            LibrarianDown.gameObject.SetActive(false);
             if (UIPanel.Controller.CurrentUIPhase == UIPhase.BattleSetting)
             {
                 if (Singleton<StageController>.Instance.GetCurrentStageFloorModel() != null && Singleton<StageController>.Instance.GetCurrentStageFloorModel().GetUnitBattleDataList().Count > 5)
@@ -281,7 +277,7 @@ namespace SummonLiberation
                 {
                     BaseMod.UIPanelTool.GetEnemyCharacterListPanel().SetCharacterRenderer(list, true);
                     enemyCharacterList.InitBattleEnemyList(list);
-                    BaseMod.UIPanelTool.GetEnemyCharacterListPanel().GetType().GetMethod("UpdateFrame", AccessTools.all).Invoke(BaseMod.UIPanelTool.GetEnemyCharacterListPanel(), new object[] { UIStoryLine.None });
+                    BaseMod.UIPanelTool.GetEnemyCharacterListPanel().UpdateFrame(UIStoryLine.None);
                 }
             }
         }
@@ -309,7 +305,7 @@ namespace SummonLiberation
                     BaseMod.UIPanelTool.GetLibrarianCharacterListPanel().SetCharacterRenderer(list, false);
                     IsTurningPage = true;
                     librarianCharacterList.InitUnitListFromBattleData(list);
-                    BaseMod.UIPanelTool.GetLibrarianCharacterListPanel().GetType().GetMethod("UpdateFrameToSephirahInBattle", AccessTools.all).Invoke(BaseMod.UIPanelTool.GetLibrarianCharacterListPanel(), new object[] { currentStageFloorModel.Sephirah });
+                    BaseMod.UIPanelTool.GetLibrarianCharacterListPanel().UpdateFrameToSephirahInBattle(currentStageFloorModel.Sephirah);
                 }
             }
         }

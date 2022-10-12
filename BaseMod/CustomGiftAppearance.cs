@@ -32,7 +32,7 @@ namespace BaseMod
                 else
                 {
                     spriteRenderer.gameObject.SetActive(false);
-                    component.GetType().GetField("_frontSpriteRenderer", AccessTools.all).SetValue(component, null);
+                    component._frontSpriteRenderer = null;
                 }
                 spriteRenderer2.gameObject.transform.localScale = new Vector2(1f, 1f);
                 if (GiftArtWork.ContainsKey(array2[2] + "_side"))
@@ -42,7 +42,7 @@ namespace BaseMod
                 else
                 {
                     spriteRenderer2.gameObject.SetActive(false);
-                    component.GetType().GetField("_sideSpriteRenderer", AccessTools.all).SetValue(component, null);
+                    component._sideSpriteRenderer = null;
                 }
                 spriteRenderer3.gameObject.transform.localScale = new Vector2(1f, 1f);
                 if (GiftArtWork.ContainsKey(array2[2] + "_frontBack"))
@@ -52,7 +52,7 @@ namespace BaseMod
                 else
                 {
                     spriteRenderer3.gameObject.SetActive(false);
-                    component.GetType().GetField("_frontBackSpriteRenderer", AccessTools.all).SetValue(component, null);
+                    component._frontBackSpriteRenderer = null;
                 }
                 spriteRenderer4.gameObject.transform.localScale = new Vector2(1f, 1f);
                 if (GiftArtWork.ContainsKey(array2[2] + "_sideBack"))
@@ -62,7 +62,7 @@ namespace BaseMod
                 else
                 {
                     spriteRenderer4.gameObject.SetActive(false);
-                    component.GetType().GetField("_sideBackSpriteRenderer", AccessTools.all).SetValue(component, null);
+                    component._sideBackSpriteRenderer = null;
                 }
                 CreatedGifts[array2[2]] = component;
                 result = component;
@@ -74,7 +74,7 @@ namespace BaseMod
             GiftArtWork = new Dictionary<string, Sprite>();
             foreach (ModContent modContent in Harmony_Patch.LoadedModContents)
             {
-                DirectoryInfo _dirInfo = modContent.GetType().GetField("_dirInfo", AccessTools.all).GetValue(modContent) as DirectoryInfo;
+                DirectoryInfo _dirInfo = modContent._dirInfo;
                 if (Directory.Exists(_dirInfo.FullName + "/GiftArtWork"))
                 {
                     DirectoryInfo directoryInfo2 = new DirectoryInfo(_dirInfo.FullName + "/GiftArtWork");

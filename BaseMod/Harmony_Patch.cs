@@ -12,7 +12,6 @@ using Spine;
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Globalization;
 using System.IO;
 using System.Reflection;
 using System.Text;
@@ -1356,7 +1355,7 @@ namespace BaseMod
         //ChangeEgoSkin
         [HarmonyPatch(typeof(BattleUnitView), "ChangeEgoSkin")]
         [HarmonyPrefix]
-        private static bool BattleUnitView_ChangeEgoSkin_Pre(BattleUnitView __instance, ref BattleUnitView.SkinInfo ____skinInfo, string egoName, bool bookNameChange = true)
+        private static bool BattleUnitView_ChangeEgoSkin_Pre(BattleUnitView __instance, string egoName, bool bookNameChange = true)
         {
             try
             {
@@ -1411,7 +1410,7 @@ namespace BaseMod
         //ChangeSkin
         [HarmonyPatch(typeof(BattleUnitView), "ChangeSkin")]
         [HarmonyPrefix]
-        private static bool BattleUnitView_ChangeSkin_Pre(BattleUnitView __instance, ref BattleUnitView.SkinInfo ____skinInfo, string charName)
+        private static bool BattleUnitView_ChangeSkin_Pre(BattleUnitView __instance, string charName)
         {
             try
             {
@@ -1532,19 +1531,19 @@ namespace BaseMod
             characterMotion.transform.name = "Custom_" + detail.ToString();
             characterMotion.actionDetail = detail;
             characterMotion.motionSpriteSet.Clear();
-            characterMotion.motionSpriteSet.Add(new SpriteSet(characterMotion.transform.GetChild(1).gameObject.GetComponent<SpriteRenderer>(), CharacterAppearanceType.Body));
-            characterMotion.motionSpriteSet.Add(new SpriteSet(characterMotion.transform.GetChild(0).GetChild(0).gameObject.GetComponent<SpriteRenderer>(), CharacterAppearanceType.Head));
-            characterMotion.motionSpriteSet.Add(new SpriteSet(characterMotion.transform.GetChild(2).gameObject.GetComponent<SpriteRenderer>(), CharacterAppearanceType.Body));
+            characterMotion.motionSpriteSet.Add(new SpriteSet(characterMotion.transform.Find("Customize_Renderer").gameObject.GetComponent<SpriteRenderer>(), CharacterAppearanceType.Body));
+            characterMotion.motionSpriteSet.Add(new SpriteSet(characterMotion.transform.Find("CustomizePivot").Find("DummyHead").gameObject.GetComponent<SpriteRenderer>(), CharacterAppearanceType.Head));
+            characterMotion.motionSpriteSet.Add(new SpriteSet(characterMotion.transform.Find("Customize_Renderer_Back").gameObject.GetComponent<SpriteRenderer>(), CharacterAppearanceType.Body));
             return characterMotion;
         }
         //CharacterSound
         [HarmonyPatch(typeof(CharacterSound), "LoadAudioCoroutine")]
         [HarmonyPrefix]
-        private static bool CharacterSound_LoadAudioCoroutine_Pre(string path, List<CharacterSound.ExternalSound> externalSoundList, List<CharacterSound.Sound> ____motionSounds, ref IEnumerator __result)
+        private static bool CharacterSound_LoadAudioCoroutine_Pre(CharacterSound __instance, string path, List<CharacterSound.ExternalSound> externalSoundList, ref IEnumerator __result)
         {
             try
             {
-                __result = LoadAudioCoroutine(path, externalSoundList, ____motionSounds);
+                __result = LoadAudioCoroutine(path, externalSoundList, __instance._motionSounds);
             }
             catch (Exception ex)
             {
@@ -1553,7 +1552,7 @@ namespace BaseMod
             }
             return false;
         }
-        private static IEnumerator LoadAudioCoroutine(string path, List<CharacterSound.ExternalSound> externalSoundList, List<CharacterSound.Sound> ____motionSounds)
+        private static IEnumerator LoadAudioCoroutine(string path, List<CharacterSound.ExternalSound> externalSoundList, List<CharacterSound.Sound> motionSounds)
         {
             foreach (CharacterSound.ExternalSound externalSound1 in externalSoundList)
             {
@@ -1581,7 +1580,7 @@ namespace BaseMod
                             {
                                 AudioClip audioClip = downloadHandler.audioClip;
                                 audioClip.name = soundName;
-                                CharacterSound.Sound sound1 = ____motionSounds.Find(x => x.motion == motion);
+                                CharacterSound.Sound sound1 = motionSounds.Find(x => x.motion == motion);
                                 if (sound1 != null)
                                 {
                                     if (win)
@@ -1607,7 +1606,7 @@ namespace BaseMod
                                     {
                                         sound2.loseSound = audioClip;
                                     }
-                                    ____motionSounds.Add(sound2);
+                                    motionSounds.Add(sound2);
                                     sound2 = null;
                                 }
                                 audioClip = null;
@@ -1644,7 +1643,7 @@ namespace BaseMod
         //Tab
         [HarmonyPatch(typeof(UIEquipPageCustomizePanel), "ApplyFilterAll")]
         [HarmonyPrefix]
-        private static bool UIEquipPageCustomizePanel_ApplyFilterAll_Pre(UIEquipPageCustomizePanel __instance, List<int> ___filteredBookIdList, List<int> ___originBookIdList, UICustomScrollBar ___scrollBar, UIStoryGradeFilter ___gradeFilter, List<UIEquipPageCustomizeSlot> ___bookSlotList, float ___slotWidth, float ___slotHeight, int ___row, int ___column)
+        private static bool UIEquipPageCustomizePanel_ApplyFilterAll_Pre(UIEquipPageCustomizePanel __instance)
         {
             try
             {
@@ -1656,25 +1655,25 @@ namespace BaseMod
                 }
                 if (__instance.isWorkshop)
                 {
-                    ___filteredBookIdList.Clear();
-                    ___filteredBookIdList.AddRange(___originBookIdList);
+                    __instance.filteredBookIdList.Clear();
+                    __instance.filteredBookIdList.AddRange(__instance.originBookIdList);
                 }
                 else
                 {
-                    List<Grade> storyGradeFilter = ___gradeFilter.GetStoryGradeFilter();
-                    ___filteredBookIdList.Clear();
+                    List<Grade> storyGradeFilter = __instance.gradeFilter.GetStoryGradeFilter();
+                    __instance.filteredBookIdList.Clear();
                     bool flag2 = storyGradeFilter.Count == 0;
                     if (flag2)
                     {
-                        ___filteredBookIdList.AddRange(___originBookIdList);
+                        __instance.filteredBookIdList.AddRange(__instance.originBookIdList);
                     }
                     foreach (Grade g2 in storyGradeFilter)
                     {
                         Grade g = g2;
-                        ___filteredBookIdList.AddRange(___originBookIdList.FindAll((int x) => GetModWorkshopBookData(x).Chapter == (int)g));
+                        __instance.filteredBookIdList.AddRange(__instance.originBookIdList.FindAll((int x) => GetModWorkshopBookData(x).Chapter == (int)g));
                     }
                 }
-                ___filteredBookIdList.Sort((int a, int b) => b.CompareTo(a));
+                __instance.filteredBookIdList.Sort((int a, int b) => b.CompareTo(a));
                 Predicate<int> match = (int x) => Singleton<BookXmlList>.Instance.GetData(x).RangeType != __instance.panel.Parent.SelectedUnit.bookItem.ClassInfo.RangeType;
                 switch (__instance.panel.Parent.SelectedUnit.bookItem.ClassInfo.RangeType)
                 {
@@ -1688,13 +1687,13 @@ namespace BaseMod
                         match = ((int x) => GetModWorkshopBookData(x).RangeType != EquipRangeType.Hybrid);
                         break;
                 }
-                List<int> collection = ___filteredBookIdList.FindAll(match);
-                ___filteredBookIdList.RemoveAll(match);
-                ___filteredBookIdList.AddRange(collection);
+                List<int> collection = __instance.filteredBookIdList.FindAll(match);
+                __instance.filteredBookIdList.RemoveAll(match);
+                __instance.filteredBookIdList.AddRange(collection);
                 int num = __instance.GetMaxRow();
-                ___scrollBar.SetScrollRectSize(___column * ___slotWidth, (num + ___row - 1) * ___slotHeight);
-                ___scrollBar.SetWindowPosition(0f, 0f);
-                __instance.ParentSelectable.ChildSelectable = ___bookSlotList[0].selectable;
+                __instance.scrollBar.SetScrollRectSize(__instance.column * __instance.slotWidth, (num + __instance.row - 1) * __instance.slotHeight);
+                __instance.scrollBar.SetWindowPosition(0f, 0f);
+                __instance.ParentSelectable.ChildSelectable = __instance.bookSlotList[0].selectable;
                 __instance.UpdateBookListPage(false);
                 return false;
             }
@@ -1708,26 +1707,26 @@ namespace BaseMod
         //Tab
         [HarmonyPatch(typeof(UIEquipPageCustomizePanel), "UpdateEquipPageSlotList")]
         [HarmonyPrefix]
-        private static bool UIEquipPageCustomizePanel_UpdateEquipPageSlotList_Pre(UIEquipPageCustomizePanel __instance, List<int> ___currentScreenBookIdList, List<UIEquipPageCustomizeSlot> ___bookSlotList)
+        private static bool UIEquipPageCustomizePanel_UpdateEquipPageSlotList_Pre(UIEquipPageCustomizePanel __instance)
         {
             try
             {
-                for (int i = 0; i < ___bookSlotList.Count; i++)
+                for (int i = 0; i < __instance.bookSlotList.Count; i++)
                 {
-                    if (i < ___currentScreenBookIdList.Count)
+                    if (i < __instance.currentScreenBookIdList.Count)
                     {
-                        BookModel data = new BookModel(GetModWorkshopBookData(___currentScreenBookIdList[i]));
-                        ___bookSlotList[i].SetData(data);
-                        ___bookSlotList[i].SetActiveSlot(true);
-                        bool flag2 = __instance.panel.PreviewData.customBookInfo != null && ___bookSlotList[i].BookDataModel.ClassInfo.id == __instance.panel.PreviewData.customBookInfo.id;
+                        BookModel data = new BookModel(GetModWorkshopBookData(__instance.currentScreenBookIdList[i]));
+                        __instance.bookSlotList[i].SetData(data);
+                        __instance.bookSlotList[i].SetActiveSlot(true);
+                        bool flag2 = __instance.panel.PreviewData.customBookInfo != null && __instance.bookSlotList[i].BookDataModel.ClassInfo.id == __instance.panel.PreviewData.customBookInfo.id;
                         if (flag2)
                         {
-                            ___bookSlotList[i].SetHighlighted(true, false, false);
+                            __instance.bookSlotList[i].SetHighlighted(true, false, false);
                         }
                     }
                     else
                     {
-                        ___bookSlotList[i].SetActiveSlot(false);
+                        __instance.bookSlotList[i].SetActiveSlot(false);
                     }
                 }
                 __instance.UpdatePageButtons();
@@ -1770,13 +1769,13 @@ namespace BaseMod
         //savecustombook
         [HarmonyPatch(typeof(UnitDataModel), "GetSaveData")]
         [HarmonyPostfix]
-        private static void UnitDataModel_GetSaveData_Post(UnitDataModel __instance, SaveData __result, BookModel ____CustomBookItem)
+        private static void UnitDataModel_GetSaveData_Post(UnitDataModel __instance, SaveData __result)
         {
             try
             {
-                if (____CustomBookItem != null)
+                if (__instance._CustomBookItem != null)
                 {
-                    LorId bookClassInfoId = ____CustomBookItem.GetBookClassInfoId();
+                    LorId bookClassInfoId = __instance._CustomBookItem.GetBookClassInfoId();
                     SaveData customcorebook = new SaveData(SaveDataType.Dictionary);
                     customcorebook.AddData("_pid", new SaveData(bookClassInfoId.packageId));
                     customcorebook.AddData("_id", new SaveData(bookClassInfoId.id));
@@ -2005,7 +2004,7 @@ namespace BaseMod
         //OnlyCards
         [HarmonyPatch(typeof(BookModel), "SetXmlInfo")]
         [HarmonyPostfix]
-        private static void BookModel_SetXmlInfo_Post(BookModel __instance, BookXmlInfo classInfo, ref List<DiceCardXmlInfo> ____onlyCards)
+        private static void BookModel_SetXmlInfo_Post(BookModel __instance, BookXmlInfo classInfo)
         {
             try
             {
@@ -2013,7 +2012,7 @@ namespace BaseMod
                 {
                     return;
                 }
-                ____onlyCards = new List<DiceCardXmlInfo>();
+                __instance._onlyCards = new List<DiceCardXmlInfo>();
                 foreach (LorId id in (classInfo as BookXmlInfo_New).EquipEffect.OnlyCards)
                 {
                     DiceCardXmlInfo cardItem = ItemXmlDataList.instance.GetCardItem(id);
@@ -2023,7 +2022,7 @@ namespace BaseMod
                     }
                     else
                     {
-                        ____onlyCards.Add(cardItem);
+                        __instance._onlyCards.Add(cardItem);
                     }
                 }
             }
@@ -2035,20 +2034,20 @@ namespace BaseMod
         //SoulCard
         [HarmonyPatch(typeof(BookModel), "CreateSoulCard")]
         [HarmonyPrefix]
-        private static bool BookModel_CreateSoulCard_Pre(BookModel __instance, int emotionLevel, BookXmlInfo ____classInfo, ref BattleDiceCardModel __result)
+        private static bool BookModel_CreateSoulCard_Pre(BookModel __instance, int emotionLevel, ref BattleDiceCardModel __result)
         {
             try
             {
-                if (____classInfo == null)
+                if (__instance._classInfo == null)
                 {
                     Debug.LogError("BookXmlInfo is null");
                     return false;
                 }
-                if (!(____classInfo is BookXmlInfo_New))
+                if (!(__instance._classInfo is BookXmlInfo_New))
                 {
                     return true;
                 }
-                BookSoulCardInfo_New bookSoulCardInfo_New = (____classInfo as BookXmlInfo_New).EquipEffect.SoulCardList.Find((BookSoulCardInfo_New x) => x.emotionLevel == emotionLevel);
+                BookSoulCardInfo_New bookSoulCardInfo_New = (__instance._classInfo as BookXmlInfo_New).EquipEffect.SoulCardList.Find((BookSoulCardInfo_New x) => x.emotionLevel == emotionLevel);
                 if (bookSoulCardInfo_New == null)
                 {
                     __result = null;
@@ -2130,13 +2129,13 @@ namespace BaseMod
         //EnemyDrop
         [HarmonyPatch(typeof(UnitDataModel), "SetByEnemyUnitClassInfo")]
         [HarmonyPostfix]
-        private static void UnitDataModel_SetByEnemyUnitClassInfo_Post(EnemyUnitClassInfo classInfo, ref string ____name)
+        private static void UnitDataModel_SetByEnemyUnitClassInfo_Post(UnitDataModel __instance, EnemyUnitClassInfo classInfo)
         {
             try
             {
                 if (OrcTools.CharacterNameDic.TryGetValue(new LorId(classInfo.workshopID, classInfo.nameId), out string characterName))
                 {
-                    ____name = characterName;
+                    __instance._name = characterName;
                 }
             }
             catch { }
@@ -2144,7 +2143,7 @@ namespace BaseMod
         //Drop
         [HarmonyPatch(typeof(UnitDataModel), "SetEnemyDropTable")]
         [HarmonyPrefix]
-        private static bool UnitDataModel_SetEnemyDropTable_Pre(EnemyUnitClassInfo classInfo, Dictionary<int, DropTable> ____dropTable, ref float ____dropBonus, ref int ____expDrop)
+        private static bool UnitDataModel_SetEnemyDropTable_Pre(UnitDataModel __instance, EnemyUnitClassInfo classInfo)
         {
             try
             {
@@ -2159,10 +2158,10 @@ namespace BaseMod
                     {
                         dropTable.Add(dropItem_ReNew.prob, dropItem_ReNew.bookId);
                     }
-                    ____dropTable.Add(dropItemTable_New.emotionLevel, dropTable);
+                    __instance._dropTable.Add(dropItemTable_New.emotionLevel, dropTable);
                 }
-                ____dropBonus = classInfo.dropBonus;
-                ____expDrop = classInfo.exp;
+                __instance._dropBonus = classInfo.dropBonus;
+                __instance._expDrop = classInfo.exp;
                 return false;
             }
             catch (Exception ex)
@@ -2174,9 +2173,9 @@ namespace BaseMod
         //DropUI
         [HarmonyPatch(typeof(UIInvitationStageInfoPanel), "SetData")]
         [HarmonyPrefix]
-        private static void UIInvitationStageInfoPanel_SetData_Post(StageClassInfo stage, UIRewardDropBookList ___rewardBookList, UIStoryLine story = UIStoryLine.None)
+        private static void UIInvitationStageInfoPanel_SetData_Post(UIInvitationStageInfoPanel __instance, StageClassInfo stage, UIStoryLine story = UIStoryLine.None)
         {
-            CanvasGroup cg = ___rewardBookList.cg;
+            CanvasGroup cg = __instance.rewardBookList.cg;
             if (story == UIStoryLine.None && cg.interactable)
             {
 
@@ -2205,7 +2204,7 @@ namespace BaseMod
                         }
                     }
                 }
-                ___rewardBookList.SetData(list);
+                __instance.rewardBookList.SetData(list);
             }
         }
         //EnemyBattleDialog
@@ -2287,14 +2286,14 @@ namespace BaseMod
         //防止被动过多炸UI，存在字体问题待解决
         [HarmonyPatch(typeof(BattleUnitInformationUI_PassiveList), "SetData")]
         [HarmonyPrefix]
-        private static bool BattleUnitInformationUI_PassiveList_SetData_Pre(BattleUnitInformationUI_PassiveList __instance, List<PassiveAbilityBase> passivelist, List<BattleUnitInformationUI_PassiveList.BattleUnitInformationPassiveSlot> ___passiveSlotList)
+        private static bool BattleUnitInformationUI_PassiveList_SetData_Pre(BattleUnitInformationUI_PassiveList __instance, List<PassiveAbilityBase> passivelist)
         {
             try
             {
-                for (int i = ___passiveSlotList.Count; i < passivelist.Count; i++)
+                for (int i = __instance.passiveSlotList.Count; i < passivelist.Count; i++)
                 {
                     BattleUnitInformationUI_PassiveList.BattleUnitInformationPassiveSlot battleUnitInformationPassiveSlot = new BattleUnitInformationUI_PassiveList.BattleUnitInformationPassiveSlot();
-                    RectTransform rectTransform = UnityEngine.Object.Instantiate(___passiveSlotList[0].Rect, ___passiveSlotList[0].Rect.parent);
+                    RectTransform rectTransform = UnityEngine.Object.Instantiate(__instance.passiveSlotList[0].Rect, __instance.passiveSlotList[0].Rect.parent);
                     battleUnitInformationPassiveSlot.Rect = rectTransform;
                     for (int j = 0; j < battleUnitInformationPassiveSlot.Rect.childCount; j++)
                     {
@@ -2312,7 +2311,7 @@ namespace BaseMod
                         }
                     }
                     rectTransform.gameObject.SetActive(false);
-                    ___passiveSlotList.Add(battleUnitInformationPassiveSlot);
+                    __instance.passiveSlotList.Add(battleUnitInformationPassiveSlot);
                 }
             }
             catch (Exception ex)
@@ -2401,7 +2400,7 @@ namespace BaseMod
         //DiceCardUIName
         [HarmonyPatch(typeof(BattleDiceCardUI), "SetCard")]
         [HarmonyPostfix]
-        private static void BattleDiceCardUI_SetCard_Post(BattleDiceCardModel cardModel, TextMeshProUGUI ___txt_cardName)
+        private static void BattleDiceCardUI_SetCard_Post(BattleDiceCardUI __instance, BattleDiceCardModel cardModel)
         {
             try
             {
@@ -2416,7 +2415,7 @@ namespace BaseMod
                 }
                 if (cardName != "Not Found")
                 {
-                    ___txt_cardName.text = cardName;
+                    __instance.txt_cardName.text = cardName;
                 }
             }
             catch { }
@@ -2472,17 +2471,17 @@ namespace BaseMod
         //If has script and is not creating a new playingcard,return _script
         /*[HarmonyPatch(typeof(BattleDiceCardModel), "CreateDiceCardSelfAbilityScript")]
         [HarmonyPrefix]
-        private static bool BattleDiceCardModel_CreateDiceCardSelfAbilityScript_Pre(ref DiceCardSelfAbilityBase __result, DiceCardSelfAbilityBase ____script)
+        private static bool BattleDiceCardModel_CreateDiceCardSelfAbilityScript_Pre(ref DiceCardSelfAbilityBase __result, DiceCardSelfAbilityBase __instance._script)
         {
             try
             {
-                if (____script != null)
+                if (__instance._script != null)
                 {
                     System.Diagnostics.StackTrace stackTrace = new System.Diagnostics.StackTrace();
                     string name = stackTrace.GetFrame(2).GetMethod().Name;
                     if (!name.Contains("AddCard") && !name.Contains("AllowTargetChanging"))
                     {
-                        __result = ____script;
+                        __result = __instance._script;
                         return false;
                     }
                 }
@@ -2529,7 +2528,7 @@ namespace BaseMod
         //Apply owner for personal card
         [HarmonyPatch(typeof(BattlePersonalEgoCardDetail), "AddCard", new Type[] { typeof(LorId) })]
         [HarmonyPrefix]
-        private static bool BattlePersonalEgoCardDetail_AddCard_Pre(LorId cardId, List<BattleDiceCardModel> ____cardsAll, List<BattleDiceCardModel> ____cardInHand, BattleUnitModel ____self)
+        private static bool BattlePersonalEgoCardDetail_AddCard_Pre(BattlePersonalEgoCardDetail __instance, LorId cardId)
         {
             try
             {
@@ -2542,12 +2541,12 @@ namespace BaseMod
                 {
                     return false;
                 }
-                if (____cardsAll.FindAll((BattleDiceCardModel x) => x.GetID() == cardId).Count == 0)
+                if (__instance._cardsAll.FindAll((BattleDiceCardModel x) => x.GetID() == cardId).Count == 0)
                 {
                     BattleDiceCardModel battleDiceCardModel = BattleDiceCardModel.CreatePlayingCard(cardItem);
-                    battleDiceCardModel.owner = ____self;
-                    ____cardsAll.Add(battleDiceCardModel);
-                    ____cardInHand.Add(battleDiceCardModel);
+                    battleDiceCardModel.owner = __instance._self;
+                    __instance._cardsAll.Add(battleDiceCardModel);
+                    __instance._cardInHand.Add(battleDiceCardModel);
                     if (battleDiceCardModel.XmlData.IsEgo())
                     {
                         battleDiceCardModel.ResetCoolTime();
@@ -2566,7 +2565,7 @@ namespace BaseMod
         //CardSelfAbilityKeywords
         [HarmonyPatch(typeof(BattleCardAbilityDescXmlList), "GetAbilityKeywords_byScript")]
         [HarmonyPrefix]
-        private static void BattleCardAbilityDescXmlList_GetAbilityKeywords_byScript_Pre(string scriptName, ref Dictionary<string, List<string>> ____dictionaryKeywordCache)
+        private static void BattleCardAbilityDescXmlList_GetAbilityKeywords_byScript_Pre(BattleCardAbilityDescXmlList __instance, string scriptName)
         {
             try
             {
@@ -2574,7 +2573,7 @@ namespace BaseMod
                 {
                     return;
                 }
-                if (!____dictionaryKeywordCache.ContainsKey(scriptName))
+                if (!__instance._dictionaryKeywordCache.ContainsKey(scriptName))
                 {
                     DiceCardAbilityBase diceCardAbilityBase = Singleton<AssemblyManager>.Instance.CreateInstance_DiceCardAbility(scriptName.Trim());
                     if (diceCardAbilityBase == null)
@@ -2582,15 +2581,15 @@ namespace BaseMod
                         DiceCardSelfAbilityBase diceCardSelfAbilityBase = Singleton<AssemblyManager>.Instance.CreateInstance_DiceCardSelfAbility(scriptName.Trim());
                         if (diceCardSelfAbilityBase != null)
                         {
-                            ____dictionaryKeywordCache[scriptName] = new List<string>();
-                            ____dictionaryKeywordCache[scriptName].AddRange(diceCardSelfAbilityBase.Keywords);
+                            __instance._dictionaryKeywordCache[scriptName] = new List<string>();
+                            __instance._dictionaryKeywordCache[scriptName].AddRange(diceCardSelfAbilityBase.Keywords);
                             return;
                         }
                     }
                     else
                     {
-                        ____dictionaryKeywordCache[scriptName] = new List<string>();
-                        ____dictionaryKeywordCache[scriptName].AddRange(diceCardAbilityBase.Keywords);
+                        __instance._dictionaryKeywordCache[scriptName] = new List<string>();
+                        __instance._dictionaryKeywordCache[scriptName].AddRange(diceCardAbilityBase.Keywords);
                     }
                 }
             }
@@ -2625,21 +2624,21 @@ namespace BaseMod
         //CardBufIcon
         [HarmonyPatch(typeof(BattleDiceCardBuf), "GetBufIcon")]
         [HarmonyPrefix]
-        private static bool BattleDiceCardBuf_GetBufIcon_Pre(BattleDiceCardBuf __instance, ref Sprite __result, ref bool ____iconInit, ref Sprite ____bufIcon)
+        private static bool BattleDiceCardBuf_GetBufIcon_Pre(BattleDiceCardBuf __instance, ref Sprite __result)
         {
             if (ArtWorks == null)
             {
                 GetArtWorks();
             }
-            if (!____iconInit)
+            if (!__instance._iconInit)
             {
                 try
                 {
                     string keywordIconId = __instance.keywordIconId;
                     if (!string.IsNullOrWhiteSpace(keywordIconId) && ArtWorks.TryGetValue("CardBuf_" + keywordIconId, out Sprite sprite) && sprite != null)
                     {
-                        ____iconInit = true;
-                        ____bufIcon = sprite;
+                        __instance._iconInit = true;
+                        __instance._bufIcon = sprite;
                         __result = sprite;
                         return false;
                     }
@@ -2651,17 +2650,17 @@ namespace BaseMod
         //costtozero real
         [HarmonyPatch(typeof(BattleDiceCardModel), "GetCost")]
         [HarmonyPrefix]
-        private static bool BattleDiceCardModel_GetCost_Pre(ref int __result, BattleDiceCardModel __instance, DiceCardSelfAbilityBase ____script, DiceCardXmlInfo ____xmlData, List<BattleDiceCardBuf> ____bufList, int ____curCost, int ____costAdder, bool ____costZero)
+        private static bool BattleDiceCardModel_GetCost_Pre(ref int __result, BattleDiceCardModel __instance)
         {
             try
             {
-                if (____script != null && ____script.IsFixedCost())
+                if (__instance._script != null && __instance._script.IsFixedCost())
                 {
-                    __result = ____xmlData.Spec.Cost;
+                    __result = __instance._xmlData.Spec.Cost;
                     return false;
                 }
-                int baseCost = ____curCost;
-                foreach (BattleDiceCardBuf battleDiceCardBuf in ____bufList)
+                int baseCost = __instance._curCost;
+                foreach (BattleDiceCardBuf battleDiceCardBuf in __instance._bufList)
                 {
                     baseCost = battleDiceCardBuf.GetCost(baseCost);
                 }
@@ -2673,19 +2672,19 @@ namespace BaseMod
                         abilityCostAdder += __instance.owner.emotionDetail.GetCardCostAdder(__instance);
                         abilityCostAdder += __instance.owner.bufListDetail.GetCardCostAdder(__instance);
                     }
-                    if (____script != null)
+                    if (__instance._script != null)
                     {
-                        abilityCostAdder += ____script.GetCostAdder(__instance.owner, __instance);
+                        abilityCostAdder += __instance._script.GetCostAdder(__instance.owner, __instance);
                     }
                 }
-                int finalCost = baseCost + ____costAdder + abilityCostAdder;
-                if (____costZero)
+                int finalCost = baseCost + __instance._costAdder + abilityCostAdder;
+                if (__instance._costZero)
                 {
                     finalCost = 0;
                 }
-                if (__instance.owner != null && ____script != null && ____script != null)
+                if (__instance.owner != null && __instance._script != null && __instance._script != null)
                 {
-                    finalCost = ____script.GetCostLast(__instance.owner, __instance, finalCost);
+                    finalCost = __instance._script.GetCostLast(__instance.owner, __instance, finalCost);
                 }
                 __result = Mathf.Max(0, finalCost);
                 return false;
@@ -2699,11 +2698,11 @@ namespace BaseMod
         //BattleDiceBehavior ignorepower lead to dicevalue zero
         [HarmonyPatch(typeof(BattleDiceBehavior), "UpdateDiceFinalValue")]
         [HarmonyPrefix]
-        private static void BattleDiceBehavior_UpdateDiceFinalValue_Pre(ref int ____diceFinalResultValue, int ____diceResultValue)
+        private static void BattleDiceBehavior_UpdateDiceFinalValue_Pre(BattleDiceBehavior __instance)
         {
             try
             {
-                ____diceFinalResultValue = ____diceResultValue;
+                __instance._diceFinalResultValue = __instance._diceResultValue;
             }
             catch { }
         }
@@ -2748,15 +2747,15 @@ namespace BaseMod
         //ReadyBuf
         [HarmonyPatch(typeof(BattleUnitBufListDetail), "OnRoundStart")]
         [HarmonyPrefix]
-        private static bool BattleUnitBufListDetail_OnRoundStart_Pre(BattleUnitBufListDetail __instance, BattleUnitModel ____self, List<BattleUnitBuf> ____bufList, List<BattleUnitBuf> ____readyBufList, List<BattleUnitBuf> ____readyReadyBufList)
+        private static bool BattleUnitBufListDetail_OnRoundStart_Pre(BattleUnitBufListDetail __instance)
         {
             try
             {
-                foreach (BattleUnitBuf ReadyBuf in ____readyBufList)
+                foreach (BattleUnitBuf ReadyBuf in __instance._readyBufList)
                 {
                     if (!ReadyBuf.IsDestroyed())
                     {
-                        BattleUnitBuf buf = ____bufList.Find((BattleUnitBuf x) => x.GetType() == ReadyBuf.GetType() && !x.IsDestroyed());
+                        BattleUnitBuf buf = __instance._bufList.Find((BattleUnitBuf x) => x.GetType() == ReadyBuf.GetType() && !x.IsDestroyed());
                         if (buf != null && !ReadyBuf.independentBufIcon && buf.GetBufIcon() != null)
                         {
                             buf.stack += ReadyBuf.stack;
@@ -2769,12 +2768,12 @@ namespace BaseMod
                         }
                     }
                 }
-                ____readyBufList.Clear();
-                foreach (BattleUnitBuf ReadyReadyBuf in ____readyReadyBufList)
+                __instance._readyBufList.Clear();
+                foreach (BattleUnitBuf ReadyReadyBuf in __instance._readyReadyBufList)
                 {
                     if (!ReadyReadyBuf.IsDestroyed())
                     {
-                        BattleUnitBuf rbuf = ____readyBufList.Find((BattleUnitBuf x) => x.GetType() == ReadyReadyBuf.GetType() && !x.IsDestroyed());
+                        BattleUnitBuf rbuf = __instance._readyBufList.Find((BattleUnitBuf x) => x.GetType() == ReadyReadyBuf.GetType() && !x.IsDestroyed());
                         if (rbuf != null && !ReadyReadyBuf.independentBufIcon && rbuf.GetBufIcon() != null)
                         {
                             rbuf.stack += ReadyReadyBuf.stack;
@@ -2782,18 +2781,18 @@ namespace BaseMod
                         }
                         else
                         {
-                            ____readyBufList.Add(ReadyReadyBuf);
+                            __instance._readyBufList.Add(ReadyReadyBuf);
                             ReadyReadyBuf.OnAddBuf(ReadyReadyBuf.stack);
                         }
                     }
                 }
-                ____readyReadyBufList.Clear();
-                if (____self.faction == Faction.Player && Singleton<StageController>.Instance.GetStageModel().ClassInfo.chapter == 3)
+                __instance._readyReadyBufList.Clear();
+                if (__instance._self.faction == Faction.Player && Singleton<StageController>.Instance.GetStageModel().ClassInfo.chapter == 3)
                 {
                     int kewordBufStack = __instance.GetKewordBufStack(KeywordBuf.Endurance);
-                    ____self.UnitData.historyInStage.maxEndurance = Mathf.Max(____self.UnitData.historyInStage.maxEndurance, kewordBufStack);
+                    __instance._self.UnitData.historyInStage.maxEndurance = Mathf.Max(__instance._self.UnitData.historyInStage.maxEndurance, kewordBufStack);
                 }
-                foreach (BattleUnitBuf battleUnitBuf3 in ____bufList.ToArray())
+                foreach (BattleUnitBuf battleUnitBuf3 in __instance._bufList.ToArray())
                 {
                     try
                     {
@@ -2820,15 +2819,15 @@ namespace BaseMod
         //CanAddBuf Apply owner
         [HarmonyPatch(typeof(BattleUnitBufListDetail), "CanAddBuf")]
         [HarmonyPrefix]
-        private static void BattleUnitBufListDetail_CanAddBuf_Pre(BattleUnitBufListDetail __instance, BattleUnitModel ____self, BattleUnitBuf buf)
+        private static void BattleUnitBufListDetail_CanAddBuf_Pre(BattleUnitBufListDetail __instance, BattleUnitBuf buf)
         {
             try
             {
-                if (buf == null || ____self == null)
+                if (buf == null || __instance._self == null)
                 {
                     return;
                 }
-                buf._owner = ____self;
+                buf._owner = __instance._self;
             }
             catch { }
         }
@@ -2867,21 +2866,21 @@ namespace BaseMod
         //EmotionCardAbilityApply
         [HarmonyPatch(typeof(BattleEmotionCardModel), MethodType.Constructor, new Type[] { typeof(EmotionCardXmlInfo), typeof(BattleUnitModel) })]
         [HarmonyPostfix]
-        private static void BattleEmotionCardModel_ctor_Post(BattleEmotionCardModel __instance, EmotionCardXmlInfo xmlInfo, BattleUnitModel owner, ref EmotionCardXmlInfo ____xmlInfo, ref BattleUnitModel ____owner, ref List<EmotionCardAbilityBase> ____abilityList)
+        private static void BattleEmotionCardModel_ctor_Post(BattleEmotionCardModel __instance, EmotionCardXmlInfo xmlInfo, BattleUnitModel owner)
         {
             try
             {
-                if (____xmlInfo == null)
+                if (__instance._xmlInfo == null)
                 {
-                    ____xmlInfo = xmlInfo;
+                    __instance._xmlInfo = xmlInfo;
                 }
-                if (____owner == null)
+                if (__instance._owner == null)
                 {
-                    ____owner = owner;
+                    __instance._owner = owner;
                 }
-                if (____abilityList == null)
+                if (__instance._abilityList == null)
                 {
-                    ____abilityList = new List<EmotionCardAbilityBase>();
+                    __instance._abilityList = new List<EmotionCardAbilityBase>();
                 }
                 foreach (string text in xmlInfo.Script)
                 {
@@ -2889,13 +2888,13 @@ namespace BaseMod
                     if (emotionCardAbilityBase != null)
                     {
                         emotionCardAbilityBase.SetEmotionCard(__instance);
-                        ____abilityList.RemoveAll(x => x.GetType().Name.Substring("EmotionCardAbility_".Length).Trim() == text);
-                        ____abilityList.Add(emotionCardAbilityBase);
+                        __instance._abilityList.RemoveAll(x => x.GetType().Name.Substring("EmotionCardAbility_".Length).Trim() == text);
+                        __instance._abilityList.Add(emotionCardAbilityBase);
                     }
                 }/*
                 List<string> list = new List<string>();
                 list.AddRange(xmlInfo.Script);
-                foreach (EmotionCardAbilityBase emotionCardAbility in ____abilityList)
+                foreach (EmotionCardAbilityBase emotionCardAbility in __instance._abilityList)
                 {
                     list.Remove(emotionCardAbility.GetType().Name.Substring("EmotionCardAbility_".Length).Trim());
                 }
@@ -2905,7 +2904,7 @@ namespace BaseMod
                     if (emotionCardAbilityBase != null)
                     {
                         emotionCardAbilityBase.SetEmotionCard(__instance);
-                        ____abilityList.Add(emotionCardAbilityBase);
+                        __instance._abilityList.Add(emotionCardAbilityBase);
                     }
                 }*/
             }
@@ -3021,7 +3020,7 @@ namespace BaseMod
         //EGOCardName
         [HarmonyPatch(typeof(BattleDiceCardUI), "SetEgoCardForPopup")]
         [HarmonyPostfix]
-        private static void BattleDiceCardUI_SetEgoCardForPopup_Post(EmotionEgoXmlInfo egoxmlinfo, TextMeshProUGUI ___txt_cardName)
+        private static void BattleDiceCardUI_SetEgoCardForPopup_Post(BattleDiceCardUI __instance, EmotionEgoXmlInfo egoxmlinfo)
         {
             try
             {
@@ -3037,7 +3036,7 @@ namespace BaseMod
                 }
                 if (cardName != "Not Found")
                 {
-                    ___txt_cardName.text = cardName;
+                    __instance.txt_cardName.text = cardName;
                 }
             }
             catch { }
@@ -3087,15 +3086,15 @@ namespace BaseMod
         //EGOName
         [HarmonyPatch(typeof(EmotionEgoCardUI), "Init")]
         [HarmonyPrefix]
-        private static bool EmotionEgoCardUI_Init_Pre(EmotionEgoCardUI __instance, EmotionEgoXmlInfo card, ref EmotionEgoXmlInfo ____card, TextMeshProUGUI ____cardName)
+        private static bool EmotionEgoCardUI_Init_Pre(EmotionEgoCardUI __instance, EmotionEgoXmlInfo card)
         {
             try
             {
                 if (OrcTools.EgoDic.ContainsKey(card))
                 {
-                    ____card = card;
+                    __instance._card = card;
                     DiceCardXmlInfo cardItem = ItemXmlDataList.instance.GetCardItem(OrcTools.EgoDic[card], false);
-                    ____cardName.text = cardItem.Name;
+                    __instance._cardName.text = cardItem.Name;
                     __instance.gameObject.SetActive(true);
                     return false;
                 }
@@ -3151,12 +3150,12 @@ namespace BaseMod
         //书库
         [HarmonyPatch(typeof(UIStoryArchivesPanel), "InitData")]
         [HarmonyPrefix]
-        private static bool UIStoryArchivesPanel_InitData_Pre(UIStoryArchivesPanel __instance, ref List<BookXmlInfo> ___episodeBooksData, ref List<BookXmlInfo> ___chapterBooksData)
+        private static bool UIStoryArchivesPanel_InitData_Pre(UIStoryArchivesPanel __instance)
         {
             try
             {
-                ___episodeBooksData = new List<BookXmlInfo>();
-                ___chapterBooksData = new List<BookXmlInfo>();
+                __instance.episodeBooksData = new List<BookXmlInfo>();
+                __instance.chapterBooksData = new List<BookXmlInfo>();
                 List<BookModel> bookModels = Singleton<BookInventoryModel>.Instance.GetBookListAll();
                 List<BookXmlInfo> bookXmlInfoList = new List<BookXmlInfo>();
                 for (int i = 0; i < bookModels.Count; i++)
@@ -3170,28 +3169,28 @@ namespace BaseMod
                     {
                         if (bookXmlInfo.episode > 1)
                         {
-                            ___episodeBooksData.Add(bookXmlInfo);
+                            __instance.episodeBooksData.Add(bookXmlInfo);
                         }
                         else
                         {
-                            ___chapterBooksData.Add(bookXmlInfo);
+                            __instance.chapterBooksData.Add(bookXmlInfo);
                         }
                     }
                     else if (bookXmlInfo is BookXmlInfo_New)
                     {
-                        ___episodeBooksData.Add(bookXmlInfo);
+                        __instance.episodeBooksData.Add(bookXmlInfo);
                     }
                     else
                     {
-                        ___chapterBooksData.Add(bookXmlInfo);
+                        __instance.chapterBooksData.Add(bookXmlInfo);
                     }
                 }
-                ___episodeBooksData.Sort((x, y) => x.id.id.CompareTo(y.id.id));
-                ___chapterBooksData.Sort((x, y) => x.id.id.CompareTo(y.id.id));
+                __instance.episodeBooksData.Sort((x, y) => x.id.id.CompareTo(y.id.id));
+                __instance.chapterBooksData.Sort((x, y) => x.id.id.CompareTo(y.id.id));
                 __instance.sephirahStoryPanel.SetData();
                 __instance.battleStoryPanel.SetData();
                 __instance.creatureRebattlePanel.SetData();
-                if (___episodeBooksData.Count >= 1)
+                if (__instance.episodeBooksData.Count >= 1)
                 {
                     __instance.bookStoryPanel.SetData();
                 }
@@ -3206,27 +3205,27 @@ namespace BaseMod
         //书库剧情槽位
         [HarmonyPatch(typeof(UIBookStoryChapterSlot), "SetEpisodeSlots")]
         [HarmonyPrefix]
-        private static bool UIBookStoryChapterSlot_SetEpisodeSlots_Pre(UIBookStoryChapterSlot __instance, ref int[] ___episodeIdx, List<UIBookStoryEpisodeSlot> ___EpisodeSlots, UIBookStoryPanel ___panel, UIBookStoryEpisodeSlot ___EpisodeSlotModel, RectTransform ___EpisodeSlotsListRect)
+        private static bool UIBookStoryChapterSlot_SetEpisodeSlots_Pre(UIBookStoryChapterSlot __instance)
         {
             try
             {
-                int i = ___episodeIdx[__instance.chapter - 1] + 1;
+                int i = __instance.episodeIdx[__instance.chapter - 1] + 1;
                 int j = 0;
-                while (i < ___episodeIdx[__instance.chapter] + 1)
+                while (i < __instance.episodeIdx[__instance.chapter] + 1)
                 {
-                    if (i != 0 && ___panel.panel.GetEpisodeBooksData((UIStoryLine)i).Count > 0)
+                    if (i != 0 && __instance.panel.panel.GetEpisodeBooksData((UIStoryLine)i).Count > 0)
                     {
-                        if (___EpisodeSlots.Count <= j)
+                        if (__instance.EpisodeSlots.Count <= j)
                         {
                             __instance.InstatiateAdditionalSlot();
                         }
-                        ___EpisodeSlots[j].Init(___panel.panel.GetEpisodeBooksData((UIStoryLine)i), __instance);
+                        __instance.EpisodeSlots[j].Init(__instance.panel.panel.GetEpisodeBooksData((UIStoryLine)i), __instance);
                         j++;
                     }
                     i++;
                 }
                 Dictionary<LorId, List<BookXmlInfo>> dictionary = new Dictionary<LorId, List<BookXmlInfo>>();
-                foreach (BookXmlInfo bookXmlInfo in ___panel.panel.GetEpisodeBooksDataAll())
+                foreach (BookXmlInfo bookXmlInfo in __instance.panel.panel.GetEpisodeBooksDataAll())
                 {
                     if (bookXmlInfo is BookXmlInfo_New && Singleton<StageClassInfoList>.Instance.GetData((bookXmlInfo as BookXmlInfo_New).LorEpisode).chapter == __instance.chapter && !Enum.TryParse(bookXmlInfo.BookIcon, out UIStoryLine uistoryLine))
                     {
@@ -3241,31 +3240,31 @@ namespace BaseMod
                 {
                     foreach (KeyValuePair<LorId, List<BookXmlInfo>> keyValuePair in dictionary)
                     {
-                        if (___EpisodeSlots.Count <= j)
+                        if (__instance.EpisodeSlots.Count <= j)
                         {
                             __instance.InstatiateAdditionalSlot();
                         }
-                        ___EpisodeSlots[j].Init(keyValuePair.Value, __instance);
+                        __instance.EpisodeSlots[j].Init(keyValuePair.Value, __instance);
                         if (OrcTools.StageNameDic.TryGetValue(keyValuePair.Key, out string stagename))
                         {
-                            ___EpisodeSlots[j].episodeText.text = stagename;
+                            __instance.EpisodeSlots[j].episodeText.text = stagename;
                         }
                         j++;
                     }
                 }
-                if (___panel.panel.GetChapterBooksData(__instance.chapter).Count > 0)
+                if (__instance.panel.panel.GetChapterBooksData(__instance.chapter).Count > 0)
                 {
-                    if (___EpisodeSlots.Count <= j)
+                    if (__instance.EpisodeSlots.Count <= j)
                     {
-                        UIBookStoryEpisodeSlot item = UnityEngine.Object.Instantiate(___EpisodeSlotModel, ___EpisodeSlotsListRect);
-                        ___EpisodeSlots.Add(item);
+                        UIBookStoryEpisodeSlot item = UnityEngine.Object.Instantiate(__instance.EpisodeSlotModel, __instance.EpisodeSlotsListRect);
+                        __instance.EpisodeSlots.Add(item);
                     }
-                    ___EpisodeSlots[j].Init(__instance.chapter, ___panel.panel.GetChapterBooksData(__instance.chapter), __instance);
+                    __instance.EpisodeSlots[j].Init(__instance.chapter, __instance.panel.panel.GetChapterBooksData(__instance.chapter), __instance);
                     j++;
                 }
-                while (j < ___EpisodeSlots.Count)
+                while (j < __instance.EpisodeSlots.Count)
                 {
-                    ___EpisodeSlots[j].Deactive();
+                    __instance.EpisodeSlots[j].Deactive();
                     j++;
                 }
                 return false;
@@ -3279,13 +3278,13 @@ namespace BaseMod
         //EpisodeSlotName
         [HarmonyPatch(typeof(UIBookStoryPanel), "OnSelectEpisodeSlot")]
         [HarmonyPostfix]
-        private static void UIBookStoryPanel_OnSelectEpisodeSlot_Post(UIBookStoryEpisodeSlot slot, TextMeshProUGUI ___selectedEpisodeText)
+        private static void UIBookStoryPanel_OnSelectEpisodeSlot_Post(UIBookStoryPanel __instance, UIBookStoryEpisodeSlot slot)
         {
             try
             {
                 if (slot != null && slot.books.Count > 0 && slot.books[0] is BookXmlInfo_New && OrcTools.StageNameDic.TryGetValue((slot.books[0] as BookXmlInfo_New).LorEpisode, out string stagename))
                 {
-                    ___selectedEpisodeText.text = stagename;
+                    __instance.selectedEpisodeText.text = stagename;
                 }
             }
             catch (Exception ex)
@@ -3408,7 +3407,7 @@ namespace BaseMod
         //BattleStoryCG
         [HarmonyPatch(typeof(UIBattleStoryInfoPanel), "SetData")]
         [HarmonyPostfix]
-        private static void UIBattleStoryInfoPanel_SetData_Post(UIBattleStoryInfoPanel __instance, StageClassInfo stage, ref Image ___CG)
+        private static void UIBattleStoryInfoPanel_SetData_Post(UIBattleStoryInfoPanel __instance, StageClassInfo stage)
         {
             try
             {
@@ -3418,7 +3417,7 @@ namespace BaseMod
                     Sprite result = GetModStoryCG(stage.id, path);
                     if (result != null)
                     {
-                        ___CG.sprite = result;
+                        __instance.CG.sprite = result;
                     }
                 }
             }
@@ -3430,12 +3429,12 @@ namespace BaseMod
         //StorySceneCG
         [HarmonyPatch(typeof(StoryScene.StoryManager), "LoadBackgroundSprite")]
         [HarmonyPrefix]
-        private static bool StoryManager_LoadBackgroundSprite_Pre(string src, ref Dictionary<string, Sprite> ____loadedCustomSprites, ref Sprite __result)
+        private static bool StoryManager_LoadBackgroundSprite_Pre(StoryScene.StoryManager __instance, string src, ref Sprite __result)
         {
             try
             {
                 Sprite sprite = Resources.Load<Sprite>("StoryResource/BgSprites/" + src);
-                if (sprite == null && !____loadedCustomSprites.TryGetValue("bgsprite:" + src, out sprite))
+                if (sprite == null && !__instance._loadedCustomSprites.TryGetValue("bgsprite:" + src, out sprite))
                 {
                     if (!File.Exists(Path.Combine(ModUtil.GetModBgSpritePath(StorySerializer.curModPath), src)))
                     {
@@ -3444,7 +3443,7 @@ namespace BaseMod
                     sprite = SpriteUtil.LoadSprite(Path.Combine(ModUtil.GetModBgSpritePath(StorySerializer.curModPath), src), new Vector2(0.5f, 0.5f));
                     if (sprite != null)
                     {
-                        ____loadedCustomSprites.Add("bgsprite:" + src, sprite);
+                        __instance._loadedCustomSprites.Add("bgsprite:" + src, sprite);
                     }
                 }
                 __result = sprite;
@@ -3491,17 +3490,17 @@ namespace BaseMod
         //EntryCG
         [HarmonyPatch(typeof(StageController), "GameOver")]
         [HarmonyPostfix]
-        private static void StageController_GameOver_Post(StageModel ____stageModel)
+        private static void StageController_GameOver_Post(StageController __instance)
         {
             try
             {
-                if (ModStoryCG.ContainsKey(____stageModel.ClassInfo.id))
+                if (ModStoryCG.ContainsKey(__instance._stageModel.ClassInfo.id))
                 {
-                    ModSaveTool.SaveString("ModLastStroyCG", ModStoryCG[____stageModel.ClassInfo.id].path, "BaseMod");
+                    ModSaveTool.SaveString("ModLastStroyCG", ModStoryCG[__instance._stageModel.ClassInfo.id].path, "BaseMod");
                 }
-                else if (TryAddModStoryCG(____stageModel.ClassInfo))
+                else if (TryAddModStoryCG(__instance._stageModel.ClassInfo))
                 {
-                    ModSaveTool.SaveString("ModLastStroyCG", ModStoryCG[____stageModel.ClassInfo.id].path, "BaseMod");
+                    ModSaveTool.SaveString("ModLastStroyCG", ModStoryCG[__instance._stageModel.ClassInfo.id].path, "BaseMod");
                 }
                 else
                 {
@@ -3560,7 +3559,7 @@ namespace BaseMod
         //EntryCG
         [HarmonyPatch(typeof(EntryScene), "SetCG")]
         [HarmonyPostfix]
-        private static void EntryScene_SetCG_Post(EntryScene __instance, ref LatestDataModel ____latestData)
+        private static void EntryScene_SetCG_Post(EntryScene __instance)
         {
             try
             {
@@ -3616,7 +3615,7 @@ namespace BaseMod
         //Condition
         [HarmonyPatch(typeof(UIInvitationRightMainPanel), "SendInvitation")]
         [HarmonyPrefix]
-        private static bool UIInvitationRightMainPanel_SendInvitation_Pre(UIInvitationRightMainPanel __instance, GameObject ___ob_tutorialSendButtonhighlight, GameObject ___ob_tutorialConfirmButtonhighlight)
+        private static bool UIInvitationRightMainPanel_SendInvitation_Pre(UIInvitationRightMainPanel __instance)
         {
             try
             {
@@ -3633,14 +3632,14 @@ namespace BaseMod
                 {
                     return true;
                 }
-                if (___ob_tutorialSendButtonhighlight.activeSelf)
+                if (__instance.ob_tutorialSendButtonhighlight.activeSelf)
                 {
-                    ___ob_tutorialSendButtonhighlight.SetActive(false);
+                    __instance.ob_tutorialSendButtonhighlight.SetActive(false);
                     SingletonBehavior<UIMainAutoTooltipManager>.Instance.AllCloseTooltip();
                 }
-                if (___ob_tutorialConfirmButtonhighlight.activeSelf)
+                if (__instance.ob_tutorialConfirmButtonhighlight.activeSelf)
                 {
-                    ___ob_tutorialConfirmButtonhighlight.SetActive(false);
+                    __instance.ob_tutorialConfirmButtonhighlight.SetActive(false);
                 }
                 if (bookRecipe != null)
                 {
@@ -3668,8 +3667,8 @@ namespace BaseMod
                             __instance.confirmAreaRoot.SetActive(true);
                             if (bookRecipe.id == 2 && !LibraryModel.Instance.IsClearRats())
                             {
-                                ___ob_tutorialConfirmButtonhighlight.gameObject.SetActive(true);
-                                SingletonBehavior<UIMainAutoTooltipManager>.Instance.OpenTooltip(UIAutoTooltipType.Invitation_Click_ConfirmButton, ___ob_tutorialConfirmButtonhighlight.transform as RectTransform, false, null, UIToolTipPanelType.Normal, UITooltipPanelPositionType.None, false, null);
+                                __instance.ob_tutorialConfirmButtonhighlight.gameObject.SetActive(true);
+                                SingletonBehavior<UIMainAutoTooltipManager>.Instance.OpenTooltip(UIAutoTooltipType.Invitation_Click_ConfirmButton, __instance.ob_tutorialConfirmButtonhighlight.transform as RectTransform, false, null, UIToolTipPanelType.Normal, UITooltipPanelPositionType.None, false, null);
                             }
                         }
                     }
@@ -3729,7 +3728,7 @@ namespace BaseMod
         //UIEquipPageScrollList
         [HarmonyPatch(typeof(UIEquipPageScrollList), "SetData")]
         [HarmonyPrefix]
-        private static bool UIEquipPageScrollList_SetData_Pre(UIEquipPageScrollList __instance, List<BookModel> books, UnitDataModel unit, ref int ___currentslotcount, ref UnitDataModel ____selectedUnit, ref List<BookModel> ____originBookModelList, ref List<BookModel> ___currentBookModelList, ref bool ___isActiveScrollBar, ref List<UIStoryKeyData> ___totalkeysdata, ref List<UISlotHeightData> ___heightdatalist, ref Dictionary<UIStoryKeyData, List<BookModel>> ___currentStoryBooksDic, ref bool ___isClickedUpArrow, ref bool ___isClickedDownArrow, ref RectTransform ___rect_slotListRoot, ref List<UISettingInvenEquipPageListSlot> ____equipPagesPanelSlotList, bool init = false)
+        private static bool UIEquipPageScrollList_SetData_Pre(UIEquipPageScrollList __instance, List<BookModel> books, UnitDataModel unit, bool init = false)
         {
             try
             {
@@ -3737,26 +3736,22 @@ namespace BaseMod
                 if (init)
                 {
                     __instance.CurrentSelectedBook = null;
-                    ___currentslotcount = 0;
+                    __instance.currentslotcount = 0;
                 }
-                ____selectedUnit = unit;
-                ____originBookModelList.Clear();
-                ___currentBookModelList.Clear();
-                ___isActiveScrollBar = false;
-                ____originBookModelList.AddRange(books);
-                ___currentBookModelList.AddRange(books);
-                ___currentBookModelList = __instance.FilterBookModels(___currentBookModelList);
-                /*___currentBookModelList = (List<BookModel>)__instance.GetType().GetMethod("FilterBookModels", AccessTools.all).Invoke(__instance, new object[]
-                                {
-                                    ___currentBookModelList
-                                });*/
-                ___totalkeysdata.Clear();
+                __instance._selectedUnit = unit;
+                __instance._originBookModelList.Clear();
+                __instance.currentBookModelList.Clear();
+                __instance.isActiveScrollBar = false;
+                __instance._originBookModelList.AddRange(books);
+                __instance.currentBookModelList.AddRange(books);
+                __instance.currentBookModelList = __instance.FilterBookModels(__instance.currentBookModelList);
+                __instance.totalkeysdata.Clear();
                 __instance.CurrentSelectedBook = null;
-                ___heightdatalist.Clear();
-                ___currentStoryBooksDic.Clear();
+                __instance.heightdatalist.Clear();
+                __instance.currentStoryBooksDic.Clear();
                 int num = 200;
                 /*int num = Enum.GetValues(typeof(UIStoryLine)).Length - 1;*/
-                foreach (BookModel bookModel in ___currentBookModelList)
+                foreach (BookModel bookModel in __instance.currentBookModelList)
                 {
                     string bookIcon = bookModel.ClassInfo.BookIcon;
                     UIStoryKeyData uistoryKeyData;
@@ -3772,20 +3767,20 @@ namespace BaseMod
                                 {
                                     StoryLine = (UIStoryLine)num
                                 };
-                                ___totalkeysdata.Add(uistoryKeyData);
+                                __instance.totalkeysdata.Add(uistoryKeyData);
                             }
                             else
                             {
-                                uistoryKeyData = ___totalkeysdata.Find((UIStoryKeyData x) => x.workshopId == bookModel.ClassInfo.id.packageId && x.chapter == bookModel.ClassInfo.Chapter && x.StoryLine == ModEpMatch[(bookModel.ClassInfo as BookXmlInfo_New).LorEpisode]);
+                                uistoryKeyData = __instance.totalkeysdata.Find((UIStoryKeyData x) => x.workshopId == bookModel.ClassInfo.id.packageId && x.chapter == bookModel.ClassInfo.Chapter && x.StoryLine == ModEpMatch[(bookModel.ClassInfo as BookXmlInfo_New).LorEpisode]);
                             }
                         }
                         else
                         {
-                            uistoryKeyData = ___totalkeysdata.Find((UIStoryKeyData x) => x.chapter == bookModel.ClassInfo.Chapter && x.workshopId == bookModel.ClassInfo.workshopID);
+                            uistoryKeyData = __instance.totalkeysdata.Find((UIStoryKeyData x) => x.chapter == bookModel.ClassInfo.Chapter && x.workshopId == bookModel.ClassInfo.workshopID);
                             if (uistoryKeyData == null)
                             {
                                 uistoryKeyData = new UIStoryKeyData(bookModel.ClassInfo.Chapter, bookModel.ClassInfo.id.packageId);
-                                ___totalkeysdata.Add(uistoryKeyData);
+                                __instance.totalkeysdata.Add(uistoryKeyData);
                             }
                         }
                     }
@@ -3797,27 +3792,27 @@ namespace BaseMod
                             continue;
                         }
                         UIStoryLine storyLine = (UIStoryLine)Enum.Parse(typeof(UIStoryLine), bookIcon);
-                        uistoryKeyData = ___totalkeysdata.Find((UIStoryKeyData x) => x.chapter == bookModel.ClassInfo.Chapter && x.StoryLine == storyLine);
+                        uistoryKeyData = __instance.totalkeysdata.Find((UIStoryKeyData x) => x.chapter == bookModel.ClassInfo.Chapter && x.StoryLine == storyLine);
                         if (uistoryKeyData == null)
                         {
                             uistoryKeyData = new UIStoryKeyData(bookModel.ClassInfo.Chapter, storyLine);
-                            ___totalkeysdata.Add(uistoryKeyData);
+                            __instance.totalkeysdata.Add(uistoryKeyData);
                         }
                     }
-                    if (!___currentStoryBooksDic.ContainsKey(uistoryKeyData))
+                    if (!__instance.currentStoryBooksDic.ContainsKey(uistoryKeyData))
                     {
                         List<BookModel> list = new List<BookModel>
                             {
                                 bookModel
                             };
-                        ___currentStoryBooksDic.Add(uistoryKeyData, list);
+                        __instance.currentStoryBooksDic.Add(uistoryKeyData, list);
                     }
                     else
                     {
-                        ___currentStoryBooksDic[uistoryKeyData].Add(bookModel);
+                        __instance.currentStoryBooksDic[uistoryKeyData].Add(bookModel);
                     }
                 }
-                ___totalkeysdata.Sort(delegate (UIStoryKeyData x, UIStoryKeyData y)
+                __instance.totalkeysdata.Sort(delegate (UIStoryKeyData x, UIStoryKeyData y)
                 {
                     if (x.chapter == -1 && y.chapter == -1)
                     {
@@ -3850,14 +3845,14 @@ namespace BaseMod
                     }
                     return 0;
                 });
-                ___totalkeysdata.Reverse();
+                __instance.totalkeysdata.Reverse();
                 __instance.CalculateSlotsHeight();
                 __instance.UpdateSlotList();
                 __instance.SetScrollBar();
-                ___isClickedUpArrow = false;
-                ___isClickedDownArrow = false;
-                LayoutRebuilder.ForceRebuildLayoutImmediate(___rect_slotListRoot);
-                UIOriginEquipPageSlot saveFirstChild = ____equipPagesPanelSlotList[0].EquipPageSlotList[0];
+                __instance.isClickedUpArrow = false;
+                __instance.isClickedDownArrow = false;
+                LayoutRebuilder.ForceRebuildLayoutImmediate(__instance.rect_slotListRoot);
+                UIOriginEquipPageSlot saveFirstChild = __instance._equipPagesPanelSlotList[0].EquipPageSlotList[0];
                 __instance.SetSaveFirstChild(saveFirstChild);
                 return false;
             }
@@ -3870,7 +3865,7 @@ namespace BaseMod
         //UISettingEquipPageScrollList
         [HarmonyPatch(typeof(UISettingEquipPageScrollList), "SetData")]
         [HarmonyPrefix]
-        private static bool UISettingEquipPageScrollList_SetData_Pre(UISettingEquipPageScrollList __instance, List<BookModel> books, UnitDataModel unit, ref int ___currentslotcount, ref UnitDataModel ____selectedUnit, ref List<BookModel> ____originBookModelList, ref List<BookModel> ___currentBookModelList, ref bool ___isActiveScrollBar, ref List<UIStoryKeyData> ___totalkeysdata, ref List<UISlotHeightData> ___heightdatalist, ref Dictionary<UIStoryKeyData, List<BookModel>> ___currentStoryBooksDic, ref bool ___isClickedUpArrow, ref bool ___isClickedDownArrow, ref RectTransform ___rect_slotListRoot, ref List<UISettingInvenEquipPageListSlot> ____equipPagesPanelSlotList, bool init = false)
+        private static bool UISettingEquipPageScrollList_SetData_Pre(UISettingEquipPageScrollList __instance, List<BookModel> books, UnitDataModel unit, bool init = false)
         {
             try
             {
@@ -3878,26 +3873,22 @@ namespace BaseMod
                 if (init)
                 {
                     __instance.CurrentSelectedBook = null;
-                    ___currentslotcount = 0;
+                    __instance.currentslotcount = 0;
                 }
-                ____selectedUnit = unit;
-                ____originBookModelList.Clear();
-                ___currentBookModelList.Clear();
-                ___isActiveScrollBar = false;
-                ____originBookModelList.AddRange(books);
-                ___currentBookModelList.AddRange(books);
-                ___currentBookModelList = __instance.FilterBookModels(___currentBookModelList);
-                /*___currentBookModelList = (List<BookModel>)__instance.GetType().GetMethod("FilterBookModels", AccessTools.all).Invoke(__instance, new object[]
-                {
-                    ___currentBookModelList
-                });*/
-                ___totalkeysdata.Clear();
+                __instance._selectedUnit = unit;
+                __instance._originBookModelList.Clear();
+                __instance.currentBookModelList.Clear();
+                __instance.isActiveScrollBar = false;
+                __instance._originBookModelList.AddRange(books);
+                __instance.currentBookModelList.AddRange(books);
+                __instance.currentBookModelList = __instance.FilterBookModels(__instance.currentBookModelList);
+                __instance.totalkeysdata.Clear();
                 __instance.CurrentSelectedBook = null;
-                ___heightdatalist.Clear();
-                ___currentStoryBooksDic.Clear();
+                __instance.heightdatalist.Clear();
+                __instance.currentStoryBooksDic.Clear();
                 int num = 200;
                 /*int num = Enum.GetValues(typeof(UIStoryLine)).Length - 1;*/
-                foreach (BookModel bookModel in ___currentBookModelList)
+                foreach (BookModel bookModel in __instance.currentBookModelList)
                 {
                     string bookIcon = bookModel.ClassInfo.BookIcon;
                     UIStoryKeyData uistoryKeyData;
@@ -3913,20 +3904,20 @@ namespace BaseMod
                                 {
                                     StoryLine = (UIStoryLine)num
                                 };
-                                ___totalkeysdata.Add(uistoryKeyData);
+                                __instance.totalkeysdata.Add(uistoryKeyData);
                             }
                             else
                             {
-                                uistoryKeyData = ___totalkeysdata.Find((UIStoryKeyData x) => x.workshopId == bookModel.ClassInfo.id.packageId && x.chapter == bookModel.ClassInfo.Chapter && x.StoryLine == ModEpMatch[(bookModel.ClassInfo as BookXmlInfo_New).LorEpisode]);
+                                uistoryKeyData = __instance.totalkeysdata.Find((UIStoryKeyData x) => x.workshopId == bookModel.ClassInfo.id.packageId && x.chapter == bookModel.ClassInfo.Chapter && x.StoryLine == ModEpMatch[(bookModel.ClassInfo as BookXmlInfo_New).LorEpisode]);
                             }
                         }
                         else
                         {
-                            uistoryKeyData = ___totalkeysdata.Find((UIStoryKeyData x) => x.chapter == bookModel.ClassInfo.Chapter && x.workshopId == bookModel.ClassInfo.workshopID);
+                            uistoryKeyData = __instance.totalkeysdata.Find((UIStoryKeyData x) => x.chapter == bookModel.ClassInfo.Chapter && x.workshopId == bookModel.ClassInfo.workshopID);
                             if (uistoryKeyData == null)
                             {
                                 uistoryKeyData = new UIStoryKeyData(bookModel.ClassInfo.Chapter, bookModel.ClassInfo.id.packageId);
-                                ___totalkeysdata.Add(uistoryKeyData);
+                                __instance.totalkeysdata.Add(uistoryKeyData);
                             }
                         }
                     }
@@ -3938,27 +3929,27 @@ namespace BaseMod
                             continue;
                         }
                         UIStoryLine storyLine = (UIStoryLine)Enum.Parse(typeof(UIStoryLine), bookIcon);
-                        uistoryKeyData = ___totalkeysdata.Find((UIStoryKeyData x) => x.chapter == bookModel.ClassInfo.Chapter && x.StoryLine == storyLine);
+                        uistoryKeyData = __instance.totalkeysdata.Find((UIStoryKeyData x) => x.chapter == bookModel.ClassInfo.Chapter && x.StoryLine == storyLine);
                         if (uistoryKeyData == null)
                         {
                             uistoryKeyData = new UIStoryKeyData(bookModel.ClassInfo.Chapter, storyLine);
-                            ___totalkeysdata.Add(uistoryKeyData);
+                            __instance.totalkeysdata.Add(uistoryKeyData);
                         }
                     }
-                    if (!___currentStoryBooksDic.ContainsKey(uistoryKeyData))
+                    if (!__instance.currentStoryBooksDic.ContainsKey(uistoryKeyData))
                     {
                         List<BookModel> list = new List<BookModel>
                             {
                                 bookModel
                             };
-                        ___currentStoryBooksDic.Add(uistoryKeyData, list);
+                        __instance.currentStoryBooksDic.Add(uistoryKeyData, list);
                     }
                     else
                     {
-                        ___currentStoryBooksDic[uistoryKeyData].Add(bookModel);
+                        __instance.currentStoryBooksDic[uistoryKeyData].Add(bookModel);
                     }
                 }
-                ___totalkeysdata.Sort(delegate (UIStoryKeyData x, UIStoryKeyData y)
+                __instance.totalkeysdata.Sort(delegate (UIStoryKeyData x, UIStoryKeyData y)
                 {
                     if (x.chapter == -1 && y.chapter == -1)
                     {
@@ -3991,14 +3982,14 @@ namespace BaseMod
                     }
                     return 0;
                 });
-                ___totalkeysdata.Reverse();
+                __instance.totalkeysdata.Reverse();
                 __instance.CalculateSlotsHeight();
                 __instance.UpdateSlotList();
                 __instance.SetScrollBar();
-                ___isClickedUpArrow = false;
-                ___isClickedDownArrow = false;
-                LayoutRebuilder.ForceRebuildLayoutImmediate(___rect_slotListRoot);
-                UIOriginEquipPageSlot saveFirstChild = ____equipPagesPanelSlotList[0].EquipPageSlotList[0];
+                __instance.isClickedUpArrow = false;
+                __instance.isClickedDownArrow = false;
+                LayoutRebuilder.ForceRebuildLayoutImmediate(__instance.rect_slotListRoot);
+                UIOriginEquipPageSlot saveFirstChild = __instance._equipPagesPanelSlotList[0].EquipPageSlotList[0];
                 __instance.SetSaveFirstChild(saveFirstChild);
                 return false;
             }
@@ -4011,7 +4002,7 @@ namespace BaseMod
         //UISettingInvenEquipPageListSlot
         [HarmonyPatch(typeof(UISettingInvenEquipPageListSlot), "SetBooksData")]
         [HarmonyPrefix]
-        private static bool UISettingInvenEquipPageListSlot_SetBooksData_Pre(UISettingInvenEquipPageListSlot __instance, List<BookModel> books, UIStoryKeyData storyKey, ref Image ___img_IconGlow, ref Image ___img_Icon, ref TextMeshProUGUI ___txt_StoryName, UISettingEquipPageScrollList ___listRoot, ref List<UIOriginEquipPageSlot> ___equipPageSlotList)
+        private static bool UISettingInvenEquipPageListSlot_SetBooksData_Pre(UISettingInvenEquipPageListSlot __instance, List<BookModel> books, UIStoryKeyData storyKey)
         {
             try
             {
@@ -4037,14 +4028,14 @@ namespace BaseMod
                     UIIconManager.IconSet storyIcon = UISpriteDataManager.instance.GetStoryIcon(data.storyType);
                     if (storyIcon != null)
                     {
-                        ___img_IconGlow.enabled = true;
-                        ___img_Icon.enabled = true;
-                        ___img_Icon.sprite = storyIcon.icon;
-                        ___img_IconGlow.sprite = storyIcon.iconGlow;
+                        __instance.img_IconGlow.enabled = true;
+                        __instance.img_Icon.enabled = true;
+                        __instance.img_Icon.sprite = storyIcon.icon;
+                        __instance.img_IconGlow.sprite = storyIcon.iconGlow;
                     }
                     if (OrcTools.StageNameDic.TryGetValue(data.id, out string stageName))
                     {
-                        ___txt_StoryName.text = "workshop " + stageName;
+                        __instance.txt_StoryName.text = "workshop " + stageName;
                     }
                 }
                 __instance.SetFrameColor(UIColorManager.Manager.GetUIColor(UIColor.Default));
@@ -4055,13 +4046,13 @@ namespace BaseMod
                     }));*/
                 __instance.SetEquipPagesData(list);
                 BookModel bookModel = list.Find((BookModel x) => x == UI.UIController.Instance.CurrentUnit.bookItem);
-                if (___listRoot.CurrentSelectedBook == null && bookModel != null)
+                if (__instance.listRoot.CurrentSelectedBook == null && bookModel != null)
                 {
-                    ___listRoot.CurrentSelectedBook = bookModel;
+                    __instance.listRoot.CurrentSelectedBook = bookModel;
                 }
-                if (___listRoot.CurrentSelectedBook != null)
+                if (__instance.listRoot.CurrentSelectedBook != null)
                 {
-                    UIOriginEquipPageSlot uioriginEquipPageSlot = ___equipPageSlotList.Find((UIOriginEquipPageSlot x) => x.BookDataModel == ___listRoot.CurrentSelectedBook);
+                    UIOriginEquipPageSlot uioriginEquipPageSlot = __instance.equipPageSlotList.Find((UIOriginEquipPageSlot x) => x.BookDataModel == __instance.listRoot.CurrentSelectedBook);
                     if (uioriginEquipPageSlot != null)
                     {
                         uioriginEquipPageSlot.SetHighlighted(true, true, false);
@@ -4079,7 +4070,7 @@ namespace BaseMod
         //UIInvenEquipPageListSlot
         [HarmonyPatch(typeof(UIInvenEquipPageListSlot), "SetBooksData")]
         [HarmonyPrefix]
-        private static bool UIInvenEquipPageListSlot_SetBooksData_Pre(UIInvenEquipPageListSlot __instance, List<BookModel> books, UIStoryKeyData storyKey, ref Image ___img_IconGlow, ref Image ___img_Icon, ref TextMeshProUGUI ___txt_StoryName, UISettingEquipPageScrollList ___listRoot, ref List<UIOriginEquipPageSlot> ___equipPageSlotList)
+        private static bool UIInvenEquipPageListSlot_SetBooksData_Pre(UIInvenEquipPageListSlot __instance, List<BookModel> books, UIStoryKeyData storyKey)
         {
             try
             {
@@ -4121,14 +4112,14 @@ namespace BaseMod
                     UIIconManager.IconSet storyIcon = UISpriteDataManager.instance.GetStoryIcon(data.storyType);
                     if (storyIcon != null)
                     {
-                        ___img_IconGlow.enabled = true;
-                        ___img_Icon.enabled = true;
-                        ___img_Icon.sprite = storyIcon.icon;
-                        ___img_IconGlow.sprite = storyIcon.iconGlow;
+                        __instance.img_IconGlow.enabled = true;
+                        __instance.img_Icon.enabled = true;
+                        __instance.img_Icon.sprite = storyIcon.icon;
+                        __instance.img_IconGlow.sprite = storyIcon.iconGlow;
                     }
                     if (OrcTools.StageNameDic.TryGetValue(data.id, out string stageName))
                     {
-                        ___txt_StoryName.text = "workshop " + stageName;
+                        __instance.txt_StoryName.text = "workshop " + stageName;
                     }
                 }
                 __instance.SetFrameColor(UIColorManager.Manager.GetUIColor(UIColor.Default));
@@ -4139,13 +4130,13 @@ namespace BaseMod
                     }));*/
                 __instance.SetEquipPagesData(list);
                 BookModel bookModel = list.Find((BookModel x) => x == UI.UIController.Instance.CurrentUnit.bookItem);
-                if (___listRoot.CurrentSelectedBook == null && bookModel != null)
+                if (__instance.listRoot.CurrentSelectedBook == null && bookModel != null)
                 {
-                    ___listRoot.CurrentSelectedBook = bookModel;
+                    __instance.listRoot.CurrentSelectedBook = bookModel;
                 }
-                if (___listRoot.CurrentSelectedBook != null)
+                if (__instance.listRoot.CurrentSelectedBook != null)
                 {
-                    UIOriginEquipPageSlot uioriginEquipPageSlot = ___equipPageSlotList.Find((UIOriginEquipPageSlot x) => x.BookDataModel == ___listRoot.CurrentSelectedBook);
+                    UIOriginEquipPageSlot uioriginEquipPageSlot = __instance.equipPageSlotList.Find((UIOriginEquipPageSlot x) => x.BookDataModel == __instance.listRoot.CurrentSelectedBook);
                     if (uioriginEquipPageSlot != null)
                     {
                         uioriginEquipPageSlot.SetHighlighted(true, true, false);
@@ -4423,7 +4414,7 @@ namespace BaseMod
         //AutoMod1
         [HarmonyPatch(typeof(UIStoryProgressPanel), "SelectedSlot")]
         [HarmonyPrefix]
-        private static void UIStoryProgressPanel_SelectedSlot_Pre(UIStoryProgressIconSlot slot, bool isSelected)
+        private static void UIStoryProgressPanel_SelectedSlot_Pre(UIStoryProgressIconSlot slot)
         {
             try
             {
@@ -4448,21 +4439,21 @@ namespace BaseMod
         //AutoMod2
         [HarmonyPatch(typeof(UIInvitationRightMainPanel), "SetCustomInvToggle")]
         [HarmonyPostfix]
-        private static void UIInvitationRightMainPanel_SetCustomInvToggle_Post(ref Toggle ____workshopInvitationToggle)
+        private static void UIInvitationRightMainPanel_SetCustomInvToggle_Post(UIInvitationRightMainPanel __instance)
         {
             if (IsModStorySelected)
             {
-                ____workshopInvitationToggle.isOn = true;
+                __instance._workshopInvitationToggle.isOn = true;
             }
         }
         //ErrorNull for delete card from deck
         [HarmonyPatch(typeof(ItemXmlDataList), "GetCardItem", new Type[] { typeof(LorId), typeof(bool) })]
         [HarmonyPrefix]
-        private static bool ItemXmlDataList_GetCardItem_Pre(ref DiceCardXmlInfo __result, LorId id, Dictionary<LorId, DiceCardXmlInfo> ____cardInfoTable, bool errNull = false)
+        private static bool ItemXmlDataList_GetCardItem_Pre(ItemXmlDataList __instance, ref DiceCardXmlInfo __result, LorId id, bool errNull = false)
         {
             try
             {
-                if (____cardInfoTable.TryGetValue(id, out DiceCardXmlInfo result))
+                if (__instance._cardInfoTable.TryGetValue(id, out DiceCardXmlInfo result))
                 {
                     __result = result;
                     return false;
@@ -4506,13 +4497,13 @@ namespace BaseMod
         //0book to "∞"
         [HarmonyPatch(typeof(UIInvitationDropBookSlot), "SetData_DropBook")]
         [HarmonyPostfix]
-        private static void UIInvitationDropBookSlot_SetData_DropBook_Post(LorId bookId, TextMeshProUGUI ___txt_bookNum)
+        private static void UIInvitationDropBookSlot_SetData_DropBook_Post(UIInvitationDropBookSlot __instance, LorId bookId)
         {
             try
             {
                 if (Singleton<DropBookInventoryModel>.Instance.GetBookCount(bookId) == 0)
                 {
-                    ___txt_bookNum.text = "∞";
+                    __instance.txt_bookNum.text = "∞";
                 }
             }
             catch { }
@@ -4551,7 +4542,7 @@ namespace BaseMod
         //DiceAttackEffect
         [HarmonyPatch(typeof(DiceEffectManager), "CreateBehaviourEffect")]
         [HarmonyPrefix]
-        private static bool DiceEffectManager_CreateBehaviourEffect_Pre(DiceEffectManager __instance, ref DiceAttackEffect __result, string resource, float scaleFactor, BattleUnitView self, BattleUnitView target, float time = 1f)
+        private static bool DiceEffectManager_CreateBehaviourEffect_Pre(ref DiceAttackEffect __result, string resource, float scaleFactor, BattleUnitView self, BattleUnitView target, float time = 1f)
         {
             try
             {
@@ -4630,7 +4621,7 @@ namespace BaseMod
                         num3++;
                     }
                 }
-                InitUIBattleSettingWaveSlots(__instance.waveSlots, __instance);
+                InitUIBattleSettingWaveSlots(__instance.waveSlots);
                 foreach (UIBattleSettingWaveSlot uibattleSettingWaveSlot3 in __instance.waveSlots)
                 {
                     uibattleSettingWaveSlot3.gameObject.SetActive(false);
@@ -4668,44 +4659,33 @@ namespace BaseMod
         }
         private static void InitUIBattleSettingWaveSlot(UIBattleSettingWaveSlot slot, UIBattleSettingWaveList list)
         {
-            FieldInfo field = slot.GetType().GetField("panel", AccessTools.all);
-            FieldInfo field2 = slot.GetType().GetField("rect", AccessTools.all);
-            FieldInfo field3 = slot.GetType().GetField("img_circle", AccessTools.all);
-            FieldInfo field4 = slot.GetType().GetField("img_circleglow", AccessTools.all);
-            FieldInfo field5 = slot.GetType().GetField("img_Icon", AccessTools.all);
-            FieldInfo field6 = slot.GetType().GetField("img_IconGlow", AccessTools.all);
-            FieldInfo field7 = slot.GetType().GetField("hsv_Icon", AccessTools.all);
-            FieldInfo field8 = slot.GetType().GetField("hsv_IconGlow", AccessTools.all);
-            FieldInfo field9 = slot.GetType().GetField("hsv_Circle", AccessTools.all);
-            FieldInfo field10 = slot.GetType().GetField("hsv_CircleGlow", AccessTools.all);
-            FieldInfo field11 = slot.GetType().GetField("txt_Alarm", AccessTools.all);
-            FieldInfo field12 = slot.GetType().GetField("materialsetter_txtAlarm", AccessTools.all);
-            FieldInfo field13 = slot.GetType().GetField("arrow", AccessTools.all);
-            FieldInfo field14 = slot.GetType().GetField("defeatColor", AccessTools.all);
-            FieldInfo field15 = slot.GetType().GetField("anim", AccessTools.all);
-            FieldInfo field16 = slot.GetType().GetField("cg", AccessTools.all);
-            field.SetValue(slot, list);
-            RectTransform value = slot.transform as RectTransform;
-            field2.SetValue(slot, value);
-            field3.SetValue(slot, slot.gameObject.transform.GetChild(1).GetChild(1).gameObject.GetComponent<Image>());
-            field4.SetValue(slot, slot.gameObject.transform.GetChild(1).GetChild(0).gameObject.GetComponent<Image>());
-            field5.SetValue(slot, slot.gameObject.transform.GetChild(1).GetChild(3).gameObject.GetComponent<Image>());
-            field6.SetValue(slot, slot.gameObject.transform.GetChild(1).GetChild(2).gameObject.GetComponent<Image>());
-            field7.SetValue(slot, slot.gameObject.transform.GetChild(1).GetChild(3).gameObject.GetComponent<_2dxFX_HSV>());
-            field8.SetValue(slot, slot.gameObject.transform.GetChild(1).GetChild(2).gameObject.GetComponent<_2dxFX_HSV>());
-            field9.SetValue(slot, slot.gameObject.transform.GetChild(1).GetChild(1).gameObject.GetComponent<_2dxFX_HSV>());
-            field10.SetValue(slot, slot.gameObject.transform.GetChild(1).GetChild(0).gameObject.GetComponent<_2dxFX_HSV>());
-            field11.SetValue(slot, slot.gameObject.transform.GetChild(2).gameObject.GetComponent<TextMeshProUGUI>());
-            field12.SetValue(slot, slot.gameObject.transform.GetChild(2).gameObject.GetComponent<TextMeshProMaterialSetter>());
-            field13.SetValue(slot, slot.gameObject.transform.GetChild(0).gameObject.GetComponent<Image>());
-            Color color = new Color(0.454902f, 0.1098039f, 0f, 1f);
-            field14.SetValue(slot, color);
-            field15.SetValue(slot, slot.gameObject.GetComponent<Animator>());
-            field16.SetValue(slot, slot.gameObject.GetComponent<CanvasGroup>());
+            slot.panel = list;
+            var rect = slot.transform as RectTransform;
+            slot.rect = rect;
+            var waveIcon = rect.Find("[Rect]WaveIcon");
+            var circle = waveIcon.Find("[Image]CircleFrame");
+            var circleGlow = waveIcon.Find("[Image]CircleFrameGlow");
+            var icon = waveIcon.Find("[Image]Icon");
+            var iconGlow = waveIcon.Find("[Image]IconGlow");
+            slot.img_circle = circle.GetComponent<Image>();
+            slot.hsv_Circle = circle.GetComponent<_2dxFX_HSV>();
+            slot.img_circleglow = circleGlow.GetComponent<Image>();
+            slot.hsv_CircleGlow = circleGlow.GetComponent<_2dxFX_HSV>();
+            slot.img_Icon = icon.GetComponent<Image>();
+            slot.hsv_Icon = icon.GetComponent<_2dxFX_HSV>();
+            slot.img_IconGlow = iconGlow.GetComponent<Image>();
+            slot.hsv_IconGlow = iconGlow.GetComponent<_2dxFX_HSV>();
+            var text = rect.Find("[Text]AlarmText");
+            slot.txt_Alarm = text.GetComponent<TextMeshProUGUI>();
+            slot.materialsetter_txtAlarm = text.GetComponent<TextMeshProMaterialSetter>();
+            slot.arrow = rect.Find("[Image]Arrow (1)").GetComponent<Image>();
+            slot.defeatColor = new Color(0.454902f, 0.1098039f, 0f, 1f);
+            slot.anim = slot.GetComponent<Animator>();
+            slot.cg = slot.GetComponent<CanvasGroup>();
             slot.transform.localPosition = new Vector2(120f, 0f);
             slot.gameObject.SetActive(false);
         }
-        private static void InitUIBattleSettingWaveSlots(List<UIBattleSettingWaveSlot> slots, UIBattleSettingWaveList __instance)
+        private static void InitUIBattleSettingWaveSlots(List<UIBattleSettingWaveSlot> slots)
         {
             for (int i = 0; i < slots.Count; i++)
             {
@@ -4836,11 +4816,7 @@ namespace BaseMod
                 if (!IsEditing && entryScene != null && Input.GetKeyDown(KeyCode.R))
                 {
                     File.WriteAllText(Application.dataPath + "/Mods/PressSuccess.log", "success");
-                    entryScene.GetType().GetMethod("OnCompleteInitializePlatform_xboxlive", AccessTools.all).Invoke(entryScene,
-                    new object[]
-                    {
-                    true
-                    });
+                    entryScene.OnCompleteInitializePlatform_xboxlive(true);
                 }
                 IsEditing = true;
             }
@@ -4853,9 +4829,9 @@ namespace BaseMod
         //Using For Reload
         [HarmonyPatch(typeof(ModContentManager), "SetActiveContents")]
         [HarmonyPrefix]
-        private static void ModContentManager_SetActiveContents_Pre(List<ModContent> ____loadedContents)
+        private static void ModContentManager_SetActiveContents_Pre(List<ModContent> __instance._loadedContents)
         {
-            ____loadedContents.Clear();
+            __instance._loadedContents.Clear();
         }
         //Using For Reload
         [HarmonyPatch(typeof(UIModPopup), "Close")]
@@ -4883,7 +4859,7 @@ namespace BaseMod
         //BookSort
         [HarmonyPatch(typeof(UIInvitationDropBookList), "ApplyFilterAll")]
         [HarmonyPostfix]
-        private static void UIInvitationDropBookList_ApplyFilterAll_Post(UIInvitationDropBookList __instance, List<LorId> ____currentBookIdList)
+        private static void UIInvitationDropBookList_ApplyFilterAll_Post(UIInvitationDropBookList __instance)
         {
             try
             {
@@ -4900,13 +4876,13 @@ namespace BaseMod
                     ModPid.Sort();
                 }
                 List<LorId> list = new List<LorId>();
-                list.AddRange(____currentBookIdList);
-                ____currentBookIdList.Clear();
+                list.AddRange(__instance._currentBookIdList);
+                __instance._currentBookIdList.Clear();
                 foreach (string id in ModPid)
                 {
-                    ____currentBookIdList.AddRange(list.FindAll((LorId x) => x.packageId == id));
+                    __instance._currentBookIdList.AddRange(list.FindAll((LorId x) => x.packageId == id));
                 }
-                ____currentBookIdList.AddRange(list.FindAll((LorId x) => x.packageId == ""));
+                __instance._currentBookIdList.AddRange(list.FindAll((LorId x) => x.packageId == ""));
                 __instance.SelectablePanel.ChildSelectable = __instance.BookSlotList[0].selectable;
                 __instance.UpdateBookListPage(false);
             }
@@ -4918,7 +4894,7 @@ namespace BaseMod
         //BookSort
         [HarmonyPatch(typeof(UIInvenFeedBookList), "ApplyFilterAll")]
         [HarmonyPostfix]
-        private static void UIInvenFeedBookList_ApplyFilterAll_Post(UIInvenFeedBookList __instance, List<LorId> ____currentBookIdList)
+        private static void UIInvenFeedBookList_ApplyFilterAll_Post(UIInvenFeedBookList __instance)
         {
             try
             {
@@ -4935,13 +4911,13 @@ namespace BaseMod
                     ModPid.Sort();
                 }
                 List<LorId> list = new List<LorId>();
-                list.AddRange(____currentBookIdList);
-                ____currentBookIdList.Clear();
+                list.AddRange(__instance._currentBookIdList);
+                __instance._currentBookIdList.Clear();
                 foreach (string id in ModPid)
                 {
-                    ____currentBookIdList.AddRange(list.FindAll((LorId x) => x.packageId == id));
+                    __instance._currentBookIdList.AddRange(list.FindAll((LorId x) => x.packageId == id));
                 }
-                ____currentBookIdList.AddRange(list.FindAll((LorId x) => x.packageId == ""));
+                __instance._currentBookIdList.AddRange(list.FindAll((LorId x) => x.packageId == ""));
                 __instance.UpdateBookListPage(false);
             }
             catch (Exception ex)
@@ -4952,17 +4928,17 @@ namespace BaseMod
         //CardSort
         [HarmonyPatch(typeof(UIInvenCardListScroll), "ApplyFilterAll")]
         [HarmonyPrefix]
-        private static bool UIInvenCardListScroll_ApplyFilterAll_Pre(UIInvenCardListScroll __instance, List<DiceCardItemModel> ____currentCardListForFilter, List<DiceCardItemModel> ____originCardList, UnitDataModel ____unitdata, int ___column, int ___row, float ___slotWidth, float ___slotHeight, UICustomScrollBar ___scrollBar, UICustomSelectablePanel ___selectablePanel, List<UIOriginCardSlot> ___slotList)
+        private static bool UIInvenCardListScroll_ApplyFilterAll_Pre(UIInvenCardListScroll __instance)
         {
             try
             {
-                ____currentCardListForFilter.Clear();
-                List<DiceCardItemModel> cardsByDetailFilterUI = __instance.GetCardsByDetailFilterUI(__instance.GetCardBySearchFilterUI(__instance.GetCardsByCostFilterUI(__instance.GetCardsByGradeFilterUI(____originCardList))));
+                __instance._currentCardListForFilter.Clear();
+                List<DiceCardItemModel> cardsByDetailFilterUI = __instance.GetCardsByDetailFilterUI(__instance.GetCardBySearchFilterUI(__instance.GetCardsByCostFilterUI(__instance.GetCardsByGradeFilterUI(__instance._originCardList))));
                 cardsByDetailFilterUI.Sort(new Comparison<DiceCardItemModel>(ModCardItemSort));
-                if (____unitdata != null)
+                if (__instance._unitdata != null)
                 {
                     Predicate<DiceCardItemModel> cond1 = (DiceCardItemModel x) => true;
-                    switch (____unitdata.bookItem.ClassInfo.RangeType)
+                    switch (__instance._unitdata.bookItem.ClassInfo.RangeType)
                     {
                         case EquipRangeType.Melee:
                             cond1 = ((DiceCardItemModel x) => x.GetSpec().Ranged != CardRange.Far);
@@ -4974,23 +4950,23 @@ namespace BaseMod
                             cond1 = ((DiceCardItemModel x) => true);
                             break;
                     }
-                    List<DiceCardXmlInfo> onlyCards = ____unitdata.bookItem.GetOnlyCards();
+                    List<DiceCardXmlInfo> onlyCards = __instance._unitdata.bookItem.GetOnlyCards();
                     Predicate<DiceCardItemModel> cond2 = ((DiceCardItemModel x) => onlyCards.Exists((DiceCardXmlInfo y) => y.id == x.GetID()));
                     foreach (DiceCardItemModel item in cardsByDetailFilterUI.FindAll((DiceCardItemModel x) => x.ClassInfo.optionList.Contains(CardOption.OnlyPage) && !cond2(x)))
                     {
                         cardsByDetailFilterUI.Remove(item);
                     }
-                    ____currentCardListForFilter.AddRange(cardsByDetailFilterUI.FindAll((DiceCardItemModel x) => (!x.ClassInfo.optionList.Contains(CardOption.OnlyPage)) ? cond1(x) : cond2(x)));
-                    ____currentCardListForFilter.AddRange(cardsByDetailFilterUI.FindAll((DiceCardItemModel x) => (x.ClassInfo.optionList.Contains(CardOption.OnlyPage) ? (cond2(x) ? 1 : 0) : (cond1(x) ? 1 : 0)) == 0));
+                    __instance._currentCardListForFilter.AddRange(cardsByDetailFilterUI.FindAll((DiceCardItemModel x) => (!x.ClassInfo.optionList.Contains(CardOption.OnlyPage)) ? cond1(x) : cond2(x)));
+                    __instance._currentCardListForFilter.AddRange(cardsByDetailFilterUI.FindAll((DiceCardItemModel x) => (x.ClassInfo.optionList.Contains(CardOption.OnlyPage) ? (cond2(x) ? 1 : 0) : (cond1(x) ? 1 : 0)) == 0));
                 }
                 else
                 {
-                    ____currentCardListForFilter.AddRange(cardsByDetailFilterUI);
+                    __instance._currentCardListForFilter.AddRange(cardsByDetailFilterUI);
                 }
                 int num = __instance.GetMaxRow();
-                ___scrollBar.SetScrollRectSize(___column * ___slotWidth, (num + (float)___row - 1f) * ___slotHeight);
-                ___scrollBar.SetWindowPosition(0f, 0f);
-                ___selectablePanel.ChildSelectable = ___slotList[0].selectable;
+                __instance.scrollBar.SetScrollRectSize(__instance.column * __instance.slotWidth, (num + (float)__instance.row - 1f) * __instance.slotHeight);
+                __instance.scrollBar.SetWindowPosition(0f, 0f);
+                __instance.selectablePanel.ChildSelectable = __instance.slotList[0].selectable;
                 __instance.SetCardsData(__instance.GetCurrentPageList());
                 return false;
             }
@@ -5222,7 +5198,7 @@ namespace BaseMod
         //GiftDataSlot
         [HarmonyPatch(typeof(UIGiftDataSlot), "SetData")]
         [HarmonyPrefix]
-        private static bool UIGiftDataSlot_SetData_Pre(UIGiftDataSlot __instance, GiftModel data, ref Image ___img_giftImage, ref Image ___img_xmark, ref Image ___img_giftMask, ref TextMeshProUGUI ___txt_giftName, ref TextMeshProUGUI ___txt_giftNameDetail, ref TextMeshProUGUI ___txt_giftPartName)
+        private static bool UIGiftDataSlot_SetData_Pre(UIGiftDataSlot __instance, GiftModel data)
         {
             try
             {
@@ -5233,9 +5209,9 @@ namespace BaseMod
                 }
                 else
                 {
-                    ___img_giftImage.enabled = true;
-                    ___img_xmark.enabled = false;
-                    ___img_giftMask.enabled = true;
+                    __instance.img_giftImage.enabled = true;
+                    __instance.img_xmark.enabled = false;
+                    __instance.img_giftMask.enabled = true;
                     __instance.OpenInit();
                     string[] array = data.GetResourcePath().Split(new char[]
                     {
@@ -5254,30 +5230,30 @@ namespace BaseMod
                     giftAppearance.gameObject.SetActive(false);
                     if (giftAppearance != null)
                     {
-                        if (giftAppearance.GetType() == typeof(GiftAppearance_Aura))
+                        if (giftAppearance is GiftAppearance_Aura)
                         {
-                            ___img_giftImage.enabled = true;
-                            ___img_giftImage.sprite = UISpriteDataManager.instance.GiftAuraIcon;
-                            ___img_giftImage.rectTransform.localScale = new Vector2(0.8f, 0.8f);
+                            __instance.img_giftImage.enabled = true;
+                            __instance.img_giftImage.sprite = UISpriteDataManager.instance.GiftAuraIcon;
+                            __instance.img_giftImage.rectTransform.localScale = new Vector2(0.8f, 0.8f);
                         }
                         else
                         {
-                            ___img_giftImage.sprite = giftAppearance.GetGiftPreview();
-                            ___img_giftImage.rectTransform.localScale = Vector2.one;
+                            __instance.img_giftImage.sprite = giftAppearance.GetGiftPreview();
+                            __instance.img_giftImage.rectTransform.localScale = Vector2.one;
                         }
-                        if (___img_giftImage.sprite == null)
+                        if (__instance.img_giftImage.sprite == null)
                         {
-                            ___img_giftImage.enabled = false;
+                            __instance.img_giftImage.enabled = false;
                         }
                     }
                     else
                     {
-                        ___img_giftImage.enabled = false;
-                        ___img_giftMask.enabled = false;
+                        __instance.img_giftImage.enabled = false;
+                        __instance.img_giftMask.enabled = false;
                     }
-                    ___txt_giftName.text = data.GetName();
-                    ___txt_giftNameDetail.text = data.GiftDesc;
-                    ___img_giftImage.gameObject.SetActive(true);
+                    __instance.txt_giftName.text = data.GetName();
+                    __instance.txt_giftNameDetail.text = data.GiftDesc;
+                    __instance.img_giftImage.gameObject.SetActive(true);
                     string id = "";
                     switch (data.ClassInfo.Position)
                     {
@@ -5309,7 +5285,7 @@ namespace BaseMod
                             id = "ui_gift_headdress4";
                             break;
                     }
-                    ___txt_giftPartName.text = TextDataModel.GetText(id, Array.Empty<object>());
+                    __instance.txt_giftPartName.text = TextDataModel.GetText(id, Array.Empty<object>());
                     return false;
                 }
             }
@@ -5322,13 +5298,13 @@ namespace BaseMod
         //UIGiftInvenSlot
         [HarmonyPatch(typeof(UIGiftInvenSlot), "SetData")]
         [HarmonyPrefix]
-        private static bool UIGiftInvenSlot_SetData_Pre(UIGiftInvenSlot __instance, GiftModel gift, UIGiftInventory inven, ref UIGiftInventory ___panel, ref Image ___img_Gift, ref TextMeshProUGUI ___txt_Part, ref TextMeshProUGUI ___txt_Name, ref TextMeshProUGUI ___txt_desc, ref TextMeshProUGUI ___txt_getcondition, ref GameObject ___conditionTextGameObject)
+        private static bool UIGiftInvenSlot_SetData_Pre(UIGiftInvenSlot __instance, GiftModel gift, UIGiftInventory inven)
         {
             try
             {
                 __instance.gameObject.SetActive(true);
                 __instance.giftData = gift;
-                ___panel = inven;
+                __instance.panel = inven;
                 if (gift == null)
                 {
                     return false;
@@ -5382,29 +5358,29 @@ namespace BaseMod
                     giftAppearance = CustomGiftAppearance.CreateCustomGift(array2);
                     giftAppearance.gameObject.SetActive(false);
                 }
-                ___img_Gift.enabled = true;
+                __instance.img_Gift.enabled = true;
                 if (giftAppearance != null)
                 {
-                    if (giftAppearance.GetType() == typeof(GiftAppearance_Aura))
+                    if (giftAppearance is GiftAppearance_Aura)
                     {
-                        ___img_Gift.sprite = UISpriteDataManager.instance.GiftAuraIcon;
-                        ___img_Gift.rectTransform.localScale = new Vector2(0.8f, 0.8f);
+                        __instance.img_Gift.sprite = UISpriteDataManager.instance.GiftAuraIcon;
+                        __instance.img_Gift.rectTransform.localScale = new Vector2(0.8f, 0.8f);
                     }
                     else
                     {
-                        ___img_Gift.sprite = giftAppearance.GetGiftPreview();
-                        ___img_Gift.rectTransform.localScale = new Vector2(1f, 1f);
+                        __instance.img_Gift.sprite = giftAppearance.GetGiftPreview();
+                        __instance.img_Gift.rectTransform.localScale = new Vector2(1f, 1f);
                     }
                 }
-                if (___img_Gift.sprite == null)
+                if (__instance.img_Gift.sprite == null)
                 {
-                    ___img_Gift.enabled = false;
+                    __instance.img_Gift.enabled = false;
                 }
-                ___txt_Part.text = TextDataModel.GetText(id, Array.Empty<object>());
-                ___txt_Name.text = gift.GetName();
-                ___txt_desc.text = gift.GiftDesc;
-                ___txt_getcondition.text = gift.GiftAcquireCondition;
-                ___conditionTextGameObject.SetActive(true);
+                __instance.txt_Part.text = TextDataModel.GetText(id, Array.Empty<object>());
+                __instance.txt_Name.text = gift.GetName();
+                __instance.txt_desc.text = gift.GiftDesc;
+                __instance.txt_getcondition.text = gift.GiftAcquireCondition;
+                __instance.conditionTextGameObject.SetActive(true);
                 return false;
             }
             catch (Exception ex)
@@ -5416,18 +5392,18 @@ namespace BaseMod
         //UIGiftPreviewSlot
         [HarmonyPatch(typeof(UIGiftPreviewSlot), "UpdateSlot")]
         [HarmonyPrefix]
-        private static bool UIGiftPreviewSlot_UpdateSlot_Pre(UIGiftPreviewSlot __instance, ref GiftModel ___Gift, ref TextMeshProUGUI ___txt_GiftName, ref TextMeshProUGUI ___txt_GiftDesc, ref Image ___img_Gift, ref GameObject ___detailcRect, bool ___isEyeOpen, ref UILibrarianAppearanceInfoPanel ___panel)
+        private static bool UIGiftPreviewSlot_UpdateSlot_Pre(UIGiftPreviewSlot __instance)
         {
             try
             {
-                if (___Gift != null)
+                if (__instance.Gift != null)
                 {
-                    ___txt_GiftName.gameObject.SetActive(true);
-                    ___txt_GiftName.text = ___Gift.GetName();
-                    ___txt_GiftDesc.text = ___Gift.GiftDesc;
-                    ___img_Gift.gameObject.SetActive(true);
-                    ___img_Gift.enabled = true;
-                    string[] array = ___Gift.GetResourcePath().Split(new char[]
+                    __instance.txt_GiftName.gameObject.SetActive(true);
+                    __instance.txt_GiftName.text = __instance.Gift.GetName();
+                    __instance.txt_GiftDesc.text = __instance.Gift.GiftDesc;
+                    __instance.img_Gift.gameObject.SetActive(true);
+                    __instance.img_Gift.enabled = true;
+                    string[] array = __instance.Gift.GetResourcePath().Split(new char[]
                     {
                         '/'
                     });
@@ -5447,30 +5423,30 @@ namespace BaseMod
                     }
                     if (giftAppearance != null)
                     {
-                        if (giftAppearance.GetType() == typeof(GiftAppearance_Aura))
+                        if (giftAppearance is GiftAppearance_Aura)
                         {
-                            ___img_Gift.sprite = UISpriteDataManager.instance.GiftAuraIcon;
-                            ___img_Gift.rectTransform.localScale = new Vector2(0.8f, 0.8f);
+                            __instance.img_Gift.sprite = UISpriteDataManager.instance.GiftAuraIcon;
+                            __instance.img_Gift.rectTransform.localScale = new Vector2(0.8f, 0.8f);
                         }
                         else
                         {
-                            ___img_Gift.sprite = giftAppearance.GetGiftPreview();
-                            ___img_Gift.rectTransform.localScale = new Vector2(1f, 1f);
+                            __instance.img_Gift.sprite = giftAppearance.GetGiftPreview();
+                            __instance.img_Gift.rectTransform.localScale = new Vector2(1f, 1f);
                         }
                     }
-                    if (___img_Gift.sprite == null)
+                    if (__instance.img_Gift.sprite == null)
                     {
-                        ___img_Gift.enabled = false;
+                        __instance.img_Gift.enabled = false;
                     }
-                    ___detailcRect.SetActive(___panel.giftDetailToggle.isOn);
+                    __instance.detailcRect.SetActive(__instance.panel.giftDetailToggle.isOn);
                 }
                 else
                 {
-                    ___txt_GiftName.gameObject.SetActive(false);
-                    ___img_Gift.gameObject.SetActive(false);
-                    ___detailcRect.SetActive(false);
+                    __instance.txt_GiftName.gameObject.SetActive(false);
+                    __instance.img_Gift.gameObject.SetActive(false);
+                    __instance.detailcRect.SetActive(false);
                 }
-                __instance.SetEyeButton(___isEyeOpen);
+                __instance.SetEyeButton(__instance.isEyeOpen);
                 __instance.SetHighlight(false);
                 __instance.SetEyeHighlight(false);
                 return false;
@@ -6378,12 +6354,11 @@ namespace BaseMod
             return skeletonData;
         }
         //?
-        private static bool RegionlessAttachmentLoader_get_EmptyRegion(ref AtlasRegion __result)
+        private static void RegionlessAttachmentLoader_get_EmptyRegion()
         {
-            FieldInfo field = typeof(Spine.Unity.RegionlessAttachmentLoader).GetField("emptyRegion", AccessTools.all);
-            if (field.GetValue(null) == null)
+            if (Spine.Unity.RegionlessAttachmentLoader.emptyRegion == null)
             {
-                AtlasRegion value = new AtlasRegion
+                AtlasRegion region = new AtlasRegion
                 {
                     name = "Empty AtlasRegion",
                     page = new AtlasPage
@@ -6395,10 +6370,8 @@ namespace BaseMod
                         }
                     }
                 };
-                field.SetValue(null, value);
+                Spine.Unity.RegionlessAttachmentLoader.emptyRegion = region;
             }
-            __result = (AtlasRegion)field.GetValue(null);
-            return false;
         }
 
         private static string GetCardName(LorId cardID)

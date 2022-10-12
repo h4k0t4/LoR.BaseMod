@@ -127,39 +127,62 @@ namespace BaseMod
 
         private void Retextualize()
         {
-            base.gameObject.transform.GetChild(0).gameObject.SetActive(true);
-            base.gameObject.transform.GetChild(0).localScale = new Vector3(6.5f, 6.8f, 1f);
-            GameObject gameObject = base.gameObject.transform.GetChild(1).GetChild(0).GetChild(0).gameObject;
-            DuplicateSprite(gameObject, TextureBackground, 0.5f);
-            for (int i = 1; i < 6; i++)
+            Transform foregroundRoot = transform.Find("[Sprite]Foregrounds_BlackFrames_Act5 (1)");
+            foregroundRoot.gameObject.SetActive(true);
+            foregroundRoot.localScale = new Vector3(6.5f, 6.8f, 1f);
+            Transform backgroundRoot = transform.Find("[Transform]BackgroundRootTransform (1)");
+            Transform backgroundContainer = backgroundRoot.Find("GameObject (1)");
+            Transform background = backgroundContainer.Find("BG (1)");
+            DuplicateSprite(background, TextureBackground, 0.5f);
+            foreach (Transform transform in backgroundContainer)
             {
-                base.gameObject.transform.GetChild(1).GetChild(0).GetChild(i).gameObject.SetActive(false);
+				if (transform != background)
+				{
+                    transform.gameObject.SetActive(false);
+				}
             }
-            GameObject gameObject2 = base.gameObject.transform.GetChild(2).GetChild(0).gameObject;
-            DuplicateSprite(gameObject2, TextureFloor, 0.5f);
-            GameObject gameObject3 = base.gameObject.transform.GetChild(2).GetChild(1).gameObject;
-            DuplicateSprite(gameObject3, TextureFloorUnder, 0.5f);
-            base.gameObject.transform.GetChild(2).GetChild(2).gameObject.SetActive(false);
-            base.gameObject.transform.GetChild(2).GetChild(3).gameObject.SetActive(false);
-            base.gameObject.transform.GetChild(3).gameObject.SetActive(false);
-            base.gameObject.transform.GetChild(4).gameObject.SetActive(false);
-            base.gameObject.transform.GetChild(5).gameObject.SetActive(false);
+            foreach (Transform transform in backgroundRoot)
+            {
+                if (transform != backgroundContainer)
+                {
+                    transform.gameObject.SetActive(false);
+                }
+            }
+            Transform groundRoot = transform.Find("[Transform]GroundSprites (1)");
+            Transform road = groundRoot.Find("Road");
+            DuplicateSprite(road, TextureFloor, 0.5f);
+            Transform roadUnder = groundRoot.Find("RoadUnder");
+            DuplicateSprite(roadUnder, TextureFloorUnder, 0.5f);
+            foreach (Transform transform in groundRoot)
+            {
+                if (transform != road && transform != roadUnder)
+                {
+                    transform.gameObject.SetActive(false);
+                }
+            }
+            foreach (Transform transform in transform)
+            {
+                if (transform != foregroundRoot && transform != backgroundRoot && transform != groundRoot)
+                {
+                    transform.gameObject.SetActive(false);
+                }
+            }
         }
 
-        private void DuplicateSprite(GameObject obj, string path, float YMiddle = 0.5f)
+        private void DuplicateSprite(Transform transform, string path, float YMiddle = 0.5f)
         {
             string filePath = resourcePath + path + ".png";
             if (!File.Exists(filePath))
             {
-                obj.SetActive(false);
+                transform.gameObject.SetActive(false);
                 return;
             }
             Texture2D texture2D = new Texture2D(1, 1);
             texture2D.LoadImage(File.ReadAllBytes(filePath));
-            Sprite sprite = obj.GetComponent<SpriteRenderer>().sprite;
-            obj.GetComponent<SpriteRenderer>().sprite = Sprite.Create(texture2D, new Rect(0f, 0f, texture2D.width, texture2D.height), new Vector2(0.5f, YMiddle), sprite.pixelsPerUnit, 0U, SpriteMeshType.FullRect);
-            obj.transform.localPosition = Vector3.zero;
-            obj.SetActive(true);
+            Sprite sprite = transform.GetComponent<SpriteRenderer>().sprite;
+            transform.GetComponent<SpriteRenderer>().sprite = Sprite.Create(texture2D, new Rect(0f, 0f, texture2D.width, texture2D.height), new Vector2(0.5f, YMiddle), sprite.pixelsPerUnit, 0U, SpriteMeshType.FullRect);
+            transform.transform.localPosition = Vector3.zero;
+            transform.gameObject.SetActive(true);
         }
 
         private readonly string TextureBackground = "BackGround";

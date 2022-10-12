@@ -27,24 +27,24 @@ namespace SummonLiberation
         //Enlarge Librarian's formation
         [HarmonyPatch(typeof(LibraryFloorModel), "Init")]
         [HarmonyPostfix]
-        private static void LibraryFloorModel_Init_Post(ref List<int> ____formationIndex, ref FormationModel ____defaultFormation, ref FormationModel ____formation)
+        private static void LibraryFloorModel_Init_Post(LibraryFloorModel __instance)
         {
             try
             {
-                ____formationIndex = new List<int>();
+                __instance._formationIndex = new List<int>();
                 for (int i = 0; i < 99; i++)
                 {
-                    ____formationIndex.Add(i);
+                    __instance._formationIndex.Add(i);
                 }
-                ____formationIndex[0] = 1;
-                ____formationIndex[1] = 0;
+                __instance._formationIndex[0] = 1;
+                __instance._formationIndex[1] = 0;
                 for (int j = 3; j < 99; j++)
                 {
-                    ____formationIndex[j] = j;
+                    __instance._formationIndex[j] = j;
                 }
-                ____defaultFormation = new FormationModel(Singleton<FormationXmlList>.Instance.GetData(1));
-                AddFormationPosition(____defaultFormation);
-                ____formation = ____defaultFormation;
+                __instance._defaultFormation = new FormationModel(Singleton<FormationXmlList>.Instance.GetData(1));
+                AddFormationPosition(__instance._defaultFormation);
+                __instance._formation = __instance._defaultFormation;
             }
             catch (Exception ex)
             {
@@ -54,15 +54,15 @@ namespace SummonLiberation
         //Enlarge Enemy's formation
         [HarmonyPatch(typeof(StageWaveModel), "Init")]
         [HarmonyPostfix]
-        private static void StageWaveModel_Init_Post(ref FormationModel ____formation, ref List<int> ____formationIndex)
+        private static void StageWaveModel_Init_Post(StageWaveModel __instance)
         {
             try
             {
                 for (int i = 5; i < 100; i++)
                 {
-                    ____formationIndex.Add(i);
+                    __instance._formationIndex.Add(i);
                 }
-                AddFormationPositionForEnemy(____formation);
+                AddFormationPositionForEnemy(__instance._formation);
             }
             catch (Exception ex)
             {
@@ -72,18 +72,18 @@ namespace SummonLiberation
         //Enlarge Enemy's formation
         [HarmonyPatch(typeof(StageWaveModel), "GetUnitBattleDataListByFormation")]
         [HarmonyPrefix]
-        private static bool StageWaveModel_GetUnitBattleDataListByFormation_Pre(StageWaveModel __instance, ref List<UnitBattleDataModel> __result, List<UnitBattleDataModel> ____unitList)
+        private static bool StageWaveModel_GetUnitBattleDataListByFormation_Pre(StageWaveModel __instance, ref List<UnitBattleDataModel> __result)
         {
             try
             {
                 List<UnitBattleDataModel> list = new List<UnitBattleDataModel>();
-                int num = Math.Max(____unitList.Count, 5);
+                int num = Math.Max(__instance._unitList.Count, 5);
                 for (int i = 0; i < num; i++)
                 {
                     int formationIndex = __instance.GetFormationIndex(i);
-                    if (formationIndex < ____unitList.Count)
+                    if (formationIndex < __instance._unitList.Count)
                     {
-                        list.Add(____unitList[formationIndex]);
+                        list.Add(__instance._unitList[formationIndex]);
                     }
                 }
                 __result = list;
@@ -98,7 +98,7 @@ namespace SummonLiberation
         //BattleUnitProfileArray Up to 9
         [HarmonyPatch(typeof(BattleUnitInfoManagerUI), "Initialize")]
         [HarmonyPrefix]
-        private static bool BattleUnitInfoManagerUI_Initialize_Pre(BattleUnitInfoManagerUI __instance, IList<BattleUnitModel> unitList, ref Direction ___allyDirection)
+        private static bool BattleUnitInfoManagerUI_Initialize_Pre(BattleUnitInfoManagerUI __instance, IList<BattleUnitModel> unitList)
         {
             try
             {
@@ -135,7 +135,7 @@ namespace SummonLiberation
                     }
                 }
 
-                ___allyDirection = Singleton<StageController>.Instance.AllyFormationDirection;
+                __instance.allyDirection = Singleton<StageController>.Instance.AllyFormationDirection;
 
                 for (int i = 0; i < __instance.allyProfileArray.Length; i++)
                 {
@@ -155,8 +155,8 @@ namespace SummonLiberation
                     enemyProfileArray2[j].gameObject.SetActive(false);
                 }
 
-                __instance.enemyarray = ((___allyDirection == Direction.RIGHT) ? enemyProfileArray2.ToArray() : allyProfileArray2.ToArray());
-                __instance.allyarray = ((___allyDirection == Direction.RIGHT) ? allyProfileArray2.ToArray() : enemyProfileArray2.ToArray());
+                __instance.enemyarray = ((__instance.allyDirection == Direction.RIGHT) ? enemyProfileArray2.ToArray() : allyProfileArray2.ToArray());
+                __instance.allyarray = ((__instance.allyDirection == Direction.RIGHT) ? allyProfileArray2.ToArray() : enemyProfileArray2.ToArray());
 
                 for (int k = 0; k < unitList.Count; k++)
                 {
@@ -204,14 +204,14 @@ namespace SummonLiberation
         //BattleEmotionCoinUI
         [HarmonyPatch(typeof(BattleEmotionCoinUI), "Init")]
         [HarmonyPrefix]
-        private static bool BattleEmotionCoinUI_Init_Pre(BattleEmotionCoinUI __instance, ref Dictionary<int, BattleEmotionCoinUI.BattleEmotionCoinData> ____librarian_lib, ref Dictionary<int, BattleEmotionCoinUI.BattleEmotionCoinData> ____enemy_lib, ref Dictionary<int, Queue<EmotionCoinType>> ____lib_queue, ref Dictionary<int, Queue<EmotionCoinType>> ____ene_queue, ref bool ____init)
+        private static bool BattleEmotionCoinUI_Init_Pre(BattleEmotionCoinUI __instance)
         {
             try
             {
-                ____librarian_lib.Clear();
-                ____enemy_lib.Clear();
-                ____lib_queue.Clear();
-                ____ene_queue.Clear();
+                __instance._librarian_lib.Clear();
+                __instance._enemy_lib.Clear();
+                __instance._lib_queue.Clear();
+                __instance._ene_queue.Clear();
                 List<BattleUnitModel> aliveList = BattleObjectManager.instance.GetAliveList(false);
                 int num = 0;
                 int num2 = 0;
@@ -271,15 +271,15 @@ namespace SummonLiberation
                     {
                         if (num2 <= 8)
                         {
-                            ____enemy_lib.Add(battleUnitModel.id, array2[num2++]);
+                            __instance._enemy_lib.Add(battleUnitModel.id, array2[num2++]);
                         }
                     }
                     else if (num <= 8)
                     {
-                        ____librarian_lib.Add(battleUnitModel.id, array[num++]);
+                        __instance._librarian_lib.Add(battleUnitModel.id, array[num++]);
                     }
                 }
-                ____init = true;
+                __instance._init = true;
                 return false;
             }
             catch (Exception ex)
@@ -309,7 +309,7 @@ namespace SummonLiberation
         //EmotionBattleTeamModel
         [HarmonyPatch(typeof(EmotionBattleTeamModel), "UpdateUnitList")]
         [HarmonyPrefix]
-        private static bool EmotionBattleTeamModel_UpdateUnitList_Pre(EmotionBattleTeamModel __instance, ref List<UnitBattleDataModel> ____unitlist)
+        private static bool EmotionBattleTeamModel_UpdateUnitList_Pre(EmotionBattleTeamModel __instance)
         {/*
             try
             {
@@ -611,7 +611,7 @@ namespace SummonLiberation
         //StageTurnPageButton
         [HarmonyPatch(typeof(UIEnemyCharacterListPanel), "Activate")]
         [HarmonyPrefix]
-        private static void UIEnemyCharacterListPanel_Activate_Pre(bool isTrue)
+        private static void UIEnemyCharacterListPanel_Activate_Pre()
         {
             try
             {
@@ -628,82 +628,82 @@ namespace SummonLiberation
         //StageTurnPageButton
         [HarmonyPatch(typeof(UIEnemyCharacterListPanel), "SetEnemyWave")]
         [HarmonyPrefix]
-        private static bool UIEnemyCharacterListPanel_SetEnemyWave_Pre(UIEnemyCharacterListPanel __instance, int targetWave, ref StageClassInfo ___currentEnemyStageinfo, UICharacterList ___CharacterList, ref int ___currentWave, GameObject ___ob_blueeffect)
+        private static bool UIEnemyCharacterListPanel_SetEnemyWave_Pre(UIEnemyCharacterListPanel __instance, int targetWave)
         {
             try
             {
-                if (___currentEnemyStageinfo == null)
+                if (__instance.currentEnemyStageinfo == null)
                 {
                     Debug.LogError("스테이지 인포 null");
-                    ___CharacterList.InitEnemyList(null, false, UIStoryLine.None);
+                    __instance.CharacterList.InitEnemyList(null, false, UIStoryLine.None);
                     return false;
                 }
-                ___currentWave = targetWave;
-                if (___ob_blueeffect.activeSelf)
+                __instance.currentWave = targetWave;
+                if (__instance.ob_blueeffect.activeSelf)
                 {
-                    ___ob_blueeffect.gameObject.SetActive(false);
+                    __instance.ob_blueeffect.gameObject.SetActive(false);
                 }
-                if (___currentEnemyStageinfo.invitationInfo.combine == StageCombineType.BookRecipe)
+                if (__instance.currentEnemyStageinfo.invitationInfo.combine == StageCombineType.BookRecipe)
                 {
-                    if (___currentEnemyStageinfo.storyType == UIStoryLine.TheBlueReverberationPrimary.ToString() || ___currentEnemyStageinfo.storyType == UIStoryLine.BlackSilence.ToString() || ___currentEnemyStageinfo.storyType == UIStoryLine.TwistedBlue.ToString() || ___currentEnemyStageinfo.storyType == UIStoryLine.Final.ToString())
+                    if (__instance.currentEnemyStageinfo.storyType == UIStoryLine.TheBlueReverberationPrimary.ToString() || __instance.currentEnemyStageinfo.storyType == UIStoryLine.BlackSilence.ToString() || __instance.currentEnemyStageinfo.storyType == UIStoryLine.TwistedBlue.ToString() || __instance.currentEnemyStageinfo.storyType == UIStoryLine.Final.ToString())
                     {
-                        ___CharacterList.SetBlockRaycast(false);
+                        __instance.CharacterList.SetBlockRaycast(false);
 
-                        List<UnitDataModel> list = GetEnemyUnitDataList(___currentEnemyStageinfo, ___currentWave);
+                        List<UnitDataModel> list = GetEnemyUnitDataList(__instance.currentEnemyStageinfo, __instance.currentWave);
                         if (list != null)
                         {
                             __instance.SetCharacterRenderer(list, true);
-                            UIStoryLine story = (UIStoryLine)Enum.Parse(typeof(UIStoryLine), ___currentEnemyStageinfo.storyType);
-                            ___CharacterList.InitEnemyList(list, false, story);
-                            __instance.GetType().GetMethod("UpdateFrame", AccessTools.all).Invoke(__instance, new object[] { story });
+                            UIStoryLine story = (UIStoryLine)Enum.Parse(typeof(UIStoryLine), __instance.currentEnemyStageinfo.storyType);
+                            __instance.CharacterList.InitEnemyList(list, false, story);
+                            __instance.UpdateFrame(story);
                         }
-                        if (___currentEnemyStageinfo.storyType == UIStoryLine.TheBlueReverberationPrimary.ToString() && !___ob_blueeffect.activeSelf)
+                        if (__instance.currentEnemyStageinfo.storyType == UIStoryLine.TheBlueReverberationPrimary.ToString() && !__instance.ob_blueeffect.activeSelf)
                         {
-                            ___ob_blueeffect.gameObject.SetActive(true);
+                            __instance.ob_blueeffect.gameObject.SetActive(true);
                         }
                     }
-                    else if (___currentEnemyStageinfo.currentState == StoryState.Clear)
+                    else if (__instance.currentEnemyStageinfo.currentState == StoryState.Clear)
                     {
-                        ___CharacterList.SetBlockRaycast(false);
-                        List<UnitDataModel> list2 = GetEnemyUnitDataList(___currentEnemyStageinfo, ___currentWave);
+                        __instance.CharacterList.SetBlockRaycast(false);
+                        List<UnitDataModel> list2 = GetEnemyUnitDataList(__instance.currentEnemyStageinfo, __instance.currentWave);
                         if (list2 != null)
                         {
                             __instance.SetCharacterRenderer(list2, true);
-                            ___CharacterList.InitEnemyList(list2, false, UIStoryLine.None);
-                            __instance.GetType().GetMethod("UpdateFrame", AccessTools.all).Invoke(__instance, new object[] { UIStoryLine.None });
+                            __instance.CharacterList.InitEnemyList(list2, false, UIStoryLine.None);
+                            __instance.UpdateFrame(UIStoryLine.None);
                         }
                     }
                     else
                     {
-                        ___CharacterList.SetBlockRaycast(true);
-                        ___CharacterList.InitNotClearEnemyList();
-                        __instance.GetType().GetMethod("UpdateFrame", AccessTools.all).Invoke(__instance, new object[] { UIStoryLine.None });
+                        __instance.CharacterList.SetBlockRaycast(true);
+                        __instance.CharacterList.InitNotClearEnemyList();
+                        __instance.UpdateFrame(UIStoryLine.None);
                     }
                 }
                 else if (LibraryModel.Instance.GetChapter() >= 2)
                 {
-                    if (___currentEnemyStageinfo.currentState == StoryState.Clear)
+                    if (__instance.currentEnemyStageinfo.currentState == StoryState.Clear)
                     {
-                        ___CharacterList.SetBlockRaycast(false);
-                        List<UnitDataModel> list3 = GetEnemyUnitDataList(___currentEnemyStageinfo, ___currentWave);
+                        __instance.CharacterList.SetBlockRaycast(false);
+                        List<UnitDataModel> list3 = GetEnemyUnitDataList(__instance.currentEnemyStageinfo, __instance.currentWave);
                         if (list3 != null)
                         {
                             __instance.SetCharacterRenderer(list3, true);
-                            ___CharacterList.InitEnemyList(list3, UIPanel.Controller.CurrentUIPhase == UIPhase.BattleSetting, UIStoryLine.None);
-                            __instance.GetType().GetMethod("UpdateFrame", AccessTools.all).Invoke(__instance, new object[] { UIStoryLine.None });
+                            __instance.CharacterList.InitEnemyList(list3, UIPanel.Controller.CurrentUIPhase == UIPhase.BattleSetting, UIStoryLine.None);
+                            __instance.UpdateFrame(UIStoryLine.None);
                         }
                     }
                     else
                     {
-                        ___CharacterList.SetBlockRaycast(true);
-                        ___CharacterList.InitNotClearEnemyList();
-                        __instance.GetType().GetMethod("UpdateFrame", AccessTools.all).Invoke(__instance, new object[] { UIStoryLine.None });
+                        __instance.CharacterList.SetBlockRaycast(true);
+                        __instance.CharacterList.InitNotClearEnemyList();
+                        __instance.UpdateFrame(UIStoryLine.None);
                     }
                 }
                 else
                 {
-                    ___CharacterList.InitNotClearEnemyList();
-                    __instance.GetType().GetMethod("UpdateFrame", AccessTools.all).Invoke(__instance, new object[] { UIStoryLine.None });
+                    __instance.CharacterList.InitNotClearEnemyList();
+                    __instance.UpdateFrame(UIStoryLine.None);
                 }
                 __instance.ReleaseCurrentSlot();
                 return false;
@@ -714,32 +714,32 @@ namespace SummonLiberation
             }
             return true;
         }
-        private static List<UnitDataModel> GetEnemyUnitDataList(StageClassInfo ___currentEnemyStageinfo, int ___currentWave)
+        private static List<UnitDataModel> GetEnemyUnitDataList(StageClassInfo currentEnemyStageinfo, int currentWave)
         {
             if (EnemyListCache == null)
             {
                 EnemyListCache = new Dictionary<LorId, List<List<UnitDataModel>>>();
             }
-            if (!EnemyListCache.ContainsKey(___currentEnemyStageinfo.id))
+            if (!EnemyListCache.ContainsKey(currentEnemyStageinfo.id))
             {
-                EnemyListCache[___currentEnemyStageinfo.id] = new List<List<UnitDataModel>>();
+                EnemyListCache[currentEnemyStageinfo.id] = new List<List<UnitDataModel>>();
             }
-            while (EnemyListCache[___currentEnemyStageinfo.id].Count <= ___currentWave)
+            while (EnemyListCache[currentEnemyStageinfo.id].Count <= currentWave)
             {
-                EnemyListCache[___currentEnemyStageinfo.id].Add(new List<UnitDataModel>());
+                EnemyListCache[currentEnemyStageinfo.id].Add(new List<UnitDataModel>());
             }
-            if (EnemyListCache[___currentEnemyStageinfo.id][___currentWave].Count <= 0)
+            if (EnemyListCache[currentEnemyStageinfo.id][currentWave].Count <= 0)
             {
-                foreach (LorId id in ___currentEnemyStageinfo.waveList[___currentWave].enemyUnitIdList)
+                foreach (LorId id in currentEnemyStageinfo.waveList[currentWave].enemyUnitIdList)
                 {
                     EnemyUnitClassInfo data = Singleton<EnemyUnitClassInfoList>.Instance.GetData(id);
                     int id2 = data.bookId[RandomUtil.SystemRange(data.bookId.Count)];
                     UnitDataModel unitDataModel = new UnitDataModel(new LorId(data.workshopID, id2), SephirahType.None, false);
                     unitDataModel.SetByEnemyUnitClassInfo(data);
-                    EnemyListCache[___currentEnemyStageinfo.id][___currentWave].Add(unitDataModel);
+                    EnemyListCache[currentEnemyStageinfo.id][currentWave].Add(unitDataModel);
                 }
             }
-            return EnemyListCache[___currentEnemyStageinfo.id][___currentWave];
+            return EnemyListCache[currentEnemyStageinfo.id][currentWave];
         }
         //StageTurnPageButton
         [HarmonyPatch(typeof(UILibrarianCharacterListPanel), "OnSetSephirah")]
@@ -775,7 +775,7 @@ namespace SummonLiberation
         //StageTurnPageButton
         [HarmonyPatch(typeof(UICharacterList), "InitLibrarianList")]
         [HarmonyPrefix]
-        private static bool UICharacterList_InitLibrarianList_Pre(UICharacterList __instance, List<UnitDataModel> unitList, SephirahType sephirah, bool Selectable, Image ___highlightFrame)
+        private static bool UICharacterList_InitLibrarianList_Pre(UICharacterList __instance, List<UnitDataModel> unitList, SephirahType sephirah, bool Selectable)
         {
             if (unitList.Count <= 5)
             {
@@ -784,7 +784,7 @@ namespace SummonLiberation
             try
             {
                 __instance.isSelectableList = Selectable;
-                ___highlightFrame.enabled = __instance.isSelectableList;
+                __instance.highlightFrame.enabled = __instance.isSelectableList;
                 for (int i = 0; i < __instance.slotList.Count; i++)
                 {
                     Color color = UIColorManager.Manager.GetSephirahColor(sephirah);
@@ -867,7 +867,7 @@ namespace SummonLiberation
         //StageTurnPageButton
         [HarmonyPatch(typeof(UICharacterList), "InitUnitListFromBattleData")]
         [HarmonyPrefix]
-        private static bool UICharacterList_InitUnitListFromBattleData_Pre(UICharacterList __instance, List<UnitBattleDataModel> dataList, Image ___highlightFrame)
+        private static bool UICharacterList_InitUnitListFromBattleData_Pre(UICharacterList __instance, List<UnitBattleDataModel> dataList)
         {
             if (dataList.Count <= 5)
             {
@@ -886,7 +886,7 @@ namespace SummonLiberation
                 UIBattleSettingPanel uibattleSettingPanel = UI.UIController.Instance.GetUIPanel(UIPanelType.BattleSetting) as UIBattleSettingPanel;
                 uibattleSettingPanel.currentAvailbleUnitslots.Clear();
                 __instance.isSelectableList = true;
-                ___highlightFrame.enabled = __instance.isSelectableList;
+                __instance.highlightFrame.enabled = __instance.isSelectableList;
                 for (int i = 0; i < __instance.slotList.Count; i++)
                 {
                     SephirahType currentSephirah = UI.UIController.Instance.CurrentSephirah;
@@ -951,7 +951,7 @@ namespace SummonLiberation
         //StageTurnPageButton
         [HarmonyPatch(typeof(UIBattleSettingPanel), "SetToggles")]
         [HarmonyPrefix]
-        private static bool UIBattleSettingPanel_SetToggles_Pre(UIBattleSettingPanel __instance, TextMeshProUGUI ___txt_AvailableUnitNumberText, Animator ___anim_availableText)
+        private static bool UIBattleSettingPanel_SetToggles_Pre(UIBattleSettingPanel __instance)
         {
             List<UnitBattleDataModel> battleDataModels = Singleton<StageController>.Instance.GetCurrentStageFloorModel().GetUnitBattleDataList();
             if (battleDataModels.Count <= 5 || battleDataModels.Count <= Singleton<StageController>.Instance.GetCurrentWaveModel().AvailableUnitNumber)
@@ -998,7 +998,7 @@ namespace SummonLiberation
                         uicharacterSlot2.SetToggle(false);
                     }
                 }
-                SetAvailibleText(battleDataModels, ___txt_AvailableUnitNumberText, ___anim_availableText);
+                SetAvailibleText(battleDataModels, __instance.txt_AvailableUnitNumberText, __instance.anim_availableText);
                 return false;
             }
             catch (Exception ex)
@@ -1014,7 +1014,7 @@ namespace SummonLiberation
         //StageTurnPageButton
         [HarmonyPatch(typeof(UIBattleSettingPanel), "SelectedToggles")]
         [HarmonyPrefix]
-        private static bool UIBattleSettingPanel_SelectedToggles_Pre(UIBattleSettingPanel __instance, UICharacterSlot slot, TextMeshProUGUI ___txt_AvailableUnitNumberText, Animator ___anim_availableText)
+        private static bool UIBattleSettingPanel_SelectedToggles_Pre(UIBattleSettingPanel __instance, UICharacterSlot slot)
         {
             List<UnitBattleDataModel> battleDataModels = Singleton<StageController>.Instance.GetCurrentStageFloorModel().GetUnitBattleDataList();
             if (battleDataModels.Count <= 5)
@@ -1057,7 +1057,7 @@ namespace SummonLiberation
                     slot.SetYesToggleState();
                     UISoundManager.instance.PlayEffectSound(UISoundType.Ui_Click);
                 }
-                SetAvailibleText(battleDataModels, ___txt_AvailableUnitNumberText, ___anim_availableText);
+                SetAvailibleText(battleDataModels, __instance.txt_AvailableUnitNumberText, __instance.anim_availableText);
                 return false;
             }
             catch (Exception ex)
@@ -1074,10 +1074,10 @@ namespace SummonLiberation
         {
             return battleDataModels.FindAll((UnitBattleDataModel x) => x.IsAddedBattle).Count >= Singleton<StageController>.Instance.GetCurrentWaveModel().AvailableUnitNumber;
         }
-        private static void SetAvailibleText(List<UnitBattleDataModel> battleDataModels, TextMeshProUGUI ___txt_AvailableUnitNumberText, Animator ___anim_availableText)
+        private static void SetAvailibleText(List<UnitBattleDataModel> battleDataModels, TextMeshProUGUI txt_AvailableUnitNumberText, Animator anim_availableText)
         {
             string text = TextDataModel.GetText("ui_battlesetting_selectedunitnumber", Array.Empty<object>());
-            ___txt_AvailableUnitNumberText.text = string.Concat(new object[]
+            txt_AvailableUnitNumberText.text = string.Concat(new object[]
             {
                 text,
                 " ",
@@ -1085,21 +1085,21 @@ namespace SummonLiberation
                 "/",
                 Singleton<StageController>.Instance.GetCurrentWaveModel().AvailableUnitNumber
             });
-            ___anim_availableText.SetTrigger("Reveal");
+            anim_availableText.SetTrigger("Reveal");
         }
         //StageTurnPageButton
         [HarmonyPatch(typeof(BattleEmotionRewardInfoUI), "SetData")]
         [HarmonyPrefix]
-        private static bool BattleEmotionRewardInfoUI_SetData_Pre(List<UnitBattleDataModel> units, Faction faction, List<BattleEmotionRewardSlotUI> ___slots)
+        private static bool BattleEmotionRewardInfoUI_SetData_Pre(BattleEmotionRewardInfoUI __instance, List<UnitBattleDataModel> units, Faction faction)
         {
             try
             {
-                while (units.Count > ___slots.Count && ___slots.Count < 9)
+                while (units.Count > __instance.slots.Count && __instance.slots.Count < 9)
                 {
-                    BattleEmotionRewardSlotUI newUI = UnityEngine.Object.Instantiate(___slots[0]);
-                    ___slots.Add(newUI);
+                    BattleEmotionRewardSlotUI newUI = UnityEngine.Object.Instantiate(__instance.slots[0]);
+                    __instance.slots.Add(newUI);
                 }
-                foreach (BattleEmotionRewardSlotUI battleEmotionRewardSlotUI in ___slots)
+                foreach (BattleEmotionRewardSlotUI battleEmotionRewardSlotUI in __instance.slots)
                 {
                     battleEmotionRewardSlotUI.gameObject.SetActive(false);
                 }
@@ -1109,8 +1109,8 @@ namespace SummonLiberation
                     {
                         break;
                     }
-                    ___slots[i].gameObject.SetActive(true);
-                    ___slots[i].SetData(units[i], faction);
+                    __instance.slots[i].gameObject.SetActive(true);
+                    __instance.slots[i].SetData(units[i], faction);
                 }
                 return false;
             }
@@ -1122,7 +1122,7 @@ namespace SummonLiberation
         }
         private static void AddFormationPosition(FormationModel Formation)
         {
-            List<FormationPosition> _postionList = (List<FormationPosition>)Formation.GetType().GetField("_postionList", AccessTools.all).GetValue(Formation);
+            List<FormationPosition> _postionList = Formation._postionList;
             for (int i = _postionList.Count; i < 99; i++)
             {
                 FormationPositionXmlData data = new FormationPositionXmlData()
@@ -1221,7 +1221,7 @@ namespace SummonLiberation
         }
         private static void AddFormationPositionForEnemy(FormationModel Formation)
         {
-            List<FormationPosition> _postionList = (List<FormationPosition>)Formation.GetType().GetField("_postionList", AccessTools.all).GetValue(Formation);
+            List<FormationPosition> _postionList = Formation._postionList;
             int x = -23;
             int y = 18;
             for (int i = _postionList.Count; i < 99; i++)
@@ -1270,8 +1270,8 @@ namespace SummonLiberation
                 }
                 if (Faction == Faction.Enemy)
                 {
-                    StageModel _stageModel = (StageModel)typeof(StageController).GetField("_stageModel", AccessTools.all).GetValue(Singleton<StageController>.Instance);
-                    BattleTeamModel _enemyTeam = (BattleTeamModel)typeof(StageController).GetField("_enemyTeam", AccessTools.all).GetValue(Singleton<StageController>.Instance);
+                    StageModel _stageModel = Singleton<StageController>.Instance._stageModel;
+                    BattleTeamModel _enemyTeam = Singleton<StageController>.Instance._enemyTeam;
 
                     UnitBattleDataModel EnemyUnitBattleDataModel = UnitBattleDataModel.CreateUnitBattleDataByEnemyUnitId(_stageModel, EnemyUnitID);
                     BattleObjectManager.instance.UnregisterUnitByIndex(Faction, Index);
@@ -1310,7 +1310,7 @@ namespace SummonLiberation
                 {
 
                     StageLibraryFloorModel currentStageFloorModel = Singleton<StageController>.Instance.GetCurrentStageFloorModel();
-                    BattleTeamModel _librarianTeam = (BattleTeamModel)typeof(StageController).GetField("_librarianTeam", AccessTools.all).GetValue(Singleton<StageController>.Instance);
+                    BattleTeamModel _librarianTeam = Singleton<StageController>.Instance._librarianTeam;
 
                     UnitDataModel unitDataModel = new UnitDataModel(BookID, currentStageFloorModel.Sephirah, false);
                     UnitBattleDataModel unitBattleDataModel = new UnitBattleDataModel(Singleton<StageController>.Instance.GetStageModel(), unitDataModel);
@@ -1357,7 +1357,7 @@ namespace SummonLiberation
                     battleUnitModel.grade = unitDataModel.grade;
                     battleUnitModel.formation = currentStageFloorModel.GetFormationPosition(battleUnitModel.index);
                     battleUnitModel.SetUnitData(unitBattleDataModel);
-                    unitDataModel.GetType().GetField("_enemyUnitId", AccessTools.all).SetValue(unitDataModel, EnemyUnitID);
+                    unitDataModel._enemyUnitId = EnemyUnitID;
                     battleUnitModel.OnCreated();
                     _librarianTeam.AddUnit(battleUnitModel);
                 }
@@ -1403,8 +1403,8 @@ namespace SummonLiberation
                 }
                 if (Faction == Faction.Enemy)
                 {
-                    StageModel _stageModel = (StageModel)typeof(StageController).GetField("_stageModel", AccessTools.all).GetValue(Singleton<StageController>.Instance);
-                    BattleTeamModel _enemyTeam = (BattleTeamModel)typeof(StageController).GetField("_enemyTeam", AccessTools.all).GetValue(Singleton<StageController>.Instance);
+                    StageModel _stageModel = Singleton<StageController>.Instance._stageModel;
+                    BattleTeamModel _enemyTeam = Singleton<StageController>.Instance._enemyTeam;
 
 
                     BattleObjectManager.instance.UnregisterUnitByIndex(Faction, Index);
@@ -1442,7 +1442,7 @@ namespace SummonLiberation
                 {
 
                     StageLibraryFloorModel currentStageFloorModel = Singleton<StageController>.Instance.GetCurrentStageFloorModel();
-                    BattleTeamModel _librarianTeam = (BattleTeamModel)typeof(StageController).GetField("_librarianTeam", AccessTools.all).GetValue(Singleton<StageController>.Instance);
+                    BattleTeamModel _librarianTeam = Singleton<StageController>.Instance._librarianTeam;
 
                     BattleObjectManager.instance.UnregisterUnitByIndex(Faction, Index);
 
@@ -1473,7 +1473,7 @@ namespace SummonLiberation
                     battleUnitModel.grade = unitBattleData.unitData.grade;
                     battleUnitModel.formation = currentStageFloorModel.GetFormationPosition(battleUnitModel.index);
                     battleUnitModel.SetUnitData(unitBattleData);
-                    unitBattleData.unitData.GetType().GetField("_enemyUnitId", AccessTools.all).SetValue(unitBattleData.unitData, EnemyUnitID);
+                    unitBattleData.unitData._enemyUnitId = EnemyUnitID;
                     battleUnitModel.OnCreated();
                     _librarianTeam.AddUnit(battleUnitModel);
                 }
@@ -1519,8 +1519,8 @@ namespace SummonLiberation
                 }
                 if (Faction == Faction.Enemy)
                 {
-                    StageModel _stageModel = (StageModel)typeof(StageController).GetField("_stageModel", AccessTools.all).GetValue(Singleton<StageController>.Instance);
-                    BattleTeamModel _enemyTeam = (BattleTeamModel)typeof(StageController).GetField("_enemyTeam", AccessTools.all).GetValue(Singleton<StageController>.Instance);
+                    StageModel _stageModel = Singleton<StageController>.Instance._stageModel;
+                    BattleTeamModel _enemyTeam = Singleton<StageController>.Instance._enemyTeam;
 
                     UnitBattleDataModel EnemyUnitBattleDataModel = new UnitBattleDataModel(_stageModel, unitData);
                     EnemyUnitBattleDataModel.Init();
@@ -1560,7 +1560,7 @@ namespace SummonLiberation
                 else
                 {
                     StageLibraryFloorModel currentStageFloorModel = Singleton<StageController>.Instance.GetCurrentStageFloorModel();
-                    BattleTeamModel _librarianTeam = (BattleTeamModel)typeof(StageController).GetField("_librarianTeam", AccessTools.all).GetValue(Singleton<StageController>.Instance);
+                    BattleTeamModel _librarianTeam = Singleton<StageController>.Instance._librarianTeam;
 
                     UnitBattleDataModel unitBattleDataModel = new UnitBattleDataModel(Singleton<StageController>.Instance.GetStageModel(), unitData);
                     BattleObjectManager.instance.UnregisterUnitByIndex(Faction, Index);
@@ -1597,7 +1597,7 @@ namespace SummonLiberation
                     battleUnitModel.grade = unitData.grade;
                     battleUnitModel.formation = currentStageFloorModel.GetFormationPosition(battleUnitModel.index);
                     battleUnitModel.SetUnitData(unitBattleDataModel);
-                    unitData.GetType().GetField("_enemyUnitId", AccessTools.all).SetValue(unitData, EnemyUnitID);
+                    unitData._enemyUnitId = EnemyUnitID;
                     battleUnitModel.OnCreated();
                     _librarianTeam.AddUnit(battleUnitModel);
                 }
