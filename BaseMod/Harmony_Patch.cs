@@ -1,5 +1,4 @@
 ﻿using Battle.DiceAttackEffect;
-using ExtendedLoader;
 using GameSave;
 using GTMDProjectMoon;
 using HarmonyLib;
@@ -7,6511 +6,6337 @@ using LOR_DiceSystem;
 using LOR_XML;
 using Mod;
 using ModSettingTool;
-using Opening;
-using Spine;
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Reflection;
+using System.Reflection.Emit;
 using System.Text;
-using System.Xml;
 using System.Xml.Serialization;
 using TMPro;
 using UI;
 using UnityEngine;
-using UnityEngine.Networking;
 using UnityEngine.UI;
+using ExtendedLoader;
+using static System.Reflection.Emit.OpCodes;
+using static HarmonyLib.AccessTools;
+using EnumExtenderV2;
 
 namespace BaseMod
 {
-    public static class Harmony_Patch
-    {
-        static Harmony_Patch()
-        {
-        }
-        public static string StaticPath
-        {
-            get
-            {
-                Staticpath = Directory.CreateDirectory(Application.dataPath + "/Managed/BaseMod/StaticInfo").FullName;
-                return Staticpath;
-            }
-        }
-        public static string LocalizePath
-        {
-            get
-            {
-                Localizepath = Directory.CreateDirectory(Application.dataPath + "/Managed/BaseMod/Localize/" + TextDataModel.CurrentLanguage).FullName;
-                return Localizepath;
-            }
-        }
-        public static string StoryPath_Static
-        {
-            get
-            {
-                StoryStaticpath = Directory.CreateDirectory(Application.dataPath + "/Managed/BaseMod/Story/EffectInfo").FullName;
-                return StoryStaticpath;
-            }
-        }
-        public static string StoryPath_Localize
-        {
-            get
-            {
-                Storylocalizepath = Directory.CreateDirectory(Application.dataPath + "/Managed/BaseMod/Story/Localize/" + TextDataModel.CurrentLanguage).FullName;
-                return Storylocalizepath;
-            }
-        }
-        public static List<ModContent> LoadedModContents
-        {
-            get
-            {
-                return Singleton<ModContentManager>.Instance._loadedContents;
-            }
-        }
-        private static bool VoidPre()
-        {
-            try
-            {
-                return false;
-            }
-            catch (Exception ex)
-            {
-                Singleton<ModContentManager>.Instance.AddErrorLog(ex.Message + Environment.NewLine + ex.StackTrace);
-                File.WriteAllText(Application.dataPath + "/Mods/error.log", ex.Message + Environment.NewLine + ex.StackTrace);
-            }
-            return true;
-        }
-        public static void Init()
-        {
-            try
-            {
-                path = Path.GetDirectoryName(Uri.UnescapeDataString(new UriBuilder(Assembly.GetExecutingAssembly().CodeBase).Path));
-                //IsEditing = false;
-                AssemList = new List<Assembly>();
-                LoadedAssembly = new List<string>();
-                ArtWorks = null;
-                BookThumb = null;
-                AudioClips = null;
-                CustomEffects = new Dictionary<string, Type>();
-                CustomMapManager = new Dictionary<string, Type>();
-                CustomBattleDialogModel = new Dictionary<string, Type>();
-                CustomGiftPassive = new Dictionary<string, Type>();
-                CustomEmotionCardAbility = new Dictionary<string, Type>();
-                ModStoryCG = new Dictionary<LorId, ModStroyCG>();
-                ModWorkShopId = new Dictionary<Assembly, string>();
-                IsModStorySelected = false;
-                OrcTools.LoadDefaultBookCategories();
-                try
-                {
-                    CreateShortcuts();
-                    ExportDocuments();
-                }
-                catch { }
-            }
-            catch (Exception ex)
-            {
-                Singleton<ModContentManager>.Instance.AddErrorLog(ex.Message + Environment.NewLine + ex.StackTrace);
-                File.WriteAllText(Application.dataPath + "/Mods/error.log", ex.Message + Environment.NewLine + ex.StackTrace);
-            }
-        }
-        private static void CreateShortcuts()
-        {
-            string baseModPath = Singleton<ModContentManager>.Instance.GetModPath("BaseMod");
-            UtilTools.CreateShortcut(Application.dataPath + "/Managed/BaseMod/", "BaseMod for Workshop", baseModPath, baseModPath, "Way to BaseMod Files");
-            UtilTools.CreateShortcut(Application.dataPath + "/Mods/", "Player.log", SaveManager.savePath + "/Player.log", SaveManager.savePath, "Way to Player.log");
-        }
-        private static void ExportDocuments()
-        {
-            string baseModPath = Singleton<ModContentManager>.Instance.GetModPath("BaseMod");
-            try
-            {
-                if (File.Exists(baseModPath + "/SteamworkUploader.rar"))
-                {
-                    File.Copy(baseModPath + "/SteamworkUploader.rar", Application.dataPath + "/Managed/BaseMod/SteamworkUploader.rar", true);
-                }
-            }
-            catch { }
-            if (Directory.Exists(baseModPath + "/Documents/"))
-            {
-                UtilTools.CopyDir(baseModPath + "/Documents", Application.dataPath + "/Managed/BaseMod/Documents");
-            }
-        }
-        public static void LoadAssemblyFiles()
-        {
-            ModSaveTool.LoadedModsWorkshopId.Add("BaseMod");
-            foreach (ModContent modContent in LoadedModContents)
-            {
-                DirectoryInfo _dirInfo = modContent._dirInfo;
-                Assembly currentAssembly;
-                foreach (FileInfo fileInfo in _dirInfo.GetFiles())
-                {
-                    string errorname = "unknown";
-                    try
-                    {
-                        if (fileInfo.Name.Contains(".dll") && !LoadedAssembly.Contains(fileInfo.FullName))
-                        {
-                            LoadedAssembly.Add(fileInfo.Directory.FullName);
-                            errorname = "LoasAssembly";
-                            currentAssembly = Assembly.LoadFile(fileInfo.FullName);
-                            errorname = "GetAssemblyTypes";
-                            foreach (Type type in currentAssembly.GetTypes())
-                            {
-                                errorname = "LoadCustomTypes";
-                                string name = type.Name;
-                                if (type.IsSubclassOf(typeof(DiceAttackEffect)) && name.StartsWith("DiceAttackEffect_"))
-                                {
-                                    CustomEffects[name.Substring("DiceAttackEffect_".Length).Trim()] = type;
-                                }
-                                if (type.IsSubclassOf(typeof(CustomMapManager)) && name.EndsWith("MapManager"))
-                                {
-                                    CustomMapManager[name.Trim()] = type;
-                                }
-                                if (type.IsSubclassOf(typeof(BattleDialogueModel)) && name.StartsWith("BattleDialogueModel_"))
-                                {
-                                    CustomBattleDialogModel[name.Substring("BattleDialogueModel_".Length).Trim()] = type;
-                                }
-                                if (type.IsSubclassOf(typeof(PassiveAbilityBase)) && name.StartsWith("GiftPassiveAbility_"))
-                                {
-                                    CustomGiftPassive[name.Substring("GiftPassiveAbility_".Length).Trim()] = type;
-                                }
-                                if (type.IsSubclassOf(typeof(EmotionCardAbilityBase)) && name.StartsWith("EmotionCardAbility_"))
-                                {
-                                    CustomEmotionCardAbility[name.Substring("EmotionCardAbility_".Length).Trim()] = type;
-                                }
-                                errorname = "LoadHarmonyPatch";
-                                if ((type != null && type.BaseType != null && type.BaseType.Name == "Harmony_Patch") || name == "Harmony_Patch")
-                                {
-                                    Activator.CreateInstance(type);
-                                }
-                            }
-                            errorname = "LoadOtherTypes";
-                            LoadTypesFromAssembly(currentAssembly);
-                            ModSaveTool.LoadedModsWorkshopId.Add(Tools.GetModId(currentAssembly));
-                            AssemList.Add(currentAssembly);
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        Singleton<ModContentManager>.Instance.AddErrorLog("Load_" + fileInfo.Name + "_" + errorname + "_Error");
-                        File.WriteAllText(Application.dataPath + "/Mods/Load_" + fileInfo.Name + "_" + errorname + "_Error" + ".log", ex.Message + Environment.NewLine + ex.StackTrace);
-                    }
-                }
-            }
-        }
-        private static void LoadTypesFromAssembly(Assembly assembly)
-        {
-            foreach (Type type in assembly.GetTypes())
-            {
-                string name = type.Name;
-                if (type.IsSubclassOf(typeof(DiceCardSelfAbilityBase)) && name.StartsWith("DiceCardSelfAbility_"))
-                {
-                    Singleton<AssemblyManager>.Instance._diceCardSelfAbilityDict.Add(name.Substring("DiceCardSelfAbility_".Length), type);
-                }
-                else if (type.IsSubclassOf(typeof(DiceCardAbilityBase)) && name.StartsWith("DiceCardAbility_"))
-                {
-                    Singleton<AssemblyManager>.Instance._diceCardAbilityDict.Add(name.Substring("DiceCardAbility_".Length), type);
-                }
-                else if (type.IsSubclassOf(typeof(BehaviourActionBase)) && name.StartsWith("BehaviourAction_"))
-                {
-                    Singleton<AssemblyManager>.Instance._behaviourActionDict.Add(name.Substring("BehaviourAction_".Length), type);
-                }
-                else if (type.IsSubclassOf(typeof(PassiveAbilityBase)) && name.StartsWith("PassiveAbility_"))
-                {
-                    Singleton<AssemblyManager>.Instance._passiveAbilityDict.Add(name.Substring("PassiveAbility_".Length), type);
-                }
-                else if (type.IsSubclassOf(typeof(DiceCardPriorityBase)) && name.StartsWith("DiceCardPriority_"))
-                {
-                    Singleton<AssemblyManager>.Instance._diceCardPriorityDict.Add(name.Substring("DiceCardPriority_".Length), type);
-                }
-                else if (type.IsSubclassOf(typeof(EnemyUnitAggroSetter)) && name.StartsWith("EnemyUnitAggroSetter_"))
-                {
-                    Singleton<AssemblyManager>.Instance._enemyUnitAggroSetterDict.Add(name.Substring("EnemyUnitAggroSetter_".Length), type);
-                }
-                else if (type.IsSubclassOf(typeof(EnemyTeamStageManager)) && name.StartsWith("EnemyTeamStageManager_"))
-                {
-                    Singleton<AssemblyManager>.Instance._enemyTeamStageManagerDict.Add(name.Substring("EnemyTeamStageManager_".Length), type);
-                }
-                else if (type.IsSubclassOf(typeof(EnemyUnitTargetSetter)) && name.StartsWith("EnemyUnitTargetSetter_"))
-                {
-                    Singleton<AssemblyManager>.Instance._enemyUnitTargetSetterDict.Add(name.Substring("EnemyUnitTargetSetter_".Length), type);
-                }
-                else if (type.IsSubclassOf(typeof(ModInitializer)))
-                {
-                    ModInitializer modInitializer = Activator.CreateInstance(type) as ModInitializer;
-                    modInitializer.OnInitializeMod();
-                }
-            }
-        }
-        public static void LoadModFiles()
-        {
-            Dictionary<string, List<Workshop.WorkshopSkinData>> _bookSkinData = Singleton<CustomizingBookSkinLoader>.Instance._bookSkinData;
-            StaticDataLoader_New.ExportOriginalFiles();
-            StaticDataLoader_New.LoadModFiles(LoadedModContents);
-            LocalizedTextLoader_New.ExportOriginalFiles();
-            LocalizedTextLoader_New.LoadModFiles(LoadedModContents);
-            StorySerializer_new.ExportStory();
-            LoadBookSkins(_bookSkinData);
-        }
-        private static void ReloadModFiles()
-        {
-            GlobalGameManager.Instance.LoadStaticData();
-            Singleton<StageClassInfoList>.Instance.GetAllWorkshopData().Clear();
-            Singleton<EnemyUnitClassInfoList>.Instance.GetAllWorkshopData().Clear();
-            Singleton<BookXmlList>.Instance.GetAllWorkshopData().Clear();
-            Singleton<CardDropTableXmlList>.Instance.GetAllWorkshopData().Clear();
-            Singleton<DropBookXmlList>.Instance.GetAllWorkshopData().Clear();
-            ItemXmlDataList.instance.GetAllWorkshopData().Clear();
-            Singleton<BookDescXmlList>.Instance._dictionaryWorkshop.Clear();
-            Singleton<CustomizingCardArtworkLoader>.Instance._artworkData.Clear();
-            Singleton<CustomizingBookSkinLoader>.Instance._bookSkinData.Clear();
-            ArtWorks = null;
-            CustomEffects.Clear();
-            CustomMapManager.Clear();
-            CustomBattleDialogModel.Clear();
-            CustomGiftPassive.Clear();
-            CustomEmotionCardAbility.Clear();
-            LoadedAssembly.Clear();
-            ArtWorks.Clear();
-            BookThumb.Clear();
-            AudioClips.Clear();
-            ModPid.Clear();
-            ModEpMatch.Clear();
-            ModStoryCG = null;
-            ModWorkShopId.Clear();
-            ModWorkshopBookIndex.Clear();
-            OrcTools.StageNameDic.Clear();
-            OrcTools.StageConditionDic.Clear();
-            OrcTools.CharacterNameDic.Clear();
-            OrcTools.EgoDic.Clear();
-            OrcTools.DropItemDic.Clear();
-            OrcTools.dialogDetails.Clear();
-        }
-        private static void LoadBookSkins(Dictionary<string, List<Workshop.WorkshopSkinData>> _bookSkinData)
-        {
-            var loader = Singleton<CustomizingResourceLoader>.Instance;
-            var list2 = LoadWorkshopExtendedCustomAppearance();
-            foreach (Workshop.WorkshopAppearanceInfo workshopAppearanceInfo in list2)
-            {
-                try
-                {
-                    if (workshopAppearanceInfo.isClothCustom)
-                    {
-                        Workshop.WorkshopSkinData workshopSkinData;
-                        if (workshopAppearanceInfo is ExtendedWorkshopAppearanceInfo extendedAppearanceInfo)
-                        {
-                            workshopSkinData = new ExtendedWorkshopSkinData
-                            {
-                                dic = extendedAppearanceInfo.clothCustomInfo,
-                                dataName = extendedAppearanceInfo.bookName,
-                                contentFolderIdx = extendedAppearanceInfo.uniqueId,
-                                atkEffectPivotDic = extendedAppearanceInfo.atkEffectPivotDic,
-                                specialMotionPivotDic = extendedAppearanceInfo.specialMotionPivotDic,
-                                motionSoundList = extendedAppearanceInfo.motionSoundList
-                            };
-                        }
-                        else
-                        {
-                            workshopSkinData = new Workshop.WorkshopSkinData
-                            {
-                                dic = workshopAppearanceInfo.clothCustomInfo,
-                                dataName = workshopAppearanceInfo.bookName,
-                                contentFolderIdx = workshopAppearanceInfo.uniqueId
-                            };
-                        }
-                        int num = loader._skinData.Count;
-                        if (loader._skinData.TryGetValue(workshopAppearanceInfo.uniqueId, out Workshop.WorkshopSkinData workshopSkinData1))
-                        {
-                            num = workshopSkinData1.id;
-                            loader._skinData.Remove(workshopAppearanceInfo.uniqueId);
-                        }
-                        workshopSkinData.id = num;
-                        loader._skinData.Add(workshopAppearanceInfo.uniqueId, workshopSkinData);
-                    }
-                }
-                catch (Exception ex)
-                {
-                    Debug.LogError("BaseMod XL: error loading workshop skin at " + workshopAppearanceInfo.path);
-                    Debug.LogError(ex);
-                }
-            }
-            foreach (ModContent modContent in LoadedModContents)
-            {
-                string modDirectory = modContent._dirInfo.FullName;
-                string modName = modContent._itemUniqueId;
-                string modId = "";
-                if (!modName.ToLower().EndsWith("@origin"))
-                {
-                    modId = modName;
-                }
-                int oldSkins = 0;
-                if (Singleton<CustomizingBookSkinLoader>.Instance._bookSkinData.TryGetValue(modName, out List<Workshop.WorkshopSkinData> skinlist))
-                {
-                    oldSkins = skinlist.Count;
-                    string defaultCharDirectory = Path.Combine(modDirectory, "Resource\\CharacterSkin");
-                    if (Directory.Exists(defaultCharDirectory))
-                    {
-                        string[] directories = Directory.GetDirectories(defaultCharDirectory);
-                        for (int i = 0; i < directories.Length; i++)
-                        {
-                            try
-                            {
-                                Workshop.WorkshopAppearanceInfo info = LoadCustomAppearance(directories[i]);
-                                if (info != null)
-                                {
-                                    string[] array = directories[i].Split(new char[]
-                                        {
-                                        '\\'
-                                        });
-                                    string bookName = array[array.Length - 1];
-                                    info.path = directories[i];
-                                    info.uniqueId = modName;
-                                    info.bookName = bookName;
-                                    if (info.isClothCustom)
-                                    {
-                                        Workshop.WorkshopSkinData newData;
-                                        if (info is ExtendedWorkshopAppearanceInfo extendedInfo)
-                                        {
-                                            newData = new ExtendedWorkshopSkinData
-                                            {
-                                                dic = extendedInfo.clothCustomInfo,
-                                                dataName = extendedInfo.bookName,
-                                                contentFolderIdx = extendedInfo.uniqueId,
-                                                atkEffectPivotDic = extendedInfo.atkEffectPivotDic,
-                                                specialMotionPivotDic = extendedInfo.specialMotionPivotDic,
-                                                motionSoundList = extendedInfo.motionSoundList,
-                                                id = i
-                                            };
-                                        }
-                                        else
-                                        {
-                                            newData = new Workshop.WorkshopSkinData
-                                            {
-                                                dic = info.clothCustomInfo,
-                                                dataName = info.bookName,
-                                                contentFolderIdx = info.uniqueId,
-                                                id = i
-                                            };
-                                        }
-                                        var oldData = skinlist.Find((Workshop.WorkshopSkinData data) => data.id == i);
-                                        if (oldData != null)
-                                        {
-                                            skinlist.Remove(oldData);
-                                        }
-                                        skinlist.Add(newData);
-                                    }
-                                }
-                            }
-                            catch (Exception ex)
-                            {
-                                Debug.LogError("BaseMod XL: error reloading skin at " + directories[i]);
-                                Debug.LogError(ex);
-                            }
-                        }
-                    }
-                }
-                string charDirectory = Path.Combine(modDirectory, "Char");
-                List<Workshop.WorkshopSkinData> list = new List<Workshop.WorkshopSkinData>();
-                if (Directory.Exists(charDirectory))
-                {
-                    string[] directories = Directory.GetDirectories(charDirectory);
-                    for (int i = 0; i < directories.Length; i++)
-                    {
-                        try
-                        {
-                            Workshop.WorkshopAppearanceInfo workshopAppearanceInfo = LoadCustomAppearance(directories[i]);
-                            if (workshopAppearanceInfo != null)
-                            {
-                                string[] array = directories[i].Split(new char[]
-                                {
-                                '\\'
-                                });
-                                string bookName = array[array.Length - 1];
-                                workshopAppearanceInfo.path = directories[i];
-                                workshopAppearanceInfo.uniqueId = modId;
-                                workshopAppearanceInfo.bookName = "Custom_" + bookName;
-                                bool isClothCustom = workshopAppearanceInfo.isClothCustom;
-                                if (isClothCustom)
-                                {
-                                    if (workshopAppearanceInfo is ExtendedWorkshopAppearanceInfo extendedAppearanceInfo)
-                                    {
-                                        list.Add(new ExtendedWorkshopSkinData
-                                        {
-                                            dic = extendedAppearanceInfo.clothCustomInfo,
-                                            dataName = extendedAppearanceInfo.bookName,
-                                            contentFolderIdx = extendedAppearanceInfo.uniqueId,
-                                            atkEffectPivotDic = extendedAppearanceInfo.atkEffectPivotDic,
-                                            specialMotionPivotDic = extendedAppearanceInfo.specialMotionPivotDic,
-                                            motionSoundList = extendedAppearanceInfo.motionSoundList,
-                                            id = oldSkins + i
-                                        });
-                                    }
-                                    else
-                                    {
-                                        list.Add(new Workshop.WorkshopSkinData
-                                        {
-                                            dic = workshopAppearanceInfo.clothCustomInfo,
-                                            dataName = workshopAppearanceInfo.bookName,
-                                            contentFolderIdx = workshopAppearanceInfo.uniqueId,
-                                            id = oldSkins + i
-                                        });
-                                    }
-                                }
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            Debug.LogError("BaseMod XL: error loading skin at " + directories[i]);
-                            Debug.LogError(ex);
-                        }
-                    }
-                    if (_bookSkinData.ContainsKey(modId))
-                    {
-                        _bookSkinData[modId].AddRange(list);
-                    }
-                    else
-                    {
-                        _bookSkinData[modId] = list;
-                    }
-                }
-            }
-        }
-        public static Workshop.WorkshopAppearanceInfo LoadCustomAppearance(string path)
-        {
-            string text = path + "/ModInfo.xml";
-            if (File.Exists(text))
-            {
-                return LoadCustomAppearanceInfo(path, text);
-            }
-            return null;
-        }
-        private static List<Workshop.WorkshopAppearanceInfo> LoadWorkshopExtendedCustomAppearance()
-        {
-            List<Workshop.WorkshopAppearanceInfo> list = new List<Workshop.WorkshopAppearanceInfo>();
-            string workshopDirPath = PlatformManager.Instance.GetWorkshopDirPath();
-            SetOriginalIndexes();
-            ReloadExternalFaceData();
-            if (Directory.Exists(workshopDirPath))
-            {
-                foreach (string text in Directory.GetDirectories(workshopDirPath))
-                {
-                    try
-                    {
-                        Workshop.WorkshopAppearanceInfo info = LoadCustomAppearance(text);
-                        if (info != null)
-                        {
-                            list.Add(info);
-                            string[] array = text.Split(new char[]
-                            {
-                            '\\'
-                            });
-                            string text2 = array[array.Length - 1];
-                            info.path = text;
-                            info.uniqueId = text2;
-                            if (string.IsNullOrWhiteSpace(info.bookName))
-                            {
-                                info.bookName = text2;
-                            }
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        Debug.LogError("BaseMod XL: error reloading skin at " + text);
-                        Debug.LogError(ex);
-                    }
-                }
-            }
-            originalEyeIndex = -1;
-            originalBrowIndex = -1;
-            originalMouthIndex = -1;
-            originalFrontHairIndex = -1;
-            originalRearHairIndex = -1;
-            string localDirPath = Path.Combine(Application.dataPath, "Mods");
-            if (Directory.Exists(localDirPath))
-            {
-                foreach (string text in Directory.GetDirectories(localDirPath))
-                {
-                    try
-                    {
-                        Workshop.WorkshopAppearanceInfo workshopAppearanceInfo = LoadCustomAppearance(text);
-                        if (workshopAppearanceInfo != null)
-                        {
-                            list.Add(workshopAppearanceInfo);
-                            string[] array = text.Split(new char[]
-                            {
-                            '\\'
-                            });
-                            string text2 = array[array.Length - 1];
-                            workshopAppearanceInfo.path = text;
-                            workshopAppearanceInfo.uniqueId = text2;
-                            if (string.IsNullOrWhiteSpace(workshopAppearanceInfo.bookName))
-                            {
-                                workshopAppearanceInfo.bookName = text2;
-                            }
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        Debug.LogError("BaseMod XL: error loading skin at " + text);
-                        Debug.LogError(ex);
-                    }
-                }
-            }
-            return list;
-        }
-        private static void SetOriginalIndexes()
-        {
-            var loaderDir = Singleton<CustomizingResourceLoader>.Instance.InternalCustomDir;
-            originalEyeIndex = GetOriginalIndex(loaderDir, "/Eyes_Normal", "/Eyes_Side_Normal");
-            originalBrowIndex = GetOriginalIndex(loaderDir, "/Brows_Normal", "/Brows_Attack", "/Brows_Side_Attack", "/Brows_Hit");
-            originalMouthIndex = GetOriginalIndex(loaderDir, "/Mouths_Normal", "/Mouths_Attack", "/Mouths_Side_Attack", "/Mouths_Hit");
-            originalFrontHairIndex = GetOriginalIndex(loaderDir, "/FrontHair", "/FrontHair_Side");
-            originalRearHairIndex = GetOriginalIndex(loaderDir, "/RearHair", "/RearHair_Side", "/RearHair_Side_FrontLayer");
-        }
-        private static int GetOriginalIndex(string baseFolder, params string[] subFolders)
-        {
-            int max = 0;
-            foreach (string subFolder in subFolders)
-            {
-                max = Mathf.Max(max, Resources.LoadAll<Sprite>(Path.Combine(baseFolder, subFolder)).Length);
-            }
-            return max;
-        }
-        private static void ReloadExternalFaceData()
+	public static class Harmony_Patch
+	{
+		public static string StaticPath
 		{
-            var loader = Singleton<CustomizingResourceLoader>.Instance;
-            originalEyeIndex = ReloadExternalFaceSets(loader.ExternalEyeDir, originalEyeIndex, loader._eyeResources);
-            originalBrowIndex = ReloadExternalFaceSets(loader.ExternalBrowDir, originalBrowIndex, loader._browResources);
-            originalMouthIndex = ReloadExternalFaceSets(loader.ExternalMouthDir, originalMouthIndex, loader._mouthResources);
-            originalFrontHairIndex = ReloadExternalHairSets(loader.ExternalFrontHairDir, false, originalFrontHairIndex, loader._frontHairResources);
-            originalRearHairIndex = ReloadExternalHairSets(loader.ExternalRearHairDir, true, originalRearHairIndex, loader._rearHairResources);
-        }
-        private static int ReloadExternalFaceSets(string dirPath, int index, List<FaceResourceSet> resList)
-		{
-            var loader = Singleton<CustomizingResourceLoader>.Instance;
-            string[] targetName = new string[]
-            {
-                loader.ExternalFaceNormalFileName,
-                loader.ExternalFaceAttackFileName,
-                loader.ExternalFaceHitFileName,
-                loader.ExternalFaceSideAttackFileName
-            };
-            DirectoryInfo directoryInfo = new DirectoryInfo(dirPath);
-            foreach (DirectoryInfo dir in directoryInfo.GetDirectories())
-            {
-                FaceResourceSet faceResourceSet = new FaceResourceSet();
-                Dictionary<string, Sprite> externalSpriteSet = GetExternalSpriteSet(dir, targetName);
-                if (externalSpriteSet.ContainsKey(loader.ExternalFaceNormalFileName))
-                {
-                    faceResourceSet.normal = externalSpriteSet[loader.ExternalFaceNormalFileName];
-                }
-                if (externalSpriteSet.ContainsKey(loader.ExternalFaceAttackFileName))
-                {
-                    faceResourceSet.atk = externalSpriteSet[loader.ExternalFaceAttackFileName];
-                }
-                if (externalSpriteSet.ContainsKey(loader.ExternalFaceHitFileName))
-                {
-                    faceResourceSet.hit = externalSpriteSet[loader.ExternalFaceHitFileName];
-                }
-                if (externalSpriteSet.ContainsKey(loader.ExternalFaceSideAttackFileName))
-                {
-                    faceResourceSet.atk_side = externalSpriteSet[loader.ExternalFaceSideAttackFileName];
-                }
-                if (faceResourceSet.FillSprite())
-                {
-                    if (index >= 0 && index < resList.Count) {
-                        resList[index] = faceResourceSet;
-                        index++;
-                    }
-                    else
-					{
-                        resList.Add(faceResourceSet);
-                        index = -1;
-					}
-                }
-            }
-            return index;
-		}
-        private static int ReloadExternalHairSets(string dirPath, bool rear, int index, List<HairResourceSet> resList)
-        {
-            var loader = Singleton<CustomizingResourceLoader>.Instance;
-            string[] targetName = new string[]
-            {
-                loader.ExternalHairDefaultFileName,
-                loader.ExternalFrontHairSideFileName,
-                loader.ExternalRearHairSideFileName,
-                loader.ExternalRearHairSideBackFileName
-            };
-            DirectoryInfo directoryInfo = new DirectoryInfo(dirPath);
-            foreach (DirectoryInfo dir in directoryInfo.GetDirectories())
-            {
-                HairResourceSet hairResourceSet = new HairResourceSet();
-                Dictionary<string, Sprite> externalSpriteSet = GetExternalSpriteSet(dir, targetName);
-                if (externalSpriteSet.ContainsKey(loader.ExternalHairDefaultFileName))
-                {
-                    hairResourceSet.Default = externalSpriteSet[loader.ExternalHairDefaultFileName];
-                }
-                if (rear)
-                {
-                    if (externalSpriteSet.ContainsKey(loader.ExternalRearHairSideFileName))
-                    {
-                        hairResourceSet.Side_Front = externalSpriteSet[loader.ExternalRearHairSideFileName];
-                    }
-                    if (externalSpriteSet.ContainsKey(loader.ExternalRearHairSideBackFileName))
-                    {
-                        hairResourceSet.Side_Back = externalSpriteSet[loader.ExternalRearHairSideBackFileName];
-                    }
-                }
-                else if (externalSpriteSet.ContainsKey(loader.ExternalFrontHairSideFileName))
-                {
-                    hairResourceSet.Side_Front = externalSpriteSet[loader.ExternalFrontHairSideFileName];
-                }
-                if (!(hairResourceSet.Default == null))
-                {
-                    if (index >= 0 && index < resList.Count)
-                    {
-                        resList[index] = hairResourceSet;
-                        index++;
-                    }
-                    else
-                    {
-                        resList.Add(hairResourceSet);
-                        index = -1;
-                    }
-                }
-            }
-            return index;
-        }
-
-        private static Dictionary<string, Sprite> GetExternalSpriteSet(DirectoryInfo dir, string[] targetName)
-        {
-            Dictionary<string, Sprite> dictionary = new Dictionary<string, Sprite>();
-            Vector2 pivot = new Vector2(0.5f, 0.5f);
-            foreach (FileInfo fileInfo in dir.GetFiles())
-            {
-                string text = Path.GetFileNameWithoutExtension(fileInfo.Name).ToLower();
-                if (targetName.Contains(text))
-                {
-                    try
-                    {
-                        Sprite sprite = SpriteUtil.LoadSprite(fileInfo.FullName, pivot);
-                        if (sprite != null && !dictionary.ContainsKey(text))
-                        {
-                            dictionary.Add(text, sprite);
-                        }
-                    }
-                    catch (Exception)
-                    {
-                        Debug.LogError("invalid image file " + fileInfo.FullName);
-                    }
-                }
-            }
-            return dictionary;
-        }
-        private static Workshop.WorkshopAppearanceInfo LoadCustomAppearanceInfo(string rootPath, string xml)
-        {
-            if (string.IsNullOrWhiteSpace(xml))
-            {
-                return null;
-            }
-            Workshop.WorkshopAppearanceInfo workshopAppearanceInfo = null;
-            StreamReader streamReader = new StreamReader(xml);
-            XmlDocument xmlDocument = new XmlDocument();
-            try
-            {
-                xmlDocument.LoadXml(streamReader.ReadToEnd());
-                XmlNode xmlNode = xmlDocument.SelectSingleNode("ModInfo");
-                bool isExtended = false;
-                XmlNode extendedXml = xmlNode.Attributes.GetNamedItem("extended");
-                if (extendedXml == null)
-                {
-                    extendedXml = xmlNode.Attributes.GetNamedItem("Extended");
-                }
-                if (extendedXml != null)
-                {
-                    bool.TryParse(extendedXml.InnerText, out isExtended);
-                }
-                if (isExtended)
-                {
-                    workshopAppearanceInfo = new ExtendedWorkshopAppearanceInfo();
-                }
-                else
-                {
-                    workshopAppearanceInfo = new Workshop.WorkshopAppearanceInfo();
-                }
-                XmlNode xmlNode2 = xmlNode.SelectSingleNode("FaceInfo");
-                XmlNode xmlNode3 = xmlNode.SelectSingleNode("ClothInfo");
-                if (xmlNode2 != null)
-                {
-                    workshopAppearanceInfo.isFaceCustom = true;
-                    for (int i = 0; i < 17; i++)
-                    {
-                        Workshop.FaceCustomType key = (Workshop.FaceCustomType)i;
-                        string xpath = key.ToString();
-                        XmlNode xmlNode4 = xmlNode2.SelectSingleNode(xpath);
-                        if (xmlNode4 != null)
-                        {
-                            string innerText = xmlNode4.InnerText;
-                            Sprite sprite = SpriteUtil.LoadSprite(rootPath + "/FaceCustom/" + innerText + ".png", new Vector2(0.5f, 0.5f));
-                            if (sprite != null)
-                            {
-                                workshopAppearanceInfo.faceCustomInfo.Add(key, sprite);
-                            }
-                        }
-                    }
-                    LoadFaceCustom(workshopAppearanceInfo.faceCustomInfo);
-                }
-                if (xmlNode3 != null)
-                {
-                    workshopAppearanceInfo.isClothCustom = true;
-                    string innerText2 = xmlNode3.SelectSingleNode("Name").InnerText;
-                    if (!string.IsNullOrWhiteSpace(innerText2))
-                    {
-                        workshopAppearanceInfo.bookName = innerText2;
-                    }
-                    for (int j = 0; j < 31; j++)
-                    {
-                        ActionDetail actionDetail = (ActionDetail)j;
-                        if (actionDetail == ActionDetail.Standing)
-                        {
-                            continue;
-                        }
-                        string actionName = actionDetail.ToString();
-                        try
-                        {
-                            XmlNode actionNode = xmlNode3.SelectSingleNode(actionName);
-                            if (actionNode == null)
-                            {
-                                continue;
-                            }
-
-                            Vector2Int size = new Vector2Int(512, 512);
-                            float res = 50f;
-                            bool isCustomSize = false;
-                            if (isExtended)
-                            {
-                                XmlNode sizeX = actionNode.Attributes.GetNamedItem("size_x");
-                                if (sizeX != null)
-                                {
-                                    size.x = int.Parse(sizeX.InnerText);
-                                }
-                                XmlNode sizeY = actionNode.Attributes.GetNamedItem("size_y");
-                                if (sizeY != null)
-                                {
-                                    size.y = int.Parse(sizeY.InnerText);
-                                }
-                                XmlNode resXml = actionNode.Attributes.GetNamedItem("quality");
-                                if (resXml != null)
-                                {
-                                    res = Tools.ParseFloatSafe(resXml.InnerText);
-                                }
-                                isCustomSize = (size.x != 512 || size.y != 512 || res != 50f);
-                            }
-
-                            XmlNode spritePivotNode = actionNode.SelectSingleNode("Pivot");
-                            XmlNode spritePivotXXml = null;
-                            XmlNode spritePivotYXml = null;
-                            if (isExtended)
-                            {
-                                spritePivotXXml = spritePivotNode.Attributes.GetNamedItem("pivot_x_custom");
-                                spritePivotYXml = spritePivotNode.Attributes.GetNamedItem("pivot_y_custom");
-                            }
-                            if (spritePivotXXml == null)
-                            {
-                                spritePivotXXml = spritePivotNode.Attributes.GetNamedItem("pivot_x");
-                            }
-                            if (spritePivotYXml == null)
-                            {
-                                spritePivotYXml = spritePivotNode.Attributes.GetNamedItem("pivot_y");
-                            }
-                            float spritePivotX = Tools.ParseFloatSafe(spritePivotXXml.InnerText);
-                            float spritePivotY = Tools.ParseFloatSafe(spritePivotYXml.InnerText);
-                            Vector2 pivotPos = new Vector2(spritePivotX / (2 * size.x) + 0.5f, spritePivotY / (2 * size.y) + 0.5f);
-                            
-                            XmlNode headNode = actionNode.SelectSingleNode("Head");
-                            bool headEnabled = true;
-                            FaceOverride faceOverride = FaceOverride.None;
-                            EffectPivot headPivot = GetEffectPivot(headNode);
-                            if (headPivot == null)
-							{
-                                headPivot = new EffectPivot();
-                                headEnabled = false;
-							}
-                            else
-							{
-                                XmlNode headEnabledXml = headNode.Attributes.GetNamedItem("head_enable");
-                                if (headEnabledXml != null)
-                                {
-                                    bool.TryParse(headEnabledXml.InnerText, out headEnabled);
-                                }
-                                XmlNode faceXml = headNode.Attributes.GetNamedItem("face");
-                                if (Enum.TryParse(faceXml?.InnerText, true, out FaceOverride faceOverride1))
-                                {
-                                    faceOverride = faceOverride1;
-                                }
-                            }
-                            float headRotation = headPivot.localEulerAngles.z;
-                            Vector2 headPos = new Vector2(headPivot.localPosition.x, headPivot.localPosition.y);
-
-                            XmlNode directionNode = actionNode.SelectSingleNode("Direction");
-                            CharacterMotion.MotionDirection direction = CharacterMotion.MotionDirection.FrontView;
-                            if (directionNode.InnerText == "Side")
-                            {
-                                direction = CharacterMotion.MotionDirection.SideView;
-                            }
-
-                            List<EffectPivot> additionalPivotCoords = null;
-                            if (isExtended)
-                            {
-                                XmlNodeList additionalPivotNodes = actionNode.SelectNodes("AdditionalPivot");
-                                if (additionalPivotNodes != null && additionalPivotNodes.Count > 0)
-                                {
-                                    additionalPivotCoords = new List<EffectPivot>();
-                                    foreach (XmlNode additionalPivot in additionalPivotNodes)
-                                    {
-                                        additionalPivotCoords.Add(GetEffectPivot(additionalPivot));
-                                    }
-                                }
-                            }
-
-                            bool hasSpriteFile = false;
-                            string spritePath = rootPath + "/ClothCustom/" + actionName + "_mid.png";
-                            bool hasSkinSprite = false;
-                            string skinSpritePath = null;
-                            bool hasBackSprite = false;
-                            string backSpritePath = rootPath + "/ClothCustom/" + actionName + "_back.png";
-                            bool hasBackSkinSprite = false;
-                            string backSkinSpritePath = rootPath + "/ClothCustom/" + actionName + "_back_skin.png";
-                            if (isExtended && File.Exists(spritePath))
-                            {
-                                hasSpriteFile = true;
-                                skinSpritePath = rootPath + "/ClothCustom/" + actionName + "_mid_skin.png";
-                                if (File.Exists(skinSpritePath))
-                                {
-                                    hasSkinSprite = true;
-                                }
-                                if (!File.Exists(backSpritePath))
-                                {
-                                    backSpritePath = rootPath + "/ClothCustom/" + actionName + ".png";
-                                    backSkinSpritePath = rootPath + "/ClothCustom/" + actionName + "_skin.png";
-                                }
-                            }
-                            else
-                            {
-                                spritePath = rootPath + "/ClothCustom/" + actionName + ".png";
-                                skinSpritePath = rootPath + "/ClothCustom/" + actionName + "_skin.png";
-                                if (File.Exists(spritePath))
-                                {
-                                    hasSpriteFile = true;
-                                    if (isExtended)
-                                    {
-                                        if (File.Exists(skinSpritePath))
-                                        {
-                                            hasSkinSprite = true;
-                                        }
-                                        var largeSpritePath = rootPath + "/ClothCustom/" + actionName + "_large.png";
-                                        if (File.Exists(largeSpritePath))
-                                        {
-                                            spritePath = largeSpritePath;
-                                        }
-                                    }
-                                }
-                            }
-
-                            if (isExtended && File.Exists(backSpritePath))
-                            {
-                                hasBackSprite = true;
-                                if (File.Exists(backSkinSpritePath))
-                                {
-                                    hasBackSkinSprite = true;
-                                }
-                            }
-
-                            bool hasFrontSprite = false;
-                            bool hasFrontSpriteFile = false;
-                            string frontSpritePath = rootPath + "/ClothCustom/" + actionName + "_front.png";
-                            bool hasFrontSkinSprite = false;
-                            string frontSkinSpritePath = frontSkinSpritePath = rootPath + "/ClothCustom/" + actionName + "_front_skin.png";
-                            if (File.Exists(frontSpritePath))
-                            {
-                                hasFrontSprite = true;
-                                hasFrontSpriteFile = true;
-                                if (isExtended)
-                                {
-                                    var largeSpritePath = rootPath + "/ClothCustom/" + actionName + "_large.png";
-                                    if (File.Exists(largeSpritePath))
-                                    {
-                                        frontSpritePath = largeSpritePath;
-                                    }
-                                    if (File.Exists(frontSkinSpritePath))
-                                    {
-                                        hasFrontSkinSprite = true;
-                                    }
-                                }
-                            }
-
-                            Workshop.ClothCustomizeData value;
-                            if (isExtended)
-                            {
-                                value = new ExtendedClothCustomizeData
-                                {
-                                    hasSpriteFile = hasSpriteFile,
-                                    spritePath = spritePath,
-                                    hasFrontSprite = hasFrontSprite,
-                                    hasFrontSpriteFile = hasFrontSpriteFile,
-                                    frontSpritePath = frontSpritePath,
-                                    pivotPos = pivotPos,
-                                    headPos = headPos,
-                                    headRotation = headRotation,
-                                    direction = direction,
-                                    headEnabled = headEnabled,
-                                    isCustomSize = isCustomSize,
-                                    size = size,
-                                    resolution = res,
-                                    hasSkinSprite = hasSkinSprite,
-                                    skinSpritePath = skinSpritePath,
-                                    hasFrontSkinSprite = hasFrontSkinSprite,
-                                    frontSkinSpritePath = frontSkinSpritePath,
-                                    hasBackSprite = hasBackSprite,
-                                    backSpritePath = backSpritePath,
-                                    hasBackSkinSprite = hasBackSkinSprite,
-                                    backSkinSpritePath = backSkinSpritePath,
-                                    additionalPivots = additionalPivotCoords,
-                                    headPivot = headPivot,
-                                    faceOverride = faceOverride
-                                };
-                            }
-                            else
-                            {
-                                value = new Workshop.ClothCustomizeData
-                                {
-                                    hasSpriteFile = hasSpriteFile,
-                                    spritePath = spritePath,
-                                    hasFrontSprite = hasFrontSprite,
-                                    hasFrontSpriteFile = hasFrontSpriteFile,
-                                    frontSpritePath = frontSpritePath,
-                                    pivotPos = pivotPos,
-                                    headPos = headPos,
-                                    headRotation = headRotation,
-                                    direction = direction,
-                                    headEnabled = headEnabled
-                                };
-                            }
-                            if (spritePath != null)
-                            {
-                                workshopAppearanceInfo.clothCustomInfo.Add(actionDetail, value);
-                            }
-                        }
-                        catch (Exception message)
-                        {
-                            Debug.LogError(message);
-                        }
-                    }
-                    if (isExtended)
-                    {
-                        ExtendedWorkshopAppearanceInfo extendedInfo = (ExtendedWorkshopAppearanceInfo)workshopAppearanceInfo;
-                        XmlNode soundNode = xmlNode3.SelectSingleNode("SoundList");
-                        if (soundNode != null)
-                        {
-                            List<CustomInvitation.BookSoundInfo> motionSoundList = new List<CustomInvitation.BookSoundInfo>();
-                            XmlNodeList motionSoundsXml = soundNode.SelectNodes("SoundInfo");
-                            if (motionSoundsXml != null)
-                            {
-                                foreach (XmlNode motionSound in motionSoundsXml)
-                                {
-                                    XmlAttributeCollection attr = motionSound.Attributes;
-                                    XmlNode motion = attr.GetNamedItem("Motion");
-                                    XmlNode winExternal = attr.GetNamedItem("WinExternal");
-                                    XmlNode winPath = attr.GetNamedItem("Win");
-                                    XmlNode loseExternal = attr.GetNamedItem("LoseExternal");
-                                    XmlNode losePath = attr.GetNamedItem("Lose");
-                                    if (Enum.TryParse(motion.InnerText, true, out MotionDetail motionDetail))
-                                    {
-                                        motionSoundList.Add(new CustomInvitation.BookSoundInfo()
-                                        {
-                                            motion = motionDetail,
-                                            isWinExternal = bool.Parse(winExternal.InnerText),
-                                            winSound = winPath.InnerText,
-                                            isLoseExternal = bool.Parse(loseExternal.InnerText),
-                                            loseSound = losePath.InnerText
-                                        });
-                                    }
-                                }
-                            }
-                            extendedInfo.motionSoundList = motionSoundList;
-                        }
-                        XmlNode effectNode = xmlNode3.SelectSingleNode("AtkEffectPivotInfo");
-                        if (effectNode != null)
-                        {
-                            Dictionary<string, EffectPivot> atkEffectPivotDic = new Dictionary<string, EffectPivot>();
-                            AddPivot(atkEffectPivotDic, effectNode, "atkEffectRoot");
-                            AddPivot(atkEffectPivotDic, effectNode, "atkEffectPivot_H");
-                            AddPivot(atkEffectPivotDic, effectNode, "atkEffectPivot_J");
-                            AddPivot(atkEffectPivotDic, effectNode, "atkEffectPivot_Z");
-                            AddPivot(atkEffectPivotDic, effectNode, "atkEffectPivot_G");
-                            AddPivot(atkEffectPivotDic, effectNode, "atkEffectPivot_E");
-                            AddPivot(atkEffectPivotDic, effectNode, "atkEffectPivot_S");
-                            AddPivot(atkEffectPivotDic, effectNode, "atkEffectPivot_F");
-                            extendedInfo.atkEffectPivotDic = atkEffectPivotDic;
-                        }
-                        XmlNode specialNode = xmlNode3.SelectSingleNode("SpecialMotionPivotInfo");
-                        if (specialNode != null)
-                        {
-                            Dictionary<ActionDetail, EffectPivot> specialMotionPivotDic = new Dictionary<ActionDetail, EffectPivot>();
-                            for (int j = 0; j < 31; j++)
-                            {
-                                ActionDetail actionDetail = (ActionDetail)j;
-                                string text = actionDetail.ToString();
-                                XmlNode effectPivotNode = specialNode.SelectSingleNode(text);
-                                if (effectPivotNode != null)
-                                {
-                                    specialMotionPivotDic[actionDetail] = GetEffectPivot(effectPivotNode);
-                                }
-                            }
-                            extendedInfo.specialMotionPivotDic = specialMotionPivotDic;
-                        }
-                    }
-                }
-            }
-            catch (Exception message2)
-            {
-                Debug.LogError(message2);
-            }
-            return workshopAppearanceInfo;
-        }
-        private static void AddPivot(Dictionary<string, EffectPivot> atkEffectPivotDic, XmlNode effectNode, string pivotNode)
-        {
-            XmlNode effectPivotNode = effectNode.SelectSingleNode(pivotNode);
-            if (effectPivotNode != null)
-            {
-                atkEffectPivotDic[pivotNode] = GetEffectPivot(effectPivotNode);
-            }
-        }
-        private static EffectPivot GetEffectPivot(XmlNode effectPivotNode)
-        {
-            if (effectPivotNode == null)
-            {
-                return null;
-            }
-            var pivot = new EffectPivot();
-            var attr = effectPivotNode.Attributes;
-            if ((attr.GetNamedItem("x") ?? attr.GetNamedItem("pivot_x") ?? attr.GetNamedItem("head_x")) is XmlNode xnode)
-            {
-                pivot.localPosition.x = Tools.ParseFloatSafe(xnode.InnerText) / 100;
-            }
-            if ((attr.GetNamedItem("y") ?? attr.GetNamedItem("pivot_y") ?? attr.GetNamedItem("head_y")) is XmlNode ynode)
-            {
-                pivot.localPosition.x = Tools.ParseFloatSafe(ynode.InnerText) / 100;
-            }
-            if (attr.GetNamedItem("rotation") is XmlNode rnode)
-            {
-                pivot.localEulerAngles.z = Tools.ParseFloatSafe(rnode.InnerText);
-            }
-            SetPivotCoords(pivot, effectPivotNode);
-            return pivot;
-        }
-        private static void SetPivotCoords(EffectPivot pivot, XmlNode pivotNode)
-		{
-            pivot.localPosition = SetVectorCoords(pivotNode.SelectSingleNode("localPosition"), pivot.localPosition);
-            pivot.localScale = SetVectorCoords(pivotNode.SelectSingleNode("localScale"), pivot.localScale);
-            pivot.localEulerAngles = SetVectorCoords(pivotNode.SelectSingleNode("localEulerAngles"), pivot.localEulerAngles);
-        }
-        private static Vector3 SetVectorCoords(XmlNode coordsNode, Vector3 coords)
-        {
-            if (coordsNode != null)
-            {
-                if (coordsNode.Attributes.GetNamedItem("x") is XmlNode xnode)
-                {
-                    coords.x = Tools.ParseFloatSafe(xnode.InnerText);
-                }
-                if (coordsNode.Attributes.GetNamedItem("y") is XmlNode ynode)
-                {
-                    coords.y = Tools.ParseFloatSafe(ynode.InnerText);
-                }
-                if (coordsNode.Attributes.GetNamedItem("z") is XmlNode znode)
-                {
-                    coords.z = Tools.ParseFloatSafe(znode.InnerText);
-                }
-            }
-            return coords;
-        }
-        private static void LoadFaceCustom(Dictionary<Workshop.FaceCustomType, Sprite> faceCustomInfo)
-        {
-            FaceResourceSet eyeResourceSet = new FaceResourceSet();
-            FaceResourceSet browResourceSet = new FaceResourceSet();
-            FaceResourceSet mouthResourceSet = new FaceResourceSet();
-            HairResourceSet frontHairResourceSet = new HairResourceSet();
-            HairResourceSet rearHairResourceSet = new HairResourceSet();
-            foreach (KeyValuePair<Workshop.FaceCustomType, Sprite> keyValuePair in faceCustomInfo)
-            {
-                Workshop.FaceCustomType key = keyValuePair.Key;
-                Sprite value = keyValuePair.Value;
-                switch (key)
-                {
-                    case Workshop.FaceCustomType.Front_RearHair:
-                        rearHairResourceSet.Default = value;
-                        break;
-                    case Workshop.FaceCustomType.Front_FrontHair:
-                        frontHairResourceSet.Default = value;
-                        break;
-                    case Workshop.FaceCustomType.Front_Eye:
-                        eyeResourceSet.normal = value;
-                        break;
-                    case Workshop.FaceCustomType.Front_Brow_Normal:
-                        browResourceSet.normal = value;
-                        break;
-                    case Workshop.FaceCustomType.Front_Brow_Attack:
-                        browResourceSet.atk = value;
-                        break;
-                    case Workshop.FaceCustomType.Front_Brow_Hit:
-                        browResourceSet.hit = value;
-                        break;
-                    case Workshop.FaceCustomType.Front_Mouth_Normal:
-                        mouthResourceSet.normal = value;
-                        break;
-                    case Workshop.FaceCustomType.Front_Mouth_Attack:
-                        mouthResourceSet.atk = value;
-                        break;
-                    case Workshop.FaceCustomType.Front_Mouth_Hit:
-                        mouthResourceSet.hit = value;
-                        break;
-                    case Workshop.FaceCustomType.Side_RearHair_Rear:
-                        rearHairResourceSet.Side_Back = value;
-                        break;
-                    case Workshop.FaceCustomType.Side_FrontHair:
-                        frontHairResourceSet.Side_Front = value;
-                        break;
-                    case Workshop.FaceCustomType.Side_RearHair_Front:
-                        rearHairResourceSet.Side_Front = value;
-                        break;
-                    case Workshop.FaceCustomType.Side_Mouth:
-                        mouthResourceSet.atk_side = value;
-                        break;
-                    case Workshop.FaceCustomType.Side_Brow:
-                        browResourceSet.atk_side = value;
-                        break;
-                    case Workshop.FaceCustomType.Side_Eye:
-                        eyeResourceSet.atk_side = value;
-                        break;
-                }
-            }
-            eyeResourceSet.FillSprite();
-            browResourceSet.FillSprite();
-            mouthResourceSet.FillSprite();
-            if (faceCustomInfo.ContainsKey(Workshop.FaceCustomType.Front_Eye) || faceCustomInfo.ContainsKey(Workshop.FaceCustomType.Side_Eye))
-            {
-                if (originalEyeIndex >= 0 && originalEyeIndex < Singleton<CustomizingResourceLoader>.Instance._eyeResources.Count)
-                {
-                    Singleton<CustomizingResourceLoader>.Instance._eyeResources[originalEyeIndex] = eyeResourceSet;
-                    originalEyeIndex++;
-                }
-                else
-                {
-                    originalEyeIndex = -1;
-                    Singleton<CustomizingResourceLoader>.Instance._eyeResources.Add(eyeResourceSet);
-                }
-            }
-            if (faceCustomInfo.ContainsKey(Workshop.FaceCustomType.Front_Brow_Attack) || faceCustomInfo.ContainsKey(Workshop.FaceCustomType.Front_Brow_Hit) || faceCustomInfo.ContainsKey(Workshop.FaceCustomType.Front_Brow_Normal) || faceCustomInfo.ContainsKey(Workshop.FaceCustomType.Side_Brow))
-            {
-                if (originalBrowIndex >= 0 && originalBrowIndex < Singleton<CustomizingResourceLoader>.Instance._browResources.Count)
-                {
-                    Singleton<CustomizingResourceLoader>.Instance._browResources[originalBrowIndex] = browResourceSet;
-                    originalBrowIndex++;
-                }
-                else
-                {
-                    originalBrowIndex = -1;
-                    Singleton<CustomizingResourceLoader>.Instance._browResources.Add(browResourceSet);
-                }
-            }
-            if (faceCustomInfo.ContainsKey(Workshop.FaceCustomType.Front_Mouth_Attack) || faceCustomInfo.ContainsKey(Workshop.FaceCustomType.Front_Mouth_Hit) || faceCustomInfo.ContainsKey(Workshop.FaceCustomType.Front_Mouth_Normal) || faceCustomInfo.ContainsKey(Workshop.FaceCustomType.Side_Mouth))
-            {
-                if (originalMouthIndex >= 0 && originalMouthIndex < Singleton<CustomizingResourceLoader>.Instance._mouthResources.Count)
-                {
-                    Singleton<CustomizingResourceLoader>.Instance._mouthResources[originalMouthIndex] = mouthResourceSet;
-                    originalMouthIndex++;
-                }
-                else
-                {
-                    originalMouthIndex = -1;
-                    Singleton<CustomizingResourceLoader>.Instance._mouthResources.Add(mouthResourceSet);
-                }
-            }
-            if (faceCustomInfo.ContainsKey(Workshop.FaceCustomType.Front_FrontHair) || faceCustomInfo.ContainsKey(Workshop.FaceCustomType.Side_FrontHair))
-            {
-                if (originalFrontHairIndex >= 0 && originalFrontHairIndex < Singleton<CustomizingResourceLoader>.Instance._frontHairResources.Count)
-                {
-                    Singleton<CustomizingResourceLoader>.Instance._frontHairResources[originalFrontHairIndex] = frontHairResourceSet;
-                    originalFrontHairIndex++;
-                }
-                else
-                {
-                    originalFrontHairIndex = -1;
-                    Singleton<CustomizingResourceLoader>.Instance._frontHairResources.Add(frontHairResourceSet);
-                }
-            }
-            if (faceCustomInfo.ContainsKey(Workshop.FaceCustomType.Front_RearHair) || faceCustomInfo.ContainsKey(Workshop.FaceCustomType.Side_RearHair_Front) || faceCustomInfo.ContainsKey(Workshop.FaceCustomType.Side_RearHair_Rear))
-            {
-                if (originalRearHairIndex >= 0 && originalRearHairIndex < Singleton<CustomizingResourceLoader>.Instance._rearHairResources.Count)
-                {
-                    Singleton<CustomizingResourceLoader>.Instance._rearHairResources[originalRearHairIndex] = rearHairResourceSet;
-                    originalRearHairIndex++;
-                }
-                else
-                {
-                    originalRearHairIndex = -1;
-                    Singleton<CustomizingResourceLoader>.Instance._rearHairResources.Add(rearHairResourceSet);
-                }
-            }
-        }
-        private static void LoadCoreThumbs()
-        {
-            var dic = new Dictionary<string, int>();
-            var list = Singleton<BookXmlList>.Instance._list;
-            foreach (BookXmlInfo info in list)
-            {
-                if (info.id.IsWorkshop())
-                {
-                    continue;
-                }
-                foreach (string skinName in info.CharacterSkin)
-                {
-                    if (!dic.ContainsKey(skinName))
-                    {
-                        dic.Add(skinName, info._id);
-                    }
-                }
-            }
-            CoreThumbDic = dic;
-        }
-        private static void LoadCoreSounds()
-		{
-            if (CharacterSound._motionSoundResources == null)
+			get
 			{
-                CharacterSound._motionSoundResources = new Dictionary<string, AudioClip>();
+				Staticpath = Directory.CreateDirectory(Application.dataPath + "/Managed/BaseMod/StaticInfo").FullName;
+				return Staticpath;
 			}
-            foreach (AudioClip audioClip in Resources.LoadAll<AudioClip>("Sounds/MotionSound"))
-            {
-                if (!CharacterSound._motionSoundResources.ContainsKey(audioClip.name))
-                {
-                    CharacterSound._motionSoundResources.Add(audioClip.name, audioClip);
-                }
-            }
-        }
-        //Apperance
-        //CreateSkin
-        [HarmonyPatch(typeof(SdCharacterUtil), "CreateSkin")]
-        [HarmonyPrefix]
-        private static bool SdCharacterUtil_CreateSkin_Pre(UnitDataModel unit, Faction faction, Transform characterRoot, ref CharacterAppearance __result)
-        {
-            try
-            {
-                if (!string.IsNullOrWhiteSpace(unit.workshopSkin))
-                {
-                    return true;
-                }
-                Workshop.WorkshopSkinData workshopBookSkinData = Singleton<CustomizingBookSkinLoader>.Instance.GetWorkshopBookSkinData(unit.CustomBookItem.BookId.packageId, unit.CustomBookItem.GetOriginalCharcterName(), "_" + unit.appearanceType);
-                if (workshopBookSkinData != null && unit.CustomBookItem.ClassInfo.skinType == "Custom")
-                {
-                    UnitCustomizingData customizeData = unit.customizeData;
-                    GiftInventory giftInventory = unit.giftInventory;
-                    GameObject gameObject = CreateCustomCharacter_new(workshopBookSkinData, out string resourceName, characterRoot);
-                    CharacterAppearance characterAppearance = null;
-                    Workshop.WorkshopSkinDataSetter component = gameObject.GetComponent<Workshop.WorkshopSkinDataSetter>();
-                    component.SetData(workshopBookSkinData);
-                    List<CustomInvitation.BookSoundInfo> motionSoundList = unit.CustomBookItem.ClassInfo.motionSoundList;
-                    if (motionSoundList != null && motionSoundList.Count > 0)
-                    {
-                        string motionSoundPath = ModUtil.GetMotionSoundPath(Singleton<ModContentManager>.Instance.GetModPath(unit.CustomBookItem.ClassInfo.id.packageId));
-                        CharacterSound component2 = gameObject.GetComponent<CharacterSound>();
-                        if (component2 != null)
-                        {
-                            component2.SetMotionSounds(motionSoundList, motionSoundPath);
-                        }
-                    }
-                    characterAppearance = gameObject.GetComponent<CharacterAppearance>();
-                    characterAppearance._initialized = false;
-                    characterAppearance.Initialize(resourceName);
-                    characterAppearance.InitCustomData(customizeData, unit.defaultBook.GetBookClassInfoId());
-                    characterAppearance.InitGiftDataAll(giftInventory.GetEquippedList());
-                    characterAppearance.ChangeMotion(ActionDetail.Standing);
-                    characterAppearance.ChangeLayer("Character");
-                    characterAppearance.SetLibrarianOnlySprites(faction);
-                    try
-                    {
-                        gameObject.GetComponent<Workshop.WorkshopSkinDataSetter>().LateInit();
-                    }
-                    catch { }
-                    __result = characterAppearance;
-                    return false;
-                }
-            }
-            catch (Exception ex)
-            {
-                File.WriteAllText(Application.dataPath + "/Mods/CreateSkinerror.log", ex.Message + Environment.NewLine + ex.StackTrace);
-            }
-            return true;
-        }
-        //ChangeEgoSkin
-        [HarmonyPatch(typeof(BattleUnitView), "ChangeEgoSkin")]
-        [HarmonyPrefix]
-        private static bool BattleUnitView_ChangeEgoSkin_Pre(BattleUnitView __instance, string egoName, bool bookNameChange = true)
-        {
-            try
-            {
-                if (LorName.IsCompressed(egoName))
-                {
-                    __instance.ChangeEgoSkin(new LorName(egoName), bookNameChange);
-                    return false;
-                }
-                Workshop.WorkshopSkinData workshopBookSkinData = Singleton<CustomizingBookSkinLoader>.Instance.GetWorkshopBookSkinData(__instance.model.UnitData.unitData.bookItem.ClassInfo.workshopID, egoName);
-                if (workshopBookSkinData == null)
-                {
-                    return true;
-                }
-                __instance._skinInfo.state = BattleUnitView.SkinState.EGO;
-                __instance._skinInfo.skinName = egoName;
-                UnitCustomizingData customizeData = __instance.model.UnitData.unitData.customizeData;
-                GiftInventory giftInventory = __instance.model.UnitData.unitData.giftInventory;
-                ActionDetail currentMotionDetail = __instance.charAppearance.GetCurrentMotionDetail();
-                __instance.DestroySkin();
-                GameObject gameObject = CreateCustomCharacter_new(workshopBookSkinData, out string resourceName, __instance.characterRotationCenter);
-                List<CustomInvitation.BookSoundInfo> motionSoundList = __instance.model.UnitData.unitData.bookItem.ClassInfo.motionSoundList;
-                if (motionSoundList != null && motionSoundList.Count > 0)
-                {
-                    string motionSoundPath = ModUtil.GetMotionSoundPath(Singleton<ModContentManager>.Instance.GetModPath(__instance.model.UnitData.unitData.bookItem.ClassInfo.id.packageId));
-                    gameObject.GetComponent<CharacterSound>()?.SetMotionSounds(motionSoundList, motionSoundPath);
-                }
-                gameObject.GetComponent<Workshop.WorkshopSkinDataSetter>().SetData(workshopBookSkinData);
-                __instance.charAppearance = gameObject.GetComponent<CharacterAppearance>();
-                __instance.charAppearance._initialized = false;
-                __instance.charAppearance.Initialize(resourceName);
-                __instance.charAppearance.InitCustomData(customizeData, __instance.model.UnitData.unitData.defaultBook.GetBookClassInfoId());
-                __instance.charAppearance.InitGiftDataAll(giftInventory.GetEquippedList());
-                __instance.charAppearance.ChangeMotion(currentMotionDetail);
-                __instance.charAppearance.ChangeLayer("Character");
-                __instance.charAppearance.SetLibrarianOnlySprites(__instance.model.faction);
-                if (bookNameChange)
-                {
-                    __instance.model.Book.SetCharacterName(egoName);
-                }
-                if (customizeData != null)
-                {
-                    __instance.ChangeHeight(customizeData.height);
-                }
-                return false;
-            }
-            catch (Exception ex)
-            {
-                File.WriteAllText(Application.dataPath + "/Mods/ChangeEgoSkinerror.log", ex.Message + Environment.NewLine + ex.StackTrace);
-            }
-            return true;
-        }
-        //ChangeSkin
-        [HarmonyPatch(typeof(BattleUnitView), "ChangeSkin")]
-        [HarmonyPrefix]
-        private static bool BattleUnitView_ChangeSkin_Pre(BattleUnitView __instance, string charName)
-        {
-            try
-            {
-                if (LorName.IsCompressed(charName))
-                {
-                    __instance.ChangeSkin(new LorName(charName));
-                    return false;
-                }
-                Workshop.WorkshopSkinData workshopBookSkinData = Singleton<CustomizingBookSkinLoader>.Instance.GetWorkshopBookSkinData(__instance.model.UnitData.unitData.bookItem.ClassInfo.workshopID, charName);
-                if (workshopBookSkinData == null)
-                {
-                    return true;
-                }
-                __instance._skinInfo.state = BattleUnitView.SkinState.Changed;
-                __instance._skinInfo.skinName = charName;
-                UnitCustomizingData customizeData = __instance.model.UnitData.unitData.customizeData;
-                GiftInventory giftInventory = __instance.model.UnitData.unitData.giftInventory;
-                ActionDetail currentMotionDetail = __instance.charAppearance.GetCurrentMotionDetail();
-                __instance.DestroySkin();
-                GameObject gameObject = CreateCustomCharacter_new(workshopBookSkinData, out string resourceName, __instance.characterRotationCenter);
-                List<CustomInvitation.BookSoundInfo> motionSoundList = __instance.model.UnitData.unitData.bookItem.ClassInfo.motionSoundList;
-                if (motionSoundList != null && motionSoundList.Count > 0)
-                {
-                    string motionSoundPath = ModUtil.GetMotionSoundPath(Singleton<ModContentManager>.Instance.GetModPath(__instance.model.UnitData.unitData.bookItem.ClassInfo.id.packageId));
-                    gameObject.GetComponent<CharacterSound>()?.SetMotionSounds(motionSoundList, motionSoundPath);
-                }
-                gameObject.GetComponent<Workshop.WorkshopSkinDataSetter>().SetData(workshopBookSkinData);
-                __instance.charAppearance = gameObject.GetComponent<CharacterAppearance>();
-                __instance.charAppearance._initialized = false;
-                __instance.charAppearance.Initialize(resourceName);
-                __instance.charAppearance.InitCustomData(customizeData, __instance.model.UnitData.unitData.defaultBook.GetBookClassInfoId());
-                __instance.charAppearance.InitGiftDataAll(giftInventory.GetEquippedList());
-                __instance.charAppearance.ChangeMotion(currentMotionDetail);
-                __instance.charAppearance.ChangeLayer("Character");
-                __instance.charAppearance.SetLibrarianOnlySprites(__instance.model.faction);
-                if (customizeData != null)
-                {
-                    __instance.ChangeHeight(customizeData.height);
-                }
-                return false;
-            }
-            catch (Exception ex)
-            {
-                File.WriteAllText(Application.dataPath + "/Mods/ChangeSkinerror.log", ex.Message + Environment.NewLine + ex.StackTrace);
-            }
-            return true;
-        }/*
-        //Clone special motion characterMotion
-        [HarmonyPatch(typeof(Workshop.WorkshopSkinDataSetter), "SetMotionData")]
-        [HarmonyPrefix]
-        private static void WorkshopSkinDataSetter_SetMotionData_Pre(Workshop.WorkshopSkinDataSetter __instance, ActionDetail motion)
-        {
-            try
-            {
-                if (__instance.Appearance.GetCharacterMotion(motion) == null)
-                {
-                    CharacterMotion NewMotion = CopyCharacterMotion(__instance.Appearance, motion);
-                    __instance.Appearance._motionList.Add(NewMotion);
-                    if (__instance.Appearance._motionList.Count > 0)
-                    {
-                        foreach (CharacterMotion characterMotion in __instance.Appearance._motionList)
-                        {
-                            if (!__instance.Appearance.CharacterMotions.ContainsKey(characterMotion.actionDetail))
-                            {
-                                __instance.Appearance.CharacterMotions.Add(characterMotion.actionDetail, characterMotion);
-                            }
-                            characterMotion.gameObject.SetActive(false);
-                        }
-                    }
-                }
-                else if (motion >= ActionDetail.Special)
-                {
-                    __instance.Appearance.GetCharacterMotion(motion).transform.position = __instance.Appearance._motionList[0].transform.position;
-                    __instance.Appearance.GetCharacterMotion(motion).transform.localPosition = __instance.Appearance._motionList[0].transform.localPosition;
-                    __instance.Appearance.GetCharacterMotion(motion).transform.localScale = __instance.Appearance._motionList[0].transform.localScale;
-                    __instance.Appearance.GetCharacterMotion(motion).transform.name = "Custom_" + motion.ToString();
-                }
-            }
-            catch (Exception ex)
-            {
-                File.WriteAllText(Application.dataPath + "/Mods/SetMotionDataerror.log", ex.Message + Environment.NewLine + ex.StackTrace);
-            }
-        }*/
-        public static GameObject CreateCustomCharacter_new(Workshop.WorkshopSkinData workshopSkinData, out string resourceName, Transform characterRotationCenter = null)
-        {
-            GameObject result = null;
-            resourceName = "";
-            try
-            {
-                if (workshopSkinData != null)
-                {
-                    GameObject original = XLRoot.CustomAppearancePrefab;
-                    if (characterRotationCenter != null)
-                    {
-                        result = UnityEngine.Object.Instantiate(original, characterRotationCenter);
-                    }
-                    else
-                    {
-                        result = UnityEngine.Object.Instantiate(original);
-                    }
-                    resourceName = workshopSkinData.dataName;
-                }
-            }
-            catch (Exception ex)
-            {
-                File.WriteAllText(Application.dataPath + "/Mods/CCCnewerror.log", ex.Message + Environment.NewLine + ex.StackTrace);
-                result = null;
-            }
-            return result;
-        }
-        public static CharacterMotion CopyCharacterMotion(CharacterAppearance apprearance, ActionDetail detail)
-        {
-            CharacterMotion characterMotion = UnityEngine.Object.Instantiate(apprearance._motionList[0]);
-            characterMotion.transform.parent = apprearance._motionList[0].transform.parent;
-            characterMotion.transform.position = apprearance._motionList[0].transform.position;
-            characterMotion.transform.localPosition = apprearance._motionList[0].transform.localPosition;
-            characterMotion.transform.localScale = apprearance._motionList[0].transform.localScale;
-            characterMotion.transform.name = "Custom_" + detail.ToString();
-            characterMotion.actionDetail = detail;
-            characterMotion.motionSpriteSet.Clear();
-            characterMotion.motionSpriteSet.Add(new SpriteSet(characterMotion.transform.Find("Customize_Renderer").gameObject.GetComponent<SpriteRenderer>(), CharacterAppearanceType.Body));
-            characterMotion.motionSpriteSet.Add(new SpriteSet(characterMotion.transform.Find("CustomizePivot").Find("DummyHead").gameObject.GetComponent<SpriteRenderer>(), CharacterAppearanceType.Head));
-            characterMotion.motionSpriteSet.Add(new SpriteSet(characterMotion.transform.Find("Customize_Renderer_Back").gameObject.GetComponent<SpriteRenderer>(), CharacterAppearanceType.Body));
-            return characterMotion;
-        }
-        //CharacterSound
-        [HarmonyPatch(typeof(CharacterSound), "LoadAudioCoroutine")]
-        [HarmonyPrefix]
-        private static bool CharacterSound_LoadAudioCoroutine_Pre(CharacterSound __instance, string path, List<CharacterSound.ExternalSound> externalSoundList, ref IEnumerator __result)
-        {
-            try
-            {
-                __result = LoadAudioCoroutine(path, externalSoundList, __instance._motionSounds);
-            }
-            catch (Exception ex)
-            {
-                Singleton<ModContentManager>.Instance.AddErrorLog(ex.Message + Environment.NewLine + ex.StackTrace);
-                File.WriteAllText(Application.dataPath + "/Mods/LoadAudioCoroutineerror.log", ex.Message + Environment.NewLine + ex.StackTrace);
-            }
-            return false;
-        }
-        private static IEnumerator LoadAudioCoroutine(string path, List<CharacterSound.ExternalSound> externalSoundList, List<CharacterSound.Sound> motionSounds)
-        {
-            foreach (CharacterSound.ExternalSound externalSound1 in externalSoundList)
-            {
-                CharacterSound.ExternalSound externalSound = externalSound1;
-                string soundName = externalSound.soundName;
-                bool win = externalSound.isWin;
-                MotionDetail motion = externalSound.motion;
-                string path1 = Path.Combine(path, soundName);
-                AudioType audioType = AudioType.OGGVORBIS;
-                if (path1.EndsWith(".wav"))
-                    audioType = AudioType.WAV;
-                if (File.Exists(path1))
-                {
-                    using (UnityWebRequest www = UnityWebRequestMultimedia.GetAudioClip("file://" + path1, audioType))
-                    {
-                        yield return www.SendWebRequest();
-                        if (www.isNetworkError)
-                        {
-                            Debug.Log(www.error);
-                        }
-                        else
-                        {
-                            DownloadHandlerAudioClip downloadHandler = www.downloadHandler as DownloadHandlerAudioClip;
-                            if (downloadHandler != null && downloadHandler.isDone)
-                            {
-                                AudioClip audioClip = downloadHandler.audioClip;
-                                audioClip.name = soundName;
-                                CharacterSound.Sound sound1 = motionSounds.Find(x => x.motion == motion);
-                                if (sound1 != null)
-                                {
-                                    if (win)
-                                    {
-                                        sound1.winSound = audioClip;
-                                    }
-                                    else
-                                    {
-                                        sound1.loseSound = audioClip;
-                                    }
-                                }
-                                else
-                                {
-                                    CharacterSound.Sound sound2 = new CharacterSound.Sound
-                                    {
-                                        motion = motion
-                                    };
-                                    if (win)
-                                    {
-                                        sound2.winSound = audioClip;
-                                    }
-                                    else
-                                    {
-                                        sound2.loseSound = audioClip;
-                                    }
-                                    motionSounds.Add(sound2);
-                                    sound2 = null;
-                                }
-                                audioClip = null;
-                                sound1 = null;
-                            }
-                            downloadHandler = null;
-                        }
-                    }
-                }
-                soundName = null;
-                soundName = null;
-                path1 = null;
-                externalSound = null;
-            }
-        }
-        [HarmonyPatch(typeof(FaceEditor), "Init")]
-        [HarmonyPostfix]
-        private static void FaceEditor_Init_Post(FaceEditor __instance)
-        {
-            try
-            {
-                __instance.face.gameObject.GetComponent<RectTransform>().sizeDelta = __instance.face.sprite.pivot;
-                __instance.frontHair.gameObject.GetComponent<RectTransform>().sizeDelta = __instance.frontHair.sprite.pivot;
-                __instance.backHair.gameObject.GetComponent<RectTransform>().sizeDelta = __instance.backHair.sprite.pivot;
-                __instance.mouth.gameObject.GetComponent<RectTransform>().sizeDelta = __instance.mouth.sprite.pivot;
-                __instance.brow.gameObject.GetComponent<RectTransform>().sizeDelta = __instance.brow.sprite.pivot;
-            }
-            catch (Exception ex)
-            {
-                File.WriteAllText(Application.dataPath + "/Mods/FaceEditorIniterror.log", ex.Message + Environment.NewLine + ex.StackTrace);
-            }
-        }
-        //CustomProjection
-        //Tab
-        [HarmonyPatch(typeof(UIEquipPageCustomizePanel), "ApplyFilterAll")]
-        [HarmonyPrefix]
-        private static bool UIEquipPageCustomizePanel_ApplyFilterAll_Pre(UIEquipPageCustomizePanel __instance)
-        {
-            try
-            {
-                if (!InitWorkshopSkinChangeButton)
-                {
-                    uiEquipPageCustomizePanel = __instance;
-                    __instance.gameObject.AddComponent<WorkshopSkinChangeButton>();
-                    InitWorkshopSkinChangeButton = true;
-                }
-                if (__instance.isWorkshop)
-                {
-                    __instance.filteredBookIdList.Clear();
-                    __instance.filteredBookIdList.AddRange(__instance.originBookIdList);
-                }
-                else
-                {
-                    List<Grade> storyGradeFilter = __instance.gradeFilter.GetStoryGradeFilter();
-                    __instance.filteredBookIdList.Clear();
-                    bool flag2 = storyGradeFilter.Count == 0;
-                    if (flag2)
-                    {
-                        __instance.filteredBookIdList.AddRange(__instance.originBookIdList);
-                    }
-                    foreach (Grade g2 in storyGradeFilter)
-                    {
-                        Grade g = g2;
-                        __instance.filteredBookIdList.AddRange(__instance.originBookIdList.FindAll((int x) => GetModWorkshopBookData(x).Chapter == (int)g));
-                    }
-                }
-                __instance.filteredBookIdList.Sort((int a, int b) => b.CompareTo(a));
-                Predicate<int> match = (int x) => Singleton<BookXmlList>.Instance.GetData(x).RangeType != __instance.panel.Parent.SelectedUnit.bookItem.ClassInfo.RangeType;
-                switch (__instance.panel.Parent.SelectedUnit.bookItem.ClassInfo.RangeType)
-                {
-                    case EquipRangeType.Melee:
-                        match = ((int x) => GetModWorkshopBookData(x).RangeType == EquipRangeType.Range);
-                        break;
-                    case EquipRangeType.Range:
-                        match = ((int x) => GetModWorkshopBookData(x).RangeType == EquipRangeType.Melee);
-                        break;
-                    case EquipRangeType.Hybrid:
-                        match = ((int x) => GetModWorkshopBookData(x).RangeType != EquipRangeType.Hybrid);
-                        break;
-                }
-                List<int> collection = __instance.filteredBookIdList.FindAll(match);
-                __instance.filteredBookIdList.RemoveAll(match);
-                __instance.filteredBookIdList.AddRange(collection);
-                int num = __instance.GetMaxRow();
-                __instance.scrollBar.SetScrollRectSize(__instance.column * __instance.slotWidth, (num + __instance.row - 1) * __instance.slotHeight);
-                __instance.scrollBar.SetWindowPosition(0f, 0f);
-                __instance.ParentSelectable.ChildSelectable = __instance.bookSlotList[0].selectable;
-                __instance.UpdateBookListPage(false);
-                return false;
-            }
-            catch (Exception ex)
-            {
-                Singleton<ModContentManager>.Instance.AddErrorLog(ex.Message + Environment.NewLine + ex.StackTrace);
-                File.WriteAllText(Application.dataPath + "/Mods/UIEquipPageCustomizePanel_ApplyFilterAll.log", ex.Message + Environment.NewLine + ex.StackTrace);
-            }
-            return true;
-        }
-        //Tab
-        [HarmonyPatch(typeof(UIEquipPageCustomizePanel), "UpdateEquipPageSlotList")]
-        [HarmonyPrefix]
-        private static bool UIEquipPageCustomizePanel_UpdateEquipPageSlotList_Pre(UIEquipPageCustomizePanel __instance)
-        {
-            try
-            {
-                for (int i = 0; i < __instance.bookSlotList.Count; i++)
-                {
-                    if (i < __instance.currentScreenBookIdList.Count)
-                    {
-                        BookModel data = new BookModel(GetModWorkshopBookData(__instance.currentScreenBookIdList[i]));
-                        __instance.bookSlotList[i].SetData(data);
-                        __instance.bookSlotList[i].SetActiveSlot(true);
-                        bool flag2 = __instance.panel.PreviewData.customBookInfo != null && __instance.bookSlotList[i].BookDataModel.ClassInfo.id == __instance.panel.PreviewData.customBookInfo.id;
-                        if (flag2)
-                        {
-                            __instance.bookSlotList[i].SetHighlighted(true, false, false);
-                        }
-                    }
-                    else
-                    {
-                        __instance.bookSlotList[i].SetActiveSlot(false);
-                    }
-                }
-                __instance.UpdatePageButtons();
-                return false;
-            }
-            catch (Exception ex)
-            {
-                File.WriteAllText(Application.dataPath + "/Mods/UIEquipPageCustomizePanel_UpdateEquipPageSlotList.log", ex.Message + Environment.NewLine + ex.StackTrace);
-            }
-            return true;
-        }
-        //Remove Garbage Projection
-        [HarmonyPatch(typeof(CustomCoreBookInventoryModel), "GetBookIdList_CustomCoreBook")]
-        [HarmonyPostfix]
-        private static List<int> CustomCoreBookInventoryModel_GetBookIdList_CustomCoreBook_Post(List<int> idList)
-        {
-            try
-            {
-                idList.RemoveAll(x => Singleton<BookInventoryModel>.Instance.GetBookCount(x) < 1);
-            }
-            catch (Exception ex)
-            {
-                File.WriteAllText(Application.dataPath + "/Mods/RemoveGarbageProjectionerror.log", ex.Message + Environment.NewLine + ex.StackTrace);
-            }
-            return idList;
-        }
-        public static BookXmlInfo GetModWorkshopBookData(int i)
-        {
-            BookXmlInfo data;
-            if (isModWorkshopSkin && ModWorkshopBookIndex != null && ModWorkshopBookIndex.ContainsKey(i))
-            {
-                data = Singleton<BookXmlList>.Instance.GetData(ModWorkshopBookIndex[i], true);
-            }
-            else
-            {
-                data = Singleton<BookXmlList>.Instance.GetData(i);
-            }
-            return data;
-        }
-        //savecustombook
-        [HarmonyPatch(typeof(UnitDataModel), "GetSaveData")]
-        [HarmonyPostfix]
-        private static void UnitDataModel_GetSaveData_Post(UnitDataModel __instance, SaveData __result)
-        {
-            try
-            {
-                if (__instance._CustomBookItem != null)
-                {
-                    LorId bookClassInfoId = __instance._CustomBookItem.GetBookClassInfoId();
-                    SaveData customcorebook = new SaveData(SaveDataType.Dictionary);
-                    customcorebook.AddData("_pid", new SaveData(bookClassInfoId.packageId));
-                    customcorebook.AddData("_id", new SaveData(bookClassInfoId.id));
-                    __result.GetDictionarySelf()["customcorebookInstanceId"] = customcorebook;
-                }
+		}
+		public static string LocalizePath
+		{
+			get
+			{
+				Localizepath = Directory.CreateDirectory(Application.dataPath + "/Managed/BaseMod/Localize/" + TextDataModel.CurrentLanguage).FullName;
+				return Localizepath;
+			}
+		}
+		public static string StoryPath_Static
+		{
+			get
+			{
+				StoryStaticpath = Directory.CreateDirectory(Application.dataPath + "/Managed/BaseMod/Story/EffectInfo").FullName;
+				return StoryStaticpath;
+			}
+		}
+		public static string StoryPath_Localize
+		{
+			get
+			{
+				Storylocalizepath = Directory.CreateDirectory(Application.dataPath + "/Managed/BaseMod/Story/Localize/" + TextDataModel.CurrentLanguage).FullName;
+				return Storylocalizepath;
+			}
+		}
+		public static List<ModContent> LoadedModContents
+		{
+			get
+			{
+				return ModContentManager.Instance._loadedContents;
+			}
+		}
+		static bool VoidPre()
+		{
+			try
+			{
+				return false;
+			}
+			catch (Exception ex)
+			{
+				ModContentManager.Instance.AddErrorLog(ex.Message + Environment.NewLine + ex.StackTrace);
+				File.WriteAllText(Application.dataPath + "/Mods/error.log", ex.Message + Environment.NewLine + ex.StackTrace);
+			}
+			return true;
+		}
+		public static void Init()
+		{
+			try
+			{
+				path = Path.GetDirectoryName(Uri.UnescapeDataString(new UriBuilder(Assembly.GetExecutingAssembly().CodeBase).Path));
+				//IsEditing = false;
+				AssemList = new List<Assembly>();
+				LoadedAssembly = new List<string>();
+				ArtWorks = null;
+				BookThumb = null;
+				AudioClips = null;
+				CustomEffects = new Dictionary<string, Type>();
+				CustomMapManager = new Dictionary<string, Type>();
+				CustomBattleDialogModel = new Dictionary<string, Type>();
+				CustomGiftPassive = new Dictionary<string, Type>();
+				CustomEmotionCardAbility = new Dictionary<string, Type>();
+				ModStoryCG = new Dictionary<LorId, ModStroyCG>();
+				ModWorkShopId = new Dictionary<Assembly, string>();
+				IsModStorySelected = false;
+				try
+				{
+					CreateShortcuts();
+					ExportDocuments();
+				}
+				catch { }
+			}
+			catch (Exception ex)
+			{
+				ModContentManager.Instance.AddErrorLog(ex.Message + Environment.NewLine + ex.StackTrace);
+				File.WriteAllText(Application.dataPath + "/Mods/error.log", ex.Message + Environment.NewLine + ex.StackTrace);
+			}
+		}
+		static void CreateShortcuts()
+		{
+			string baseModPath = ModContentManager.Instance.GetModPath("BaseMod");
+			UtilTools.CreateShortcut(Application.dataPath + "/Managed/BaseMod/", "BaseMod for Workshop", baseModPath, baseModPath, "Way to BaseMod Files");
+			UtilTools.CreateShortcut(Application.dataPath + "/Mods/", "Player.log", SaveManager.savePath + "/Player.log", SaveManager.savePath, "Way to Player.log");
+		}
+		static void ExportDocuments()
+		{
+			string baseModPath = ModContentManager.Instance.GetModPath("BaseMod");
+			try
+			{
+				if (File.Exists(baseModPath + "/SteamworkUploader.rar"))
+				{
+					File.Copy(baseModPath + "/SteamworkUploader.rar", Application.dataPath + "/Managed/BaseMod/SteamworkUploader.rar", true);
+				}
+			}
+			catch { }
+			if (Directory.Exists(baseModPath + "/Documents/"))
+			{
+				UtilTools.CopyDir(baseModPath + "/Documents", Application.dataPath + "/Managed/BaseMod/Documents");
+			}
+		}
+		public static void LoadAssemblyFiles()
+		{
+			ModSaveTool.LoadedModsWorkshopId.Add("BaseMod");
+			foreach (ModContent modContent in LoadedModContents)
+			{
+				ModContentManager.Instance._currentPid = modContent._itemUniqueId;
+				DirectoryInfo _dirInfo = modContent._dirInfo;
+				Assembly currentAssembly;
+				var config = BasemodConfig.FindBasemodConfig(modContent._itemUniqueId);
+				if (config.IgnoreStaticFiles)
+				{
+					continue;
+				}
+				foreach (FileInfo fileInfo in _dirInfo.GetFiles())
+				{
+					string errorname = "unknown";
+					try
+					{
+						if (fileInfo.Name.Contains(".dll") && !LoadedAssembly.Contains(fileInfo.FullName))
+						{
+							LoadedAssembly.Add(fileInfo.Directory.FullName);
+							errorname = "LoadAssembly";
+							currentAssembly = Assembly.LoadFile(fileInfo.FullName);
+							errorname = "GetAssemblyTypes";
+							IEnumerable<Type> types;
+							try
+							{
+								types = currentAssembly.GetTypes();
+							}
+							catch (ReflectionTypeLoadException r)
+							{
+								ModContentManager.Instance.AddErrorLog("Load_" + fileInfo.Name + "_" + errorname + "_Error");
+								File.WriteAllText(Application.dataPath + "/Mods/Load_" + fileInfo.Name + "_" + errorname + "_Error" + ".log", string.Join("\n", r.LoaderExceptions.Select(e => e.ToString())));
+								types = r.Types.Where(t => t != null);
+							}
+							foreach (Type type in types)
+							{
+								errorname = "LoadCustomTypes";
+								string name = type.Name;
+								if (type.IsSubclassOf(typeof(DiceAttackEffect)) && name.StartsWith("DiceAttackEffect_"))
+								{
+									CustomEffects[name.Substring("DiceAttackEffect_".Length).Trim()] = type;
+								}
+								if (type.IsSubclassOf(typeof(CustomMapManager)) && name.EndsWith("MapManager"))
+								{
+									CustomMapManager[name.Trim()] = type;
+								}
+								if (type.IsSubclassOf(typeof(BattleDialogueModel)) && name.StartsWith("BattleDialogueModel_"))
+								{
+									CustomBattleDialogModel[name.Substring("BattleDialogueModel_".Length).Trim()] = type;
+								}
+								if (type.IsSubclassOf(typeof(PassiveAbilityBase)) && name.StartsWith("GiftPassiveAbility_"))
+								{
+									CustomGiftPassive[name.Substring("GiftPassiveAbility_".Length).Trim()] = type;
+								}
+								if (type.IsSubclassOf(typeof(EmotionCardAbilityBase)) && name.StartsWith("EmotionCardAbility_"))
+								{
+									CustomEmotionCardAbility[name.Substring("EmotionCardAbility_".Length).Trim()] = type;
+								}
+								if (type.IsSubclassOf(typeof(QuestMissionScriptBase)) && name.StartsWith("QuestMissionScript_"))
+								{
+									CustomQuest[name.Substring("QuestMissionScript_".Length).Trim()] = type;
+								}
+								errorname = "LoadHarmonyPatch";
+								if (name == "Harmony_Patch" || (type != null && type.BaseType != null && type.BaseType.Name == "Harmony_Patch"))
+								{
+									Activator.CreateInstance(type);
+								}
+							}
+							errorname = "LoadOtherTypes";
+							LoadTypesFromAssembly(types, fileInfo.Name);
+							ModSaveTool.LoadedModsWorkshopId.Add(Tools.GetModId(currentAssembly));
+							AssemList.Add(currentAssembly);
+						}
+					}
+					catch (Exception ex)
+					{
+						ModContentManager.Instance.AddErrorLog("Load_" + fileInfo.Name + "_" + errorname + "_Error");
+						File.WriteAllText(Application.dataPath + "/Mods/Load_" + fileInfo.Name + "_" + errorname + "_Error" + ".log", ex.ToString());
+					}
+				}
+				ModContentManager.Instance._currentPid = "";
+			}
+			CallAllInitializer();
+		}
+		static void CallAllInitializer()
+		{
+			foreach (var (pid, filename, initializer) in allInitializers)
+			{
+				ModContentManager.Instance._currentPid = pid;
+				try
+				{
+					initializer.OnInitializeMod();
+				}
+				catch (Exception ex)
+				{
+					ModContentManager.Instance.AddErrorLog($"OnInitialize_{filename}_{initializer.GetType().Name}_Error");
+					File.WriteAllText(Application.dataPath + $"/Mods/OnInitialize_{filename}_{initializer.GetType().Name}_Error.log", ex.ToString());
+				}
+				ModContentManager.Instance._currentPid = "";
+			}
+			allInitializers.Clear();
+		}
+		static void LoadTypesFromAssembly(IEnumerable<Type> types, string filename)
+		{
+			AssemblyManager assemblyManager = AssemblyManager.Instance;
+			foreach (Type type in types)
+			{
+				string name = type.Name;
+				if (type.IsSubclassOf(typeof(DiceCardSelfAbilityBase)) && name.StartsWith("DiceCardSelfAbility_"))
+				{
+					assemblyManager._diceCardSelfAbilityDict.Add(name.Substring("DiceCardSelfAbility_".Length), type);
+				}
+				else if (type.IsSubclassOf(typeof(DiceCardAbilityBase)) && name.StartsWith("DiceCardAbility_"))
+				{
+					assemblyManager._diceCardAbilityDict.Add(name.Substring("DiceCardAbility_".Length), type);
+				}
+				else if (type.IsSubclassOf(typeof(BehaviourActionBase)) && name.StartsWith("BehaviourAction_"))
+				{
+					assemblyManager._behaviourActionDict.Add(name.Substring("BehaviourAction_".Length), type);
+				}
+				else if (type.IsSubclassOf(typeof(PassiveAbilityBase)) && name.StartsWith("PassiveAbility_"))
+				{
+					assemblyManager._passiveAbilityDict.Add(name.Substring("PassiveAbility_".Length), type);
+				}
+				else if (type.IsSubclassOf(typeof(DiceCardPriorityBase)) && name.StartsWith("DiceCardPriority_"))
+				{
+					assemblyManager._diceCardPriorityDict.Add(name.Substring("DiceCardPriority_".Length), type);
+				}
+				else if (type.IsSubclassOf(typeof(EnemyUnitAggroSetter)) && name.StartsWith("EnemyUnitAggroSetter_"))
+				{
+					assemblyManager._enemyUnitAggroSetterDict.Add(name.Substring("EnemyUnitAggroSetter_".Length), type);
+				}
+				else if (type.IsSubclassOf(typeof(EnemyTeamStageManager)) && name.StartsWith("EnemyTeamStageManager_"))
+				{
+					assemblyManager._enemyTeamStageManagerDict.Add(name.Substring("EnemyTeamStageManager_".Length), type);
+				}
+				else if (type.IsSubclassOf(typeof(EnemyUnitTargetSetter)) && name.StartsWith("EnemyUnitTargetSetter_"))
+				{
+					assemblyManager._enemyUnitTargetSetterDict.Add(name.Substring("EnemyUnitTargetSetter_".Length), type);
+				}
+				else if (type.IsSubclassOf(typeof(ModInitializer)))
+				{
+					allInitializers.Add((ModContentManager.Instance._currentPid, filename, Activator.CreateInstance(type) as ModInitializer));
+				}
+			}
+		}
+		public static void LoadModFiles()
+		{
+			Dictionary<string, List<Workshop.WorkshopSkinData>> _bookSkinData = CustomizingBookSkinLoader.Instance._bookSkinData;
+			StaticDataLoader_New.ExportOriginalFiles();
+			StaticDataLoader_New.LoadModFiles(LoadedModContents);
+			LocalizedTextLoader_New.ExportOriginalFiles();
+			LocalizedTextLoader_New.LoadModFiles(LoadedModContents);
+			StorySerializer_new.ExportStory();
+			LoadBookSkins(_bookSkinData);
+		}
+		static void ReloadModFiles()
+		{
+			GlobalGameManager.Instance.LoadStaticData();
+			StageClassInfoList.Instance.GetAllWorkshopData().Clear();
+			EnemyUnitClassInfoList.Instance.GetAllWorkshopData().Clear();
+			BookXmlList.Instance.GetAllWorkshopData().Clear();
+			CardDropTableXmlList.Instance.GetAllWorkshopData().Clear();
+			DropBookXmlList.Instance.GetAllWorkshopData().Clear();
+			ItemXmlDataList.instance.GetAllWorkshopData().Clear();
+			BookDescXmlList.Instance._dictionaryWorkshop.Clear();
+			CustomizingCardArtworkLoader.Instance._artworkData.Clear();
+			CustomizingBookSkinLoader.Instance._bookSkinData.Clear();
+			ArtWorks = null;
+			CustomEffects.Clear();
+			CustomMapManager.Clear();
+			CustomBattleDialogModel.Clear();
+			CustomGiftPassive.Clear();
+			CustomEmotionCardAbility.Clear();
+			LoadedAssembly.Clear();
+			ArtWorks.Clear();
+			BookThumb.Clear();
+			AudioClips.Clear();
+			ModEpMatch.Clear();
+			ModStoryCG = null;
+			ModWorkShopId.Clear();
+			OrcTools.StageNameDic.Clear();
+			OrcTools.StageConditionDic.Clear();
+			OrcTools.CharacterNameDic.Clear();
+			OrcTools.EgoDic.Clear();
+#pragma warning disable CS0612 // Type or member is obsolete
+			OrcTools.DropItemDic.Clear();
+#pragma warning restore CS0612 // Type or member is obsolete
+			OrcTools.DropItemDicV2.Clear();
+			OrcTools.dialogDetails.Clear();
+		}
+		static void CopyLoaderThumbsForCompat()
+		{
+			CoreThumbDic = XLRoot.CoreThumbDic;
+			BookThumb = XLRoot.BookThumb;
+		}
+		static void LoadBookSkins(Dictionary<string, List<Workshop.WorkshopSkinData>> _bookSkinData)
+		{
+			var customizingBookSkinLoader = CustomizingBookSkinLoader.Instance;
+			foreach (ModContent modContent in LoadedModContents)
+			{
+				var config = BasemodConfig.FindBasemodConfig(modContent._itemUniqueId);
+				if (config.IgnoreStaticFiles)
+				{
+					continue;
+				}
+				string modDirectory = modContent._dirInfo.FullName;
+				string modName = modContent._itemUniqueId;
+				string modId = "";
+				if (!modName.ToLower().EndsWith("@origin"))
+				{
+					modId = modName;
+				}
+				int oldSkins = 0;
+				if (customizingBookSkinLoader._bookSkinData.TryGetValue(modName, out List<Workshop.WorkshopSkinData> skinlist))
+				{
+					oldSkins = skinlist.Count;
+				}
+				string charDirectory = Path.Combine(modDirectory, "Char");
+				List<Workshop.WorkshopSkinData> list = new List<Workshop.WorkshopSkinData>();
+				if (Directory.Exists(charDirectory))
+				{
+					string[] directories = Directory.GetDirectories(charDirectory);
+					for (int i = 0; i < directories.Length; i++)
+					{
+						try
+						{
+							Workshop.WorkshopAppearanceInfo workshopAppearanceInfo = Workshop.WorkshopAppearanceItemLoader.LoadCustomAppearance(directories[i]);
+							if (workshopAppearanceInfo != null)
+							{
+								string[] array = directories[i].Split(new char[]
+								{
+								'\\'
+								});
+								string bookName = array[array.Length - 1];
+								workshopAppearanceInfo.path = directories[i];
+								workshopAppearanceInfo.uniqueId = modId;
+								workshopAppearanceInfo.bookName = "Custom_" + bookName;
+								if (workshopAppearanceInfo.isClothCustom)
+								{
+									list.Add(new Workshop.WorkshopSkinData
+									{
+										dic = workshopAppearanceInfo.clothCustomInfo,
+										dataName = workshopAppearanceInfo.bookName,
+										contentFolderIdx = workshopAppearanceInfo.uniqueId,
+										id = oldSkins + i
+									});
+								}
+								if (workshopAppearanceInfo.faceCustomInfo != null && workshopAppearanceInfo.faceCustomInfo.Count > 0 && FaceData.GetExtraData(workshopAppearanceInfo.faceCustomInfo) == null)
+								{
+									XLRoot.LoadFaceCustom(workshopAppearanceInfo.faceCustomInfo, $"mod_{modName}:{bookName}");
+								}
+							}
+						}
+						catch (Exception ex)
+						{
+							Debug.LogError("BaseMod: error loading skin at " + directories[i]);
+							Debug.LogError(ex);
+						}
+					}
+					if (_bookSkinData.TryGetValue(modId, out var modSkinList) && modSkinList != null)
+					{
+						modSkinList.AddRange(list);
+					}
+					else
+					{
+						_bookSkinData[modId] = list;
+					}
+				}
+			}
+		}
+		public static Workshop.WorkshopAppearanceInfo LoadCustomAppearance(string path)
+		{
+			return Workshop.WorkshopAppearanceItemLoader.LoadCustomAppearance(path);
+		}/*
+		//Clone special motion characterMotion
+		[HarmonyPatch(typeof(Workshop.WorkshopSkinDataSetter), nameof(Workshop.WorkshopSkinDataSetter.SetMotionData))]
+		[HarmonyPrefix]
+		static void WorkshopSkinDataSetter_SetMotionData_Pre(Workshop.WorkshopSkinDataSetter __instance, ActionDetail motion)
+		{
+			try
+			{
+				if (__instance.Appearance.GetCharacterMotion(motion) == null)
+				{
+					CharacterMotion NewMotion = CopyCharacterMotion(__instance.Appearance, motion);
+					__instance.Appearance._motionList.Add(NewMotion);
+					if (__instance.Appearance._motionList.Count > 0)
+					{
+						foreach (CharacterMotion characterMotion in __instance.Appearance._motionList)
+						{
+							if (!__instance.Appearance.CharacterMotions.ContainsKey(characterMotion.actionDetail))
+							{
+								__instance.Appearance.CharacterMotions.Add(characterMotion.actionDetail, characterMotion);
+							}
+							characterMotion.gameObject.SetActive(false);
+						}
+					}
+				}
+				else if (motion >= ActionDetail.Special)
+				{
+					__instance.Appearance.GetCharacterMotion(motion).transform.position = __instance.Appearance._motionList[0].transform.position;
+					__instance.Appearance.GetCharacterMotion(motion).transform.localPosition = __instance.Appearance._motionList[0].transform.localPosition;
+					__instance.Appearance.GetCharacterMotion(motion).transform.localScale = __instance.Appearance._motionList[0].transform.localScale;
+					__instance.Appearance.GetCharacterMotion(motion).transform.name = "Custom_" + motion.ToString();
+				}
+			}
+			catch (Exception ex)
+			{
+				File.WriteAllText(Application.dataPath + "/Mods/SetMotionDataerror.log", ex.Message + Environment.NewLine + ex.StackTrace);
+			}
+		}*/
+		//no longer used
+		public static GameObject CreateCustomCharacter_new(Workshop.WorkshopSkinData workshopSkinData, out string resourceName, Transform characterRotationCenter = null)
+		{
+			GameObject result = null;
+			resourceName = "";
+			try
+			{
+				if (workshopSkinData != null)
+				{
+					GameObject original = XLRoot.CustomAppearancePrefab;
+					if (characterRotationCenter != null)
+					{
+						result = UnityEngine.Object.Instantiate(original, characterRotationCenter);
+					}
+					else
+					{
+						result = UnityEngine.Object.Instantiate(original);
+					}
+					resourceName = workshopSkinData.dataName;
+				}
+			}
+			catch (Exception ex)
+			{
+				File.WriteAllText(Application.dataPath + "/Mods/CCCnewerror.log", ex.Message + Environment.NewLine + ex.StackTrace);
+				result = null;
+			}
+			return result;
+		}
+		public static CharacterMotion CopyCharacterMotion(CharacterAppearance apprearance, ActionDetail detail)
+		{
+			CharacterMotion characterMotion = UnityEngine.Object.Instantiate(apprearance._motionList[0]);
+			characterMotion.transform.parent = apprearance._motionList[0].transform.parent;
+			characterMotion.transform.position = apprearance._motionList[0].transform.position;
+			characterMotion.transform.localPosition = apprearance._motionList[0].transform.localPosition;
+			characterMotion.transform.localScale = apprearance._motionList[0].transform.localScale;
+			characterMotion.transform.name = "Custom_" + detail.ToString();
+			characterMotion.actionDetail = detail;
+			characterMotion.motionSpriteSet.Clear();
+			characterMotion.motionSpriteSet.Add(new SpriteSet(characterMotion.transform.Find("Customize_Renderer").gameObject.GetComponent<SpriteRenderer>(), CharacterAppearanceType.Body));
+			characterMotion.motionSpriteSet.Add(new SpriteSet(characterMotion.transform.Find("CustomizePivot").Find("DummyHead").gameObject.GetComponent<SpriteRenderer>(), CharacterAppearanceType.Head));
+			characterMotion.motionSpriteSet.Add(new SpriteSet(characterMotion.transform.Find("Customize_Renderer_Back").gameObject.GetComponent<SpriteRenderer>(), CharacterAppearanceType.Body));
+			if (characterMotion.transform.Find("Customize_Renderer")?.gameObject.GetComponent<SpriteRenderer>() is SpriteRenderer rendererBack)
+			{
+				characterMotion.motionSpriteSet.Add(new SpriteSet(rendererBack, CharacterAppearanceType.Body));
+			}
+			if (characterMotion.transform.Find("Customize_Renderer_Back_Skin")?.gameObject.GetComponent<SpriteRenderer>() is SpriteRenderer rendererBackSkin)
+			{
+				characterMotion.motionSpriteSet.Add(new SpriteSet(rendererBackSkin, CharacterAppearanceType.Skin));
+			}
+			if (characterMotion.transform.Find("Customize_Renderer_Skin")?.gameObject.GetComponent<SpriteRenderer>() is SpriteRenderer rendererSkin)
+			{
+				characterMotion.motionSpriteSet.Add(new SpriteSet(rendererSkin, CharacterAppearanceType.Skin));
+			}
+			if (characterMotion.transform.Find("Customize_Renderer")?.gameObject.GetComponent<SpriteRenderer>() is SpriteRenderer rendererFrontSkin)
+			{
+				characterMotion.motionSpriteSet.Add(new SpriteSet(rendererFrontSkin, CharacterAppearanceType.Skin));
+			}
+			if (characterMotion.transform.Find("Customize_Renderer_Effect")?.gameObject.GetComponent<SpriteRenderer>() is SpriteRenderer rendererEffect)
+			{
+				characterMotion.motionSpriteSet.Add(new SpriteSet(rendererEffect, CharacterAppearanceType.Effect));
+			}
+			return characterMotion;
+		}
+		//CharacterSound
+		//new version moved to ExtendedLoader
+		/*
+		[HarmonyPatch(typeof(CharacterSound), nameof(CharacterSound.LoadAudioCoroutine))]
+		[HarmonyPrefix]
+		static bool CharacterSound_LoadAudioCoroutine_Pre(CharacterSound __instance, string path, List<CharacterSound.ExternalSound> externalSoundList, ref IEnumerator __result)
+		{
+			try
+			{
+				__result = LoadAudioCoroutine(path, externalSoundList, __instance._motionSounds);
+			}
+			catch (Exception ex)
+			{
+				ModContentManager.Instance.AddErrorLog(ex.Message + Environment.NewLine + ex.StackTrace);
+				File.WriteAllText(Application.dataPath + "/Mods/LoadAudioCoroutineerror.log", ex.Message + Environment.NewLine + ex.StackTrace);
+			}
+			return false;
+		}
+		static IEnumerator LoadAudioCoroutine(string path, List<CharacterSound.ExternalSound> externalSoundList, List<CharacterSound.Sound> motionSounds)
+		{
+			foreach (CharacterSound.ExternalSound externalSound1 in externalSoundList)
+			{
+				CharacterSound.ExternalSound externalSound = externalSound1;
+				string soundName = externalSound.soundName;
+				bool win = externalSound.isWin;
+				MotionDetail motion = externalSound.motion;
+				string path1 = Path.Combine(path, soundName);
+				AudioType audioType = AudioType.OGGVORBIS;
+				if (path1.EndsWith(".wav"))
+					audioType = AudioType.WAV;
+				if (File.Exists(path1))
+				{
+					using (UnityWebRequest www = UnityWebRequestMultimedia.GetAudioClip("file://" + path1, audioType))
+					{
+						yield return www.SendWebRequest();
+						if (www.isNetworkError)
+						{
+							Debug.Log(www.error);
+						}
+						else
+						{
+							DownloadHandlerAudioClip downloadHandler = www.downloadHandler as DownloadHandlerAudioClip;
+							if (downloadHandler != null && downloadHandler.isDone)
+							{
+								AudioClip audioClip = downloadHandler.audioClip;
+								audioClip.name = soundName;
+								CharacterSound.Sound sound1 = motionSounds.Find(x => x.motion == motion);
+								if (sound1 != null)
+								{
+									if (win)
+									{
+										sound1.winSound = audioClip;
+									}
+									else
+									{
+										sound1.loseSound = audioClip;
+									}
+								}
+								else
+								{
+									CharacterSound.Sound sound2 = new CharacterSound.Sound
+									{
+										motion = motion
+									};
+									if (win)
+									{
+										sound2.winSound = audioClip;
+									}
+									else
+									{
+										sound2.loseSound = audioClip;
+									}
+									motionSounds.Add(sound2);
+									sound2 = null;
+								}
+								audioClip = null;
+								sound1 = null;
+							}
+							downloadHandler = null;
+						}
+					}
+				}
+				soundName = null;
+				soundName = null;
+				path1 = null;
+				externalSound = null;
+			}
+		}
+		*/
+		//Remove Garbage Projection
+		[HarmonyPatch(typeof(CustomCoreBookInventoryModel), nameof(CustomCoreBookInventoryModel.GetBookIdList_CustomCoreBook))]
+		[HarmonyPostfix]
+		static List<int> CustomCoreBookInventoryModel_GetBookIdList_CustomCoreBook_Post(List<int> idList)
+		{
+			try
+			{
+				var bookInventoryModel = BookInventoryModel.Instance;
+				var bookXmlList = BookXmlList.Instance;
+				idList.RemoveAll(x => bookInventoryModel.GetBookCount(x) < 1 && !(bookXmlList.GetData(x) is BookXmlInfo info && !info.isError && info.optionList != null && info.optionList.Contains(BookOption.Basic)));
+			}
+			catch (Exception ex)
+			{
+				Debug.LogException(ex);
+			}
+			return idList;
+		}
+		//save custom title
+		[HarmonyPatch(typeof(UnitDataModel), nameof(UnitDataModel.GetSaveData))]
+		[HarmonyPostfix]
+		static void UnitDataModel_GetSaveData_Post(UnitDataModel __instance, SaveData __result)
+		{
+			try
+			{
+				var saveDict = __result.GetDictionarySelf();
+				if (OrcTools.GiftAndTitleDic.TryGetValue(__instance.prefixID, out var prefixLorId) && prefixLorId != __instance.prefixID)
+				{
+					saveDict["prefixID"] = new SaveData(0);
+					saveDict.Add("BasemodPrefixID", prefixLorId.GetSaveData());
+				}
+				if (OrcTools.GiftAndTitleDic.TryGetValue(__instance.postfixID, out var postfixLorId) && postfixLorId != __instance.postfixID)
+				{
+					saveDict["postfixID"] = new SaveData(0);
+					saveDict.Add("BasemodPostfixID", postfixLorId.GetSaveData());
+				}
+			}
+			catch (Exception ex)
+			{
+				File.WriteAllText(Application.dataPath + "/Mods/SaveCustomTitleerror.txt", ex.Message + Environment.NewLine + ex.StackTrace);
+			}
+		}
+		//load custom title
+		[HarmonyPatch(typeof(UnitDataModel), nameof(UnitDataModel.LoadFromSaveData))]
+		[HarmonyPostfix]
+		static void UnitDataModel_LoadFromSaveData_Post(UnitDataModel __instance, SaveData data)
+		{
+			try
+			{
+				SaveData customPrefix = data.GetData("BasemodPrefixID");
+				if (customPrefix != null)
+				{
+					var customPrefixId = LorId.LoadFromSaveData(customPrefix);
+					if (OrcTools.CustomPrefixes.TryGetValue(customPrefixId, out var prefix))
+					{
+						__instance.prefixID = prefix.ID;
+					}
+				}
+				SaveData customPostfix = data.GetData("BasemodPostfixID");
+				if (customPostfix != null)
+				{
+					var customPostfixId = LorId.LoadFromSaveData(customPostfix);
+					if (OrcTools.CustomPrefixes.TryGetValue(customPostfixId, out var postfix))
+					{
+						__instance.postfixID = postfix.ID;
+					}
+				}
+			}
+			catch (Exception ex)
+			{
+				File.WriteAllText(Application.dataPath + "/Mods/LoadCustomTitleerror.txt", ex.Message + Environment.NewLine + ex.StackTrace);
+			}
+		}
 
-            }
-            catch (Exception ex)
-            {
-                File.WriteAllText(Application.dataPath + "/Mods/SaveCustomBookerror.txt", ex.Message + Environment.NewLine + ex.StackTrace);
-            }
-        }
-        //loadcustombook
-        [HarmonyPatch(typeof(UnitDataModel), "LoadFromSaveData")]
-        [HarmonyPostfix]
-        private static void UnitDataModel_LoadFromSaveData_Post(UnitDataModel __instance, SaveData data)
-        {
-            try
-            {
-                SaveData customcorebook = data.GetData("customcorebookInstanceId");
-                if (customcorebook == null)
-                {
-                    return;
-                }
-                if (customcorebook.GetData("_pid") == null)
-                {
-                    return;
-                }
-                LorId id = new LorId(customcorebook.GetString("_pid"), customcorebook.GetInt("_id"));
-                if (!Singleton<BookXmlList>.Instance.GetData(id).isError)
-                {
-                    BookModel bookModel = new BookModel(Singleton<BookXmlList>.Instance.GetData(id));
-                    if (bookModel != null)
-                    {
-                        if (bookModel.ClassInfo.optionList.Contains(BookOption.Basic))
-                        {
-                            LorId bookClassInfoId = bookModel.GetBookClassInfoId();
-                            if (bookClassInfoId.id > 10)
-                            {
-                                __instance.EquipCustomCoreBook(bookModel);
-                            }
-                            else if (__instance.OwnerSephirah != (SephirahType)bookClassInfoId.id)
-                            {
-                                __instance.EquipCustomCoreBook(null);
-                            }
-                            else if (__instance.isSephirah)
-                            {
-                                __instance.EquipCustomCoreBook(bookModel);
-                            }
-                            else
-                            {
-                                __instance.EquipCustomCoreBook(null);
-                            }
-                        }
-                        else
-                        {
-                            __instance.EquipCustomCoreBook(bookModel);
-                        }
-                        if (Singleton<SaveManager>.Instance.iver <= 13 && bookModel.GetBookClassInfoId() == __instance.bookItem.GetBookClassInfoId())
-                        {
-                            __instance.EquipCustomCoreBook(null);
-                        }
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                File.WriteAllText(Application.dataPath + "/Mods/LoadCustomBookerror.txt", ex.Message + Environment.NewLine + ex.StackTrace);
-            }
-        }
+		//Book
+		//BookIcon
+		[HarmonyPatch(typeof(BookModel), nameof(BookModel.bookIcon), MethodType.Getter)]
+		[HarmonyPrefix]
+		static bool BookModel_get_bookIcon_Pre(BookModel __instance, ref Sprite __result)
+		{
+			try
+			{
+				if (ArtWorks == null)
+				{
+					GetArtWorks();
+				}
+				if (ArtWorks.TryGetValue(__instance.ClassInfo.BookIcon, out Sprite sprite))
+				{
+					__result = sprite;
+					return false;
+				}
+			}
+			catch (Exception ex)
+			{
+				File.WriteAllText(Application.dataPath + "/Mods/BookIconerror.log", ex.Message + Environment.NewLine + ex.StackTrace);
+			}
+			return true;
+		}
+		//BookName
+		[HarmonyPatch(typeof(BookXmlInfo), nameof(BookXmlInfo.Name), MethodType.Getter)]
+		[HarmonyPrefix]
+		static bool BookXmlInfo_get_Name_Pre(BookXmlInfo __instance, ref string __result)
+		{
+			try
+			{
+				string bookName = BookDescXmlList.Instance.GetBookName(new LorId(__instance.workshopID, __instance.TextId));
+				if (!string.IsNullOrWhiteSpace(bookName))
+				{
+					__result = bookName;
+					return false;
+				}
+			}
+			catch { }
+			return true;
+		}
+		//BookStory
+		[HarmonyPatch(typeof(BookXmlInfo), nameof(BookXmlInfo.Desc), MethodType.Getter)]
+		[HarmonyPrefix]
+		static bool BookXmlInfo_get_Desc_Pre(BookXmlInfo __instance, ref List<string> __result)
+		{
+			try
+			{
+				List<string> bookText = BookDescXmlList.Instance.GetBookText(new LorId(__instance.workshopID, __instance.TextId));
+				if (bookText.Count > 0)
+				{
+					__result = bookText;
+					return false;
+				}
+			}
+			catch { }
+			return true;
+		}
+		//OnlyCards
+		[HarmonyPatch(typeof(BookModel), nameof(BookModel.SetXmlInfo))]
+		[HarmonyPostfix]
+		static void BookModel_SetXmlInfo_Post(BookModel __instance, BookXmlInfo classInfo)
+		{
+			try
+			{
+				if (!OrcTools.OnlyCardDic.TryGetValue(classInfo.id, out var onlyCardList))
+				{
+					return;
+				}
+				__instance._onlyCards = new List<DiceCardXmlInfo>();
+				foreach (LorId id in onlyCardList)
+				{
+					DiceCardXmlInfo cardItem = ItemXmlDataList.instance.GetCardItem(id);
+					if (cardItem == null)
+					{
+						Debug.LogError("onlycard not found");
+					}
+					else
+					{
+						__instance._onlyCards.Add(cardItem);
+					}
+				}
+			}
+			catch (Exception ex)
+			{
+				File.WriteAllText(Application.dataPath + "/Mods/SetOnlyCardserror.log", ex.Message + Environment.NewLine + ex.StackTrace);
+			}
+		}
+		//SoulCard
+		[HarmonyPatch(typeof(BookModel), nameof(BookModel.CreateSoulCard))]
+		[HarmonyPrefix]
+		static bool BookModel_CreateSoulCard_Pre(BookModel __instance, int emotionLevel, ref BattleDiceCardModel __result)
+		{
+			try
+			{
+				if (__instance._classInfo == null)
+				{
+					Debug.LogError("BookXmlInfo is null");
+					return false;
+				}
+				if (!OrcTools.SoulCardDic.TryGetValue(__instance._classInfo.id, out var soulCardList))
+				{
+					return true;
+				}
+				var soulCardNew = soulCardList.Find((BookSoulCardInfo_New x) => x.emotionLevel == emotionLevel);
+				if (soulCardNew == null)
+				{
+					__result = null;
+					return false;
+				}
+				DiceCardXmlInfo cardItem = ItemXmlDataList.instance.GetCardItem(soulCardNew.lorId);
+				if (cardItem == null)
+				{
+					__result = null;
+					return false;
+				}
+				__result = BattleDiceCardModel.CreatePlayingCard(cardItem);
+				return false;
+			}
+			catch (Exception ex)
+			{
+				File.WriteAllText(Application.dataPath + "/Mods/CreateSoulCarderror.log", ex.Message + Environment.NewLine + ex.StackTrace);
+			}
+			return true;
+		}
 
-        //Book
-        //BookIcon
-        [HarmonyPatch(typeof(BookModel), "bookIcon", MethodType.Getter)]
-        [HarmonyPrefix]
-        private static bool BookModel_get_bookIcon_Pre(BookModel __instance, ref Sprite __result)
-        {
-            try
-            {
-                if (ArtWorks == null)
-                {
-                    GetArtWorks();
-                }
-                if (ArtWorks.TryGetValue(__instance.ClassInfo.BookIcon, out Sprite sprite))
-                {
-                    __result = sprite;
-                    return false;
-                }
-            }
-            catch (Exception ex)
-            {
-                File.WriteAllText(Application.dataPath + "/Mods/BookIconerror.log", ex.Message + Environment.NewLine + ex.StackTrace);
-            }
-            return true;
-        }
-        //BookName
-        [HarmonyPatch(typeof(BookXmlInfo), "Name", MethodType.Getter)]
-        [HarmonyPrefix]
-        private static bool BookXmlInfo_get_Name_Pre(BookXmlInfo __instance, ref string __result)
-        {
-            try
-            {
-                string bookName = Singleton<BookDescXmlList>.Instance.GetBookName(new LorId(__instance.workshopID, __instance.TextId));
-                if (!string.IsNullOrWhiteSpace(bookName))
-                {
-                    __result = bookName;
-                    return false;
-                }
-            }
-            catch { }
-            return true;
-        }
-        //BookStory
-        [HarmonyPatch(typeof(BookXmlInfo), "Desc", MethodType.Getter)]
-        [HarmonyPrefix]
-        private static bool BookXmlInfo_get_Desc_Pre(BookXmlInfo __instance, ref List<string> __result)
-        {
-            try
-            {
-                List<string> bookText = Singleton<BookDescXmlList>.Instance.GetBookText(new LorId(__instance.workshopID, __instance.TextId));
-                if (bookText.Count > 0)
-                {
-                    __result = bookText;
-                    return false;
-                }
-            }
-            catch { }
-            return true;
-        }
-        //BookModelThumb
-        [HarmonyPatch(typeof(BookModel), "GetThumbSprite")]
-        [HarmonyPrefix]
-        private static bool BookModel_GetThumbSprite_Pre(BookModel __instance, ref Sprite __result)
-        {
-            try
-            {
-                Workshop.WorkshopSkinData workshopBookSkinData = Singleton<CustomizingBookSkinLoader>.Instance.GetWorkshopBookSkinData(__instance.BookId.packageId, __instance.ClassInfo.GetCharacterSkin(), "_" + __instance.ClassInfo.gender);
-                if (workshopBookSkinData != null)
-                {
-                    string path = workshopBookSkinData.dic[ActionDetail.Default].spritePath;
-                    DirectoryInfo directoryInfo = new DirectoryInfo(path);
-                    path = directoryInfo.Parent.Parent.FullName + "/Thumb.png";
-                    Sprite bookThumb = GetBookThumb(__instance.BookId, path);
-                    if (bookThumb != null)
-                    {
-                        __result = bookThumb;
-                        return false;
-                    }
-                    XLRoot.MakeThumbnail(workshopBookSkinData.dic[ActionDetail.Default]);
-                }
-            }
-            catch (Exception ex)
-            {
-                File.WriteAllText(Application.dataPath + "/Mods/Book_Thumberror.log", ex.Message + Environment.NewLine + ex.StackTrace);
-            }
-            if (__instance.ClassInfo.skinType != "Custom")
-            {
-                CoreThumbDic.TryGetValue(__instance.ClassInfo.GetCharacterSkin(), out int index);
-                if (index == 0)
-                {
-                    index++;
-                }
-                __result = Resources.Load<Sprite>("Sprites/Books/Thumb/" + index);
-                return false;
-            }
-            return true;
-        }
-        //BookXmlInfoThumb
-        [HarmonyPatch(typeof(BookXmlInfo), "GetThumbSprite")]
-        [HarmonyPrefix]
-        private static bool BookXmlInfo_GetThumbSprite_Pre(BookXmlInfo __instance, ref Sprite __result)
-        {
-            try
-            {
-                Workshop.WorkshopSkinData workshopBookSkinData = Singleton<CustomizingBookSkinLoader>.Instance.GetWorkshopBookSkinData(__instance.id.packageId, __instance.GetCharacterSkin(), "_" + __instance.gender);
-                if (workshopBookSkinData != null)
-                {
-                    string path = workshopBookSkinData.dic[ActionDetail.Default].spritePath;
-                    DirectoryInfo dir = new DirectoryInfo(path);
-                    path = dir.Parent.Parent.FullName + "/Thumb.png";
-                    Sprite bookThumb = GetBookThumb(__instance.id, path);
-                    if (bookThumb != null)
-                    {
-                        __result = bookThumb;
-                        return false;
-                    }
-                    XLRoot.MakeThumbnail(workshopBookSkinData.dic[ActionDetail.Default]);
-                }
-            }
-            catch (Exception ex)
-            {
-                File.WriteAllText(Application.dataPath + "/Mods/BookXml_Thumberror.log", ex.Message + Environment.NewLine + ex.StackTrace);
-            }
-            if (__instance.skinType != "Custom")
-            {
-                CoreThumbDic.TryGetValue(__instance.GetCharacterSkin(), out int index);
-                if (index == 0)
-                {
-                    index++;
-                }
-                __result = Resources.Load<Sprite>("Sprites/Books/Thumb/" + index);
-                return false;
-            }
-            return true;
-        }
-        private static Sprite GetBookThumb(LorId BookId, string Path)
-        {
-            if (BookThumb == null)
-            {
-                BookThumb = new Dictionary<LorId, Sprite>();
-            }
-            if (BookThumb.TryGetValue(BookId, out Sprite result))
-            {
-                return result;
-            }
-            else if (File.Exists(Path))
-            {
-                Texture2D texture2D = new Texture2D(2, 2);
-                texture2D.LoadImage(File.ReadAllBytes(Path));
-                Sprite value = Sprite.Create(texture2D, new Rect(0f, 0f, texture2D.width, texture2D.height), new Vector2(0.5f, 0.5f));
-                BookThumb[BookId] = value;
-                return value;
-            }
-            return null;
-        }
-        //OnlyCards
-        [HarmonyPatch(typeof(BookModel), "SetXmlInfo")]
-        [HarmonyPostfix]
-        private static void BookModel_SetXmlInfo_Post(BookModel __instance, BookXmlInfo classInfo)
-        {
-            try
-            {
-                if (!(classInfo is BookXmlInfo_New))
-                {
-                    return;
-                }
-                __instance._onlyCards = new List<DiceCardXmlInfo>();
-                foreach (LorId id in (classInfo as BookXmlInfo_New).EquipEffect.OnlyCards)
-                {
-                    DiceCardXmlInfo cardItem = ItemXmlDataList.instance.GetCardItem(id);
-                    if (cardItem == null)
-                    {
-                        Debug.LogError("onlycard not found");
-                    }
-                    else
-                    {
-                        __instance._onlyCards.Add(cardItem);
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                File.WriteAllText(Application.dataPath + "/Mods/SetOnlyCardserror.log", ex.Message + Environment.NewLine + ex.StackTrace);
-            }
-        }
-        //SoulCard
-        [HarmonyPatch(typeof(BookModel), "CreateSoulCard")]
-        [HarmonyPrefix]
-        private static bool BookModel_CreateSoulCard_Pre(BookModel __instance, int emotionLevel, ref BattleDiceCardModel __result)
-        {
-            try
-            {
-                if (__instance._classInfo == null)
-                {
-                    Debug.LogError("BookXmlInfo is null");
-                    return false;
-                }
-                if (!(__instance._classInfo is BookXmlInfo_New))
-                {
-                    return true;
-                }
-                BookSoulCardInfo_New bookSoulCardInfo_New = (__instance._classInfo as BookXmlInfo_New).EquipEffect.SoulCardList.Find((BookSoulCardInfo_New x) => x.emotionLevel == emotionLevel);
-                if (bookSoulCardInfo_New == null)
-                {
-                    __result = null;
-                    return false;
-                }
-                DiceCardXmlInfo cardItem = ItemXmlDataList.instance.GetCardItem(new LorId(bookSoulCardInfo_New.WorkshopId, bookSoulCardInfo_New.cardId));
-                if (cardItem == null)
-                {
-                    __result = null;
-                    return false;
-                }
-                __result = BattleDiceCardModel.CreatePlayingCard(cardItem);
-                return false;
-            }
-            catch (Exception ex)
-            {
-                File.WriteAllText(Application.dataPath + "/Mods/CreateSoulCarderror.log", ex.Message + Environment.NewLine + ex.StackTrace);
-            }
-            return true;
-        }
+		//Stage
+		//StageName
+		[HarmonyPatch(typeof(StageNameXmlList), nameof(StageNameXmlList.GetName), new Type[] { typeof(StageClassInfo) })]
+		[HarmonyPrefix]
+		static bool StageNameXmlList_GetName_Pre(StageClassInfo stageInfo, ref string __result)
+		{
+			try
+			{
+				if (stageInfo == null || stageInfo.id == null)
+				{
+					__result = "Not Found";
+					return false;
+				}
+				if (OrcTools.StageNameDic.TryGetValue(stageInfo.id, out string stageName))
+				{
+					__result = stageName;
+					return false;
+				}
+			}
+			catch { }
+			return true;
+		}
 
-        //Stage
-        //StageName
-        [HarmonyPatch(typeof(StageNameXmlList), "GetName", new Type[] { typeof(StageClassInfo) })]
-        [HarmonyPrefix]
-        private static bool StageNameXmlList_GetName_Pre(StageClassInfo stageInfo, ref string __result)
-        {
-            try
-            {
-                if (stageInfo == null || stageInfo.id == null)
-                {
-                    __result = "Not Found";
-                    return false;
-                }
-                if (OrcTools.StageNameDic.TryGetValue(stageInfo.id, out string stageName))
-                {
-                    __result = stageName;
-                    return false;
-                }
-            }
-            catch { }
-            return true;
-        }
+		//BattleUnitModel
+		//CharacterName
+		[HarmonyPatch(typeof(CharactersNameXmlList), nameof(CharactersNameXmlList.GetName), new Type[] { typeof(LorId) })]
+		[HarmonyPrefix]
+		static bool CharactersNameXmlList_GetName_Pre(LorId id, ref string __result)
+		{
+			try
+			{
+				if (OrcTools.CharacterNameDic.TryGetValue(id, out string characterName))
+				{
+					__result = characterName;
+					return false;
+				}
+			}
+			catch { }
+			return true;
+		}
+		//DropBookName
+		[HarmonyPatch(typeof(DropBookXmlInfo), nameof(DropBookXmlInfo.Name), MethodType.Getter)]
+		[HarmonyPrefix]
+		static bool DropBookXmlInfo_get_Name_Pre(DropBookXmlInfo __instance, ref string __result)
+		{
+			try
+			{
+				string dropBookName = TextDataModel.GetText(__instance._targetText, Array.Empty<object>());
+				if (!string.IsNullOrWhiteSpace(dropBookName))
+				{
+					__result = dropBookName;
+					return false;
+				}
+			}
+			catch { }
+			return true;
+		}
+		//EnemyBookInject
+		[HarmonyPatch(typeof(UnitDataModel), MethodType.Constructor, new Type[] { typeof(LorId), typeof(SephirahType), typeof(bool) })]
+		[HarmonyPrefix]
+		static void UnitDataModel_ctor_Pre(ref LorId defaultBook)
+		{
+			if (defaultBook != null && OrcTools.UnitBookDic.TryGetValue(defaultBook, out var realBook))
+			{
+				defaultBook = realBook;
+			}
+		}
+		[HarmonyPatch(typeof(BookXmlList), nameof(BookXmlList.GetData), new Type[] { typeof(LorId), typeof(bool) })]
+		[HarmonyPrefix]
+		static void BookXmlList_GetData_Pre(ref LorId id)
+		{
+			if (id != null && OrcTools.UnitBookDic.TryGetValue(id, out var realBook))
+			{
+				id = realBook;
+			}
+		}
+		//EnemyDrop
+		[HarmonyPatch(typeof(UnitDataModel), nameof(UnitDataModel.SetByEnemyUnitClassInfo))]
+		[HarmonyPostfix]
+		static void UnitDataModel_SetByEnemyUnitClassInfo_Post(UnitDataModel __instance, EnemyUnitClassInfo classInfo)
+		{
+			try
+			{
+				if (OrcTools.CharacterNameDic.TryGetValue(new LorId(classInfo.workshopID, classInfo.nameId), out string characterName))
+				{
+					__instance._name = characterName;
+				}
+			}
+			catch { }
+		}
+		//Drop
+		[HarmonyPatch(typeof(UnitDataModel), nameof(UnitDataModel.SetEnemyDropTable))]
+		[HarmonyPrefix]
+		static bool UnitDataModel_SetEnemyDropTable_Pre(UnitDataModel __instance, EnemyUnitClassInfo classInfo)
+		{
+			try
+			{
+				if (classInfo == null)
+				{
+					return false;
+				}
+#pragma warning disable CS0612 // Type or member is obsolete
+				if (!OrcTools.DropItemDicV2.TryGetValue(classInfo.id, out var dropTableListNew) & !OrcTools.DropItemDic.TryGetValue(classInfo.id, out var dropTableListOld))
+				{
+					return true;
+				}
+#pragma warning restore CS0612 // Type or member is obsolete
+				__instance._dropTable.Clear();
+				if (dropTableListNew != null)
+				{
+					foreach (var tableNew in dropTableListNew)
+					{
+						DropTable dropTable = __instance._dropTable.TryGetValue(tableNew.emotionLevel, out var drop) ? drop : new DropTable();
+						foreach (var dropNew in tableNew.dropItemListNew)
+						{
+							dropTable.Add(dropNew.prob, dropNew.bookLorId);
+						}
+						__instance._dropTable[tableNew.emotionLevel] = dropTable;
+					}
+				}
+				if (dropTableListOld != null)
+				{
+					foreach (var tableNewOld in dropTableListOld)
+					{
+						DropTable dropTable = __instance._dropTable.TryGetValue(tableNewOld.emotionLevel, out var drop) ? drop : new DropTable();
+						foreach (var dropNew in tableNewOld.dropList)
+						{
+							dropTable.Add(dropNew.prob, dropNew.bookId);
+						}
+						__instance._dropTable[tableNewOld.emotionLevel] = dropTable;
+					}
+				}
+				__instance._dropBonus = classInfo.dropBonus;
+				__instance._expDrop = classInfo.exp;
+				return false;
+			}
+			catch (Exception ex)
+			{
+				File.WriteAllText(Application.dataPath + "/Mods/SetEnemyDropTableerror.log", ex.Message + Environment.NewLine + ex.StackTrace);
+			}
+			return true;
+		}
+		//DropUI
+		[HarmonyPatch(typeof(UIInvitationStageInfoPanel), nameof(UIInvitationStageInfoPanel.SetData))]
+		[HarmonyTranspiler]
+		static IEnumerable<CodeInstruction> UIInvitationStageInfoPanel_SetData_In(IEnumerable<CodeInstruction> instructions)
+		{
+			bool ready = true;
+			foreach (var instruction in instructions)
+			{
+				yield return instruction;
+				if (ready && instruction.IsStloc() && TryGetIntValue(instruction.operand, out var index) && index == 5)
+				{
+					ready = false;
+					yield return new CodeInstruction(Ldarg_0);
+					yield return new CodeInstruction(Ldarg_1);
+					yield return new CodeInstruction(Ldarg_2);
+					yield return new CodeInstruction(Ldloc, 5);
+					yield return new CodeInstruction(Call, Method(typeof(Harmony_Patch), nameof(UIInvitationStageInfoPanel_SetData_CheckCustomDrop)));
+				}
+			}
+		}
+		internal static bool TryGetIntValue(object operand, out int value)
+		{
+			if (operand is IConvertible convertible)
+			{
+				try
+				{
+					value = convertible.ToInt32(null);
+					return true;
+				}
+				catch
+				{
+				}
+			}
+			else
+			{
+				if (operand is LocalBuilder builder)
+				{
+					value = builder.LocalIndex;
+					return true;
+				}
+			}
+			value = 0;
+			return false;
+		}
+		static void UIInvitationStageInfoPanel_SetData_CheckCustomDrop(UIInvitationStageInfoPanel panel, StageClassInfo stage, UIStoryLine story, List<LorId> dropBookIds)
+		{
+			CanvasGroup cg = panel.rewardBookList.cg;
+			EnemyUnitClassInfoList enemyUnitClassInfoList = EnemyUnitClassInfoList.Instance;
+			if (story == UIStoryLine.None && cg.interactable)
+			{
+				foreach (StageWaveInfo stageWaveInfo in stage.waveList)
+				{
+					foreach (LorId id in stageWaveInfo.enemyUnitIdList)
+					{
+						EnemyUnitClassInfo data = enemyUnitClassInfoList.GetData(id);
+						if (OrcTools.DropItemDicV2.TryGetValue(data.id, out var listNew))
+						{
+							foreach (EnemyDropItemTable_V2 tableNew in listNew)
+							{
+								foreach (var dropNew in tableNew.dropItemListNew)
+								{
+									if (!dropBookIds.Contains(dropNew.bookLorId))
+									{
+										dropBookIds.Add(dropNew.bookLorId);
+									}
+								}
+							}
+						}
+#pragma warning disable CS0612 // Type or member is obsolete
+						if (OrcTools.DropItemDic.TryGetValue(data.id, out var listNewOld))
+						{
+							foreach (EnemyDropItemTable_New tableNewOld in listNewOld)
+							{
+								foreach (var dropNewOld in tableNewOld.dropList)
+								{
+									if (!dropBookIds.Contains(dropNewOld.bookId))
+									{
+										dropBookIds.Add(dropNewOld.bookId);
+									}
+								}
+							}
+						}
+#pragma warning restore CS0612 // Type or member is obsolete
+					}
+				}
+			}
+		}
+		//EnemyBattleDialog
+		[HarmonyPatch(typeof(UnitDataModel), nameof(UnitDataModel.InitBattleDialogByDefaultBook))]
+		[HarmonyPrefix]
+		static bool UnitDataModel_InitBattleDialogByDefaultBook_Pre(UnitDataModel __instance, LorId lorId)
+		{
+			try
+			{
+				if (lorId.id <= 0)
+				{
+					return true;
+				}
+				else
+				{
+					OrcTools.DialogDetail dialogDetail = OrcTools.DialogDetail.FindDialogInBookID(lorId) ?? OrcTools.DialogDetail.FindDialogInCharacterID(lorId);
+					if (dialogDetail == null)
+					{
+						return true;
+					}
+					BattleDialogCharacter characterData = null;
+					if (!string.IsNullOrWhiteSpace(dialogDetail.GroupName))
+					{
+						characterData = BattleDialogXmlList.Instance.GetCharacterData(dialogDetail.GroupName, dialogDetail.CharacterID.id.ToString());
+					}
+					if (characterData == null)
+					{
+						characterData = BattleDialogXmlList.Instance.GetCharacterData_Mod(lorId.packageId, dialogDetail.CharacterID.id);
+					}
+					Type type = FindBattleDialogueModel(dialogDetail.CharacterName, characterData?.characterID);
+					if (type == null)
+					{
+						__instance.battleDialogModel = new BattleDialogueModel(characterData);
+						return false;
+					}
+					else
+					{
+						__instance.battleDialogModel = Activator.CreateInstance(type, new object[] { characterData }) as BattleDialogueModel;
+						return false;
+					}
+				}
+			}
+			catch (Exception ex)
+			{
+				File.WriteAllText(Application.dataPath + "/Mods/InitBattleDialogByDefaultBookerror.log", ex.Message + Environment.NewLine + ex.StackTrace);
+			}
+			return true;
+		}
+		public static Type FindBattleDialogueModel(string name, string id)
+		{
+			if (string.IsNullOrWhiteSpace(name))
+			{
+				name = null;
+			}
+			else
+			{
+				name = name.Trim();
+				if (CustomBattleDialogModel.TryGetValue(name, out Type type))
+				{
+					return type;
+				}
+			}
 
-        //BattleUnitModel
-        //CharacterName
-        [HarmonyPatch(typeof(CharactersNameXmlList), "GetName", new Type[] { typeof(LorId) })]
-        [HarmonyPrefix]
-        private static bool CharactersNameXmlList_GetName_Pre(LorId id, ref string __result)
-        {
-            try
-            {
-                if (OrcTools.CharacterNameDic.TryGetValue((id), out string characterName))
-                {
-                    __result = characterName;
-                    return false;
-                }
-            }
-            catch { }
-            return true;
-        }
-        //DropBookName
-        [HarmonyPatch(typeof(DropBookXmlInfo), "Name", MethodType.Getter)]
-        [HarmonyPrefix]
-        private static bool DropBookXmlInfo_get_Name_Pre(DropBookXmlInfo __instance, ref string __result)
-        {
-            try
-            {
-                string dropBookName = TextDataModel.GetText(__instance._targetText, Array.Empty<object>());
-                if (!string.IsNullOrWhiteSpace(dropBookName))
-                {
-                    __result = dropBookName;
-                    return false;
-                }
-            }
-            catch { }
-            return true;
-        }
-        //EnemyDrop
-        [HarmonyPatch(typeof(UnitDataModel), "SetByEnemyUnitClassInfo")]
-        [HarmonyPostfix]
-        private static void UnitDataModel_SetByEnemyUnitClassInfo_Post(UnitDataModel __instance, EnemyUnitClassInfo classInfo)
-        {
-            try
-            {
-                if (OrcTools.CharacterNameDic.TryGetValue(new LorId(classInfo.workshopID, classInfo.nameId), out string characterName))
-                {
-                    __instance._name = characterName;
-                }
-            }
-            catch { }
-        }
-        //Drop
-        [HarmonyPatch(typeof(UnitDataModel), "SetEnemyDropTable")]
-        [HarmonyPrefix]
-        private static bool UnitDataModel_SetEnemyDropTable_Pre(UnitDataModel __instance, EnemyUnitClassInfo classInfo)
-        {
-            try
-            {
-                if (classInfo != null && !OrcTools.DropItemDic.ContainsKey(classInfo.id))
-                {
-                    return true;
-                }
-                foreach (EnemyDropItemTable_New dropItemTable_New in OrcTools.DropItemDic[classInfo.id])
-                {
-                    DropTable dropTable = new DropTable();
-                    foreach (EnemyDropItem_ReNew dropItem_ReNew in dropItemTable_New.dropList)
-                    {
-                        dropTable.Add(dropItem_ReNew.prob, dropItem_ReNew.bookId);
-                    }
-                    __instance._dropTable.Add(dropItemTable_New.emotionLevel, dropTable);
-                }
-                __instance._dropBonus = classInfo.dropBonus;
-                __instance._expDrop = classInfo.exp;
-                return false;
-            }
-            catch (Exception ex)
-            {
-                File.WriteAllText(Application.dataPath + "/Mods/SetEnemyDropTableerror.log", ex.Message + Environment.NewLine + ex.StackTrace);
-            }
-            return true;
-        }
-        //DropUI
-        [HarmonyPatch(typeof(UIInvitationStageInfoPanel), "SetData")]
-        [HarmonyPrefix]
-        private static void UIInvitationStageInfoPanel_SetData_Post(UIInvitationStageInfoPanel __instance, StageClassInfo stage, UIStoryLine story = UIStoryLine.None)
-        {
-            CanvasGroup cg = __instance.rewardBookList.cg;
-            if (story == UIStoryLine.None && cg.interactable)
-            {
+			if (string.IsNullOrWhiteSpace(id))
+			{
+				id = null;
+			}
+			else
+			{
+				id = id.Trim();
+				if (CustomBattleDialogModel.TryGetValue(id, out Type type2))
+				{
+					return type2;
+				}
+			}
 
-                List<LorId> list = new List<LorId>();
-                if (stage.id == 40008)
-                {
-                    list.Add(new LorId(240023));
-                }
-                foreach (StageWaveInfo stageWaveInfo in stage.waveList)
-                {
-                    foreach (LorId id in stageWaveInfo.enemyUnitIdList)
-                    {
-                        EnemyUnitClassInfo data = Singleton<EnemyUnitClassInfoList>.Instance.GetData(id);
-                        if (OrcTools.DropItemDic.ContainsKey(data.id))
-                        {
-                            foreach (EnemyDropItemTable_New dropItemTable_New in OrcTools.DropItemDic[data.id])
-                            {
-                                foreach (EnemyDropItem_ReNew dropItem_ReNew in dropItemTable_New.dropList)
-                                {
-                                    if (!list.Contains(dropItem_ReNew.bookId))
-                                    {
-                                        list.Add(dropItem_ReNew.bookId);
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-                __instance.rewardBookList.SetData(list);
-            }
-        }
-        //EnemyBattleDialog
-        [HarmonyPatch(typeof(UnitDataModel), "InitBattleDialogByDefaultBook")]
-        [HarmonyPrefix]
-        private static bool UnitDataModel_InitBattleDialogByDefaultBook_Pre(UnitDataModel __instance, LorId lorId)
-        {
-            try
-            {
-                if (lorId.id <= 0)
-                {
-                    Debug.LogError("Invalid book ID : " + lorId.id);
-                    return false;
-                }
-                else
-                {
-                    OrcTools.DialogDetail dialogDetail = OrcTools.DialogDetail.FindDialogInBookID(lorId);
-                    if (dialogDetail == null)
-                    {
-                        dialogDetail = OrcTools.DialogDetail.FindDialogInCharacterID(lorId);
-                    }
-                    if (dialogDetail == null)
-                    {
-                        return true;
-                    }
-                    BattleDialogCharacter characterData = null;
-                    if (!string.IsNullOrWhiteSpace(dialogDetail.GroupName))
-                    {
-                        characterData = Singleton<BattleDialogXmlList>.Instance.GetCharacterData(dialogDetail.GroupName, dialogDetail.CharacterID.id.ToString());
-                    }
-                    if (characterData == null)
-                    {
-                        characterData = Singleton<BattleDialogXmlList>.Instance.GetCharacterData_Mod(lorId.packageId, dialogDetail.CharacterID.id);
-                    }
-                    Type type = FindBattleDialogueModel(dialogDetail.CharacterName, characterData.characterID, lorId.IsWorkshop());
-                    if (type == null)
-                    {
-                        __instance.battleDialogModel = new BattleDialogueModel(characterData);
-                        return false;
-                    }
-                    else
-                    {
-                        __instance.battleDialogModel = Activator.CreateInstance(type, new object[]
-                        {
-                                characterData
-                        }) as BattleDialogueModel;
-                        return false;
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                File.WriteAllText(Application.dataPath + "/Mods/InitBattleDialogByDefaultBookerror.log", ex.Message + Environment.NewLine + ex.StackTrace);
-            }
-            return true;
-        }
-        public static Type FindBattleDialogueModel(string name, string id, bool isMod)
-        {
-            if (!string.IsNullOrWhiteSpace(name) && CustomBattleDialogModel.TryGetValue(name, out Type type))
-            {
-                return type;
-            }
-            if (!string.IsNullOrWhiteSpace(id) && CustomBattleDialogModel.TryGetValue(id, out Type type2))
-            {
-                return type2;
-            }
-            if (!isMod)
-            {
-                foreach (Type type3 in Assembly.LoadFile(Application.dataPath + "/Managed/Assembly-CSharp.dll").GetTypes())
-                {
-                    if (type3.Name == "BattleDialogueModel_" + id.Trim())
-                    {
-                        return type3;
-                    }
-                }
-            }
-            return null;
-        }
-        //防止被动过多炸UI，存在字体问题待解决
-        [HarmonyPatch(typeof(BattleUnitInformationUI_PassiveList), "SetData")]
-        [HarmonyPrefix]
-        private static bool BattleUnitInformationUI_PassiveList_SetData_Pre(BattleUnitInformationUI_PassiveList __instance, List<PassiveAbilityBase> passivelist)
-        {
-            try
-            {
-                for (int i = __instance.passiveSlotList.Count; i < passivelist.Count; i++)
-                {
-                    BattleUnitInformationUI_PassiveList.BattleUnitInformationPassiveSlot battleUnitInformationPassiveSlot = new BattleUnitInformationUI_PassiveList.BattleUnitInformationPassiveSlot();
-                    RectTransform rectTransform = UnityEngine.Object.Instantiate(__instance.passiveSlotList[0].Rect, __instance.passiveSlotList[0].Rect.parent);
-                    battleUnitInformationPassiveSlot.Rect = rectTransform;
-                    for (int j = 0; j < battleUnitInformationPassiveSlot.Rect.childCount; j++)
-                    {
-                        if (battleUnitInformationPassiveSlot.Rect.GetChild(j).gameObject.name.Contains("Glow"))
-                        {
-                            battleUnitInformationPassiveSlot.img_IconGlow = battleUnitInformationPassiveSlot.Rect.GetChild(j).gameObject.GetComponent<Image>();
-                        }
-                        else if (battleUnitInformationPassiveSlot.Rect.GetChild(j).gameObject.name.Contains("Desc"))
-                        {
-                            battleUnitInformationPassiveSlot.txt_PassiveDesc = battleUnitInformationPassiveSlot.Rect.GetChild(j).gameObject.GetComponent<TextMeshProUGUI>();
-                        }
-                        else
-                        {
-                            battleUnitInformationPassiveSlot.img_Icon = rectTransform.GetChild(j).gameObject.GetComponent<Image>();
-                        }
-                    }
-                    rectTransform.gameObject.SetActive(false);
-                    __instance.passiveSlotList.Add(battleUnitInformationPassiveSlot);
-                }
-            }
-            catch (Exception ex)
-            {
-                File.WriteAllText(Application.dataPath + "/Mods/BUIUIPSerror.log", ex.Message + Environment.NewLine + ex.StackTrace);
-            }
-            return true;
-        }
+			Type result = null;
+			if (!CoreDialogsLoaded)
+			{
+				var baseType = typeof(BattleDialogueModel);
+				foreach (Type type3 in Assembly.Load("Assembly-CSharp").GetTypes())
+				{
+					if (baseType.IsAssignableFrom(type3) && type3.Name.StartsWith("BattleDialogueModel_"))
+					{
+						var typeName = type3.Name.Substring("BattleDialogueModel_".Length);
+						if (!CustomBattleDialogModel.ContainsKey(typeName))
+						{
+							CustomBattleDialogModel[typeName] = type3;
+							if (typeName == name || typeName == id && result == null)
+							{
+								result = type3;
+							}
+						}
+					}
+				}
+				CoreDialogsLoaded = true;
+			}
+			return result;
+		}
+		//防止被动过多炸UI，存在字体问题待解决
+		[HarmonyPatch(typeof(BattleUnitInformationUI_PassiveList), nameof(BattleUnitInformationUI_PassiveList.SetData))]
+		[HarmonyPrefix]
+		static void BattleUnitInformationUI_PassiveList_SetData_Pre(BattleUnitInformationUI_PassiveList __instance, List<PassiveAbilityBase> passivelist)
+		{
+			try
+			{
+				int unhidden = passivelist.Count(passive => !passive.isHide) + 1;
+				if (__instance.passiveSlotList.Count < unhidden)
+				{
+					__instance.passiveSlotList.Capacity = unhidden;
+					var copyHelper = __instance.passiveSlotList[0].Rect.GetComponent<BattleUnitInformationPassiveSlotCopyHelper>();
+					if (copyHelper == null)
+					{
+						copyHelper = __instance.passiveSlotList[0].Rect.gameObject.AddComponent<BattleUnitInformationPassiveSlotCopyHelper>();
+						copyHelper.Init(__instance.passiveSlotList[0]);
+					}
+					for (int i = __instance.passiveSlotList.Count; i < unhidden; i++)
+					{
+						__instance.passiveSlotList.Add(copyHelper.CopyThis());
+					}
+				}
+			}
+			catch (Exception ex)
+			{
+				File.WriteAllText(Application.dataPath + "/Mods/BUIUIPSerror.log", ex.Message + Environment.NewLine + ex.StackTrace);
+			}
+		}
+		private class BattleUnitInformationPassiveSlotCopyHelper : MonoBehaviour
+		{
+			public TextMeshProUGUI txt_PassiveDesc;
 
-        //Card
-        //CardName
-        [HarmonyPatch(typeof(BattleDiceCardModel), "GetName")]
-        [HarmonyPrefix]
-        private static bool BattleDiceCardModel_GetName_Pre(BattleDiceCardModel __instance, ref string __result)
-        {
-            try
-            {
-                string cardName = "";
-                if (__instance.XmlData._textId <= 0)
-                {
-                    cardName = GetCardName(__instance.GetID());
-                }
-                else
-                {
-                    cardName = GetCardName(new LorId(__instance.XmlData.workshopID, __instance.XmlData._textId));
-                }
-                if (cardName != "Not Found")
-                {
-                    __result = cardName;
-                    return false;
-                }
-            }
-            catch { }
-            return true;
-        }
-        //CardItemName
-        [HarmonyPatch(typeof(DiceCardItemModel), "GetName")]
-        [HarmonyPrefix]
-        public static bool DiceCardItemModel_GetName_Pre(DiceCardItemModel __instance, ref string __result)
-        {
-            try
-            {
-                string cardName = "";
-                if (__instance.ClassInfo._textId <= 0)
-                {
-                    cardName = GetCardName(__instance.GetID());
-                }
-                else
-                {
-                    cardName = GetCardName(new LorId(__instance.ClassInfo.workshopID, __instance.ClassInfo._textId));
-                }
-                if (cardName != "Not Found")
-                {
-                    __result = cardName;
-                    return false;
-                }
-            }
-            catch { }
-            return true;
-        }
-        //CardXmlName
-        [HarmonyPatch(typeof(DiceCardXmlInfo), "Name", MethodType.Getter)]
-        [HarmonyPrefix]
-        private static bool DiceCardXmlInfo_get_Name_Pre(DiceCardXmlInfo __instance, ref string __result)
-        {
-            try
-            {
-                string cardName = "";
-                if (__instance._textId <= 0)
-                {
-                    cardName = GetCardName(__instance.id);
-                }
-                else
-                {
-                    cardName = GetCardName(new LorId(__instance.workshopID, __instance._textId));
-                }
-                if (cardName != "Not Found")
-                {
-                    __result = cardName;
-                    return false;
-                }
-            }
-            catch { }
-            return true;
-        }
-        //DiceCardUIName
-        [HarmonyPatch(typeof(BattleDiceCardUI), "SetCard")]
-        [HarmonyPostfix]
-        private static void BattleDiceCardUI_SetCard_Post(BattleDiceCardUI __instance, BattleDiceCardModel cardModel)
-        {
-            try
-            {
-                string cardName = "";
-                if (cardModel.XmlData._textId <= 0)
-                {
-                    cardName = GetCardName(cardModel.GetID());
-                }
-                else
-                {
-                    cardName = GetCardName(new LorId(cardModel.XmlData.workshopID, cardModel.XmlData._textId));
-                }
-                if (cardName != "Not Found")
-                {
-                    __instance.txt_cardName.text = cardName;
-                }
-            }
-            catch { }
-        }
-        //Get CardSprite
-        [HarmonyPatch(typeof(AssetBundleManagerRemake), "LoadCardSprite")]
-        [HarmonyPrefix]
-        private static bool AssetBundleManagerRemake_LoadCardSprite_Pre(string name, ref Sprite __result)
-        {
-            try
-            {
-                if (name == null)
-                {
-                    return true;
-                }
-                else
-                {
-                    if (ArtWorks == null)
-                    {
-                        GetArtWorks();
-                    }
-                    if (ArtWorks.TryGetValue(name, out Sprite sprite))
-                    {
-                        __result = sprite;
-                        return false;
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                File.WriteAllText(Application.dataPath + "/Mods/LoadCardSpriteerror.log", ex.Message + Environment.NewLine + ex.StackTrace);
-            }
-            return true;
-        }
-        //Get CardSprite
-        [HarmonyPatch(typeof(CustomizingCardArtworkLoader), "GetSpecificArtworkSprite")]
-        [HarmonyPostfix]
-        private static Sprite CustomizingCardArtworkLoader_GetSpecificArtworkSprite_Post(Sprite cardArtwork, string name)
-        {
-            try
-            {
-                if (cardArtwork == null)
-                {
-                    cardArtwork = Singleton<AssetBundleManagerRemake>.Instance.LoadCardSprite(name);
-                }
-            }
-            catch (Exception ex)
-            {
-                File.WriteAllText(Application.dataPath + "/Mods/LoadCardSprite2error.log", ex.Message + Environment.NewLine + ex.StackTrace);
-            }
-            return cardArtwork;
-        }
-        //If has script and is not creating a new playingcard,return _script
-        /*[HarmonyPatch(typeof(BattleDiceCardModel), "CreateDiceCardSelfAbilityScript")]
-        [HarmonyPrefix]
-        private static bool BattleDiceCardModel_CreateDiceCardSelfAbilityScript_Pre(ref DiceCardSelfAbilityBase __result, DiceCardSelfAbilityBase __instance._script)
-        {
-            try
-            {
-                if (__instance._script != null)
-                {
-                    System.Diagnostics.StackTrace stackTrace = new System.Diagnostics.StackTrace();
-                    string name = stackTrace.GetFrame(2).GetMethod().Name;
-                    if (!name.Contains("AddCard") && !name.Contains("AllowTargetChanging"))
-                    {
-                        __result = __instance._script;
-                        return false;
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                File.WriteAllText(Application.dataPath + "/Mods/ScriptFixPreerror.txt", ex.Message + Environment.NewLine + ex.StackTrace);
-            }
-            return true;
-        }*/
-        //If has script,create a playingcard for cardModel in hand
-        [HarmonyPatch(typeof(BattleDiceCardModel), "CreateDiceCardSelfAbilityScript")]
-        [HarmonyPostfix]
-        private static void BattleDiceCardModel_CreateDiceCardSelfAbilityScript_Post(BattleDiceCardModel __instance, DiceCardSelfAbilityBase __result)
-        {
-            try
-            {
-                if (__result == null)
-                {
-                    return;
-                }
-                if (__result.card == null)
-                {
-                    BattlePlayingCardDataInUnitModel card = new BattlePlayingCardDataInUnitModel
-                    {
-                        owner = __instance.owner,
-                        card = __instance,
-                        cardAbility = __result
-                    };
-                    __result.card = card;
-                }
-                else
-                {
-                    __result.card.owner = __instance.owner;
-                    __result.card.card = __instance;
-                }
-                return;
-            }
-            catch (Exception ex)
-            {
-                File.WriteAllText(Application.dataPath + "/Mods/ScriptFixPosterror.txt", ex.Message + Environment.NewLine + ex.StackTrace);
-            }
-        }
-        //Apply owner for personal card
-        [HarmonyPatch(typeof(BattlePersonalEgoCardDetail), "AddCard", new Type[] { typeof(LorId) })]
-        [HarmonyPrefix]
-        private static bool BattlePersonalEgoCardDetail_AddCard_Pre(BattlePersonalEgoCardDetail __instance, LorId cardId)
-        {
-            try
-            {
-                DiceCardXmlInfo cardItem = ItemXmlDataList.instance.GetCardItem(cardId, false);
-                if (cardItem == null)
-                {
-                    return false;
-                }
-                if (!cardItem.IsPersonal())
-                {
-                    return false;
-                }
-                if (__instance._cardsAll.FindAll((BattleDiceCardModel x) => x.GetID() == cardId).Count == 0)
-                {
-                    BattleDiceCardModel battleDiceCardModel = BattleDiceCardModel.CreatePlayingCard(cardItem);
-                    battleDiceCardModel.owner = __instance._self;
-                    __instance._cardsAll.Add(battleDiceCardModel);
-                    __instance._cardInHand.Add(battleDiceCardModel);
-                    if (battleDiceCardModel.XmlData.IsEgo())
-                    {
-                        battleDiceCardModel.ResetCoolTime();
-                        battleDiceCardModel.SetMaxCooltime();
-                        battleDiceCardModel.SetCurrentCostMax();
-                    }
-                }
-                return false;
-            }
-            catch (Exception ex)
-            {
-                File.WriteAllText(Application.dataPath + "/Mods/PersonalEGOAddCarderror.log", ex.Message + Environment.NewLine + ex.StackTrace);
-            }
-            return true;
-        }
-        //CardSelfAbilityKeywords
-        [HarmonyPatch(typeof(BattleCardAbilityDescXmlList), "GetAbilityKeywords_byScript")]
-        [HarmonyPrefix]
-        private static void BattleCardAbilityDescXmlList_GetAbilityKeywords_byScript_Pre(BattleCardAbilityDescXmlList __instance, string scriptName)
-        {
-            try
-            {
-                if (string.IsNullOrWhiteSpace(scriptName))
-                {
-                    return;
-                }
-                if (!__instance._dictionaryKeywordCache.ContainsKey(scriptName))
-                {
-                    DiceCardAbilityBase diceCardAbilityBase = Singleton<AssemblyManager>.Instance.CreateInstance_DiceCardAbility(scriptName.Trim());
-                    if (diceCardAbilityBase == null)
-                    {
-                        DiceCardSelfAbilityBase diceCardSelfAbilityBase = Singleton<AssemblyManager>.Instance.CreateInstance_DiceCardSelfAbility(scriptName.Trim());
-                        if (diceCardSelfAbilityBase != null)
-                        {
-                            __instance._dictionaryKeywordCache[scriptName] = new List<string>();
-                            __instance._dictionaryKeywordCache[scriptName].AddRange(diceCardSelfAbilityBase.Keywords);
-                            return;
-                        }
-                    }
-                    else
-                    {
-                        __instance._dictionaryKeywordCache[scriptName] = new List<string>();
-                        __instance._dictionaryKeywordCache[scriptName].AddRange(diceCardAbilityBase.Keywords);
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                File.WriteAllText(Application.dataPath + "/Mods/KeywordsbyScripterror.log", ex.Message + Environment.NewLine + ex.StackTrace);
-            }
-        }
-        //RangeSpecial
-        [HarmonyPatch(typeof(UISpriteDataManager), "GetRangeIconSprite")]
-        [HarmonyPrefix]
-        private static bool UISpriteDataManager_GetRangeIconSprite_Pre(ref Sprite __result, CardRange range)
-        {
-            try
-            {
-                if (ArtWorks == null)
-                {
-                    GetArtWorks();
-                }
-                if (range == CardRange.Special)
-                {
-                    __result = ArtWorks["CommonPage_RightTop_Type_SpecialAttack"];
-                    return false;
-                }
-            }
-            catch (Exception ex)
-            {
-                File.WriteAllText(Application.dataPath + "/Mods/SpecialRangeIconerror.log", ex.Message + Environment.NewLine + ex.StackTrace);
-            }
-            return true;
-        }
-        //CardBufIcon
-        [HarmonyPatch(typeof(BattleDiceCardBuf), "GetBufIcon")]
-        [HarmonyPrefix]
-        private static bool BattleDiceCardBuf_GetBufIcon_Pre(BattleDiceCardBuf __instance, ref Sprite __result)
-        {
-            if (ArtWorks == null)
-            {
-                GetArtWorks();
-            }
-            if (!__instance._iconInit)
-            {
-                try
-                {
-                    string keywordIconId = __instance.keywordIconId;
-                    if (!string.IsNullOrWhiteSpace(keywordIconId) && ArtWorks.TryGetValue("CardBuf_" + keywordIconId, out Sprite sprite) && sprite != null)
-                    {
-                        __instance._iconInit = true;
-                        __instance._bufIcon = sprite;
-                        __result = sprite;
-                        return false;
-                    }
-                }
-                catch { }
-            }
-            return true;
-        }
-        //costtozero real
-        [HarmonyPatch(typeof(BattleDiceCardModel), "GetCost")]
-        [HarmonyPrefix]
-        private static bool BattleDiceCardModel_GetCost_Pre(ref int __result, BattleDiceCardModel __instance)
-        {
-            try
-            {
-                if (__instance._script != null && __instance._script.IsFixedCost())
-                {
-                    __result = __instance._xmlData.Spec.Cost;
-                    return false;
-                }
-                int baseCost = __instance._curCost;
-                foreach (BattleDiceCardBuf battleDiceCardBuf in __instance._bufList)
-                {
-                    baseCost = battleDiceCardBuf.GetCost(baseCost);
-                }
-                int abilityCostAdder = 0;
-                if (__instance.owner != null)
-                {
-                    if (!__instance.XmlData.IsPersonal())
-                    {
-                        abilityCostAdder += __instance.owner.emotionDetail.GetCardCostAdder(__instance);
-                        abilityCostAdder += __instance.owner.bufListDetail.GetCardCostAdder(__instance);
-                    }
-                    if (__instance._script != null)
-                    {
-                        abilityCostAdder += __instance._script.GetCostAdder(__instance.owner, __instance);
-                    }
-                }
-                int finalCost = baseCost + __instance._costAdder + abilityCostAdder;
-                if (__instance._costZero)
-                {
-                    finalCost = 0;
-                }
-                if (__instance.owner != null && __instance._script != null && __instance._script != null)
-                {
-                    finalCost = __instance._script.GetCostLast(__instance.owner, __instance, finalCost);
-                }
-                __result = Mathf.Max(0, finalCost);
-                return false;
-            }
-            catch (Exception ex)
-            {
-                File.WriteAllText(Application.dataPath + "/Mods/GetCostRemakeerror.log", ex.Message + Environment.NewLine + ex.StackTrace);
-            }
-            return true;
-        }
-        //BattleDiceBehavior ignorepower lead to dicevalue zero
-        [HarmonyPatch(typeof(BattleDiceBehavior), "UpdateDiceFinalValue")]
-        [HarmonyPrefix]
-        private static void BattleDiceBehavior_UpdateDiceFinalValue_Pre(BattleDiceBehavior __instance)
-        {
-            try
-            {
-                __instance._diceFinalResultValue = __instance._diceResultValue;
-            }
-            catch { }
-        }
+			public Image img_Icon;
 
-        //Passive
-        //PassiveName
-        [HarmonyPatch(typeof(BookPassiveInfo), "name", MethodType.Getter)]
-        [HarmonyPrefix]
-        private static bool BookPassiveInfo_get_name_Pre(BookPassiveInfo __instance, ref string __result)
-        {
-            try
-            {
-                string passiveName = Singleton<PassiveDescXmlList>.Instance.GetName(__instance.passive.id);
-                if (!string.IsNullOrWhiteSpace(passiveName))
-                {
-                    __result = passiveName;
-                    return false;
-                }
-            }
-            catch { }
-            return true;
-        }
-        //PassiveDesc
-        [HarmonyPatch(typeof(BookPassiveInfo), "desc", MethodType.Getter)]
-        [HarmonyPrefix]
-        private static bool BookPassiveInfo_get_desc_Pre(BookPassiveInfo __instance, ref string __result)
-        {
-            try
-            {
-                string passiveDesc = Singleton<PassiveDescXmlList>.Instance.GetDesc(__instance.passive.id);
-                if (!string.IsNullOrWhiteSpace(passiveDesc))
-                {
-                    __result = passiveDesc;
-                    return false;
-                }
-            }
-            catch { }
-            return true;
-        }
+			public Image img_IconGlow;
 
-        //BattleUnitBuff
-        //ReadyBuf
-        [HarmonyPatch(typeof(BattleUnitBufListDetail), "OnRoundStart")]
-        [HarmonyPrefix]
-        private static bool BattleUnitBufListDetail_OnRoundStart_Pre(BattleUnitBufListDetail __instance)
-        {
-            try
-            {
-                foreach (BattleUnitBuf ReadyBuf in __instance._readyBufList)
-                {
-                    if (!ReadyBuf.IsDestroyed())
-                    {
-                        BattleUnitBuf buf = __instance._bufList.Find((BattleUnitBuf x) => x.GetType() == ReadyBuf.GetType() && !x.IsDestroyed());
-                        if (buf != null && !ReadyBuf.independentBufIcon && buf.GetBufIcon() != null)
-                        {
-                            buf.stack += ReadyBuf.stack;
-                            buf.OnAddBuf(ReadyBuf.stack);
-                        }
-                        else
-                        {
-                            __instance.AddBuf(ReadyBuf);
-                            ReadyBuf.OnAddBuf(ReadyBuf.stack);
-                        }
-                    }
-                }
-                __instance._readyBufList.Clear();
-                foreach (BattleUnitBuf ReadyReadyBuf in __instance._readyReadyBufList)
-                {
-                    if (!ReadyReadyBuf.IsDestroyed())
-                    {
-                        BattleUnitBuf rbuf = __instance._readyBufList.Find((BattleUnitBuf x) => x.GetType() == ReadyReadyBuf.GetType() && !x.IsDestroyed());
-                        if (rbuf != null && !ReadyReadyBuf.independentBufIcon && rbuf.GetBufIcon() != null)
-                        {
-                            rbuf.stack += ReadyReadyBuf.stack;
-                            rbuf.OnAddBuf(ReadyReadyBuf.stack);
-                        }
-                        else
-                        {
-                            __instance._readyBufList.Add(ReadyReadyBuf);
-                            ReadyReadyBuf.OnAddBuf(ReadyReadyBuf.stack);
-                        }
-                    }
-                }
-                __instance._readyReadyBufList.Clear();
-                if (__instance._self.faction == Faction.Player && Singleton<StageController>.Instance.GetStageModel().ClassInfo.chapter == 3)
-                {
-                    int kewordBufStack = __instance.GetKewordBufStack(KeywordBuf.Endurance);
-                    __instance._self.UnitData.historyInStage.maxEndurance = Mathf.Max(__instance._self.UnitData.historyInStage.maxEndurance, kewordBufStack);
-                }
-                foreach (BattleUnitBuf battleUnitBuf3 in __instance._bufList.ToArray())
-                {
-                    try
-                    {
-                        if (!battleUnitBuf3.IsDestroyed())
-                        {
-                            battleUnitBuf3.OnRoundStart();
-                        }
-                    }
-                    catch (Exception exception)
-                    {
-                        Debug.LogException(exception);
-                    }
-                }
-                __instance.CheckDestroyedBuf();
-                __instance.CheckAchievements();
-                return false;
-            }
-            catch (Exception ex)
-            {
-                File.WriteAllText(Application.dataPath + "/Mods/ReadyBufFixerror.log", ex.Message + Environment.NewLine + ex.StackTrace);
-            }
-            return true;
-        }
-        //CanAddBuf Apply owner
-        [HarmonyPatch(typeof(BattleUnitBufListDetail), "CanAddBuf")]
-        [HarmonyPrefix]
-        private static void BattleUnitBufListDetail_CanAddBuf_Pre(BattleUnitBufListDetail __instance, BattleUnitBuf buf)
-        {
-            try
-            {
-                if (buf == null || __instance._self == null)
-                {
-                    return;
-                }
-                buf._owner = __instance._self;
-            }
-            catch { }
-        }
-        //GetBufIcon
-        [HarmonyPatch(typeof(BattleUnitBuf), "GetBufIcon")]
-        [HarmonyPrefix]
-        private static void BattleUnitBuf_GetBufIcon_Pre(BattleUnitBuf __instance)
-        {
-            if (ArtWorks == null)
-            {
-                GetArtWorks();
-            }
-            if (BattleUnitBuf._bufIconDictionary == null)
-            {
-                BattleUnitBuf._bufIconDictionary = new Dictionary<string, Sprite>();
-            }
-            if (BattleUnitBuf._bufIconDictionary.Count == 0)
-            {
-                Sprite[] array = Resources.LoadAll<Sprite>("Sprites/BufIconSheet/");
-                if (array != null && array.Length != 0)
-                {
-                    for (int i = 0; i < array.Length; i++)
-                    {
-                        BattleUnitBuf._bufIconDictionary.Add(array[i].name, array[i]);
-                    }
-                }
-            }
-            string keywordIconId = __instance.keywordIconId;
-            if (!string.IsNullOrWhiteSpace(keywordIconId) && !BattleUnitBuf._bufIconDictionary.ContainsKey(keywordIconId) && ArtWorks.TryGetValue(keywordIconId, out Sprite sprite))
-            {
-                BattleUnitBuf._bufIconDictionary[keywordIconId] = sprite;
-            }
-        }
+			public RectTransform Rect;
 
-        //EmotionCard
-        //EmotionCardAbilityApply
-        [HarmonyPatch(typeof(BattleEmotionCardModel), MethodType.Constructor, new Type[] { typeof(EmotionCardXmlInfo), typeof(BattleUnitModel) })]
-        [HarmonyPostfix]
-        private static void BattleEmotionCardModel_ctor_Post(BattleEmotionCardModel __instance, EmotionCardXmlInfo xmlInfo, BattleUnitModel owner)
-        {
-            try
-            {
-                if (__instance._xmlInfo == null)
-                {
-                    __instance._xmlInfo = xmlInfo;
-                }
-                if (__instance._owner == null)
-                {
-                    __instance._owner = owner;
-                }
-                if (__instance._abilityList == null)
-                {
-                    __instance._abilityList = new List<EmotionCardAbilityBase>();
-                }
-                foreach (string text in xmlInfo.Script)
-                {
-                    EmotionCardAbilityBase emotionCardAbilityBase = FindEmotionCardAbility(text.Trim());
-                    if (emotionCardAbilityBase != null)
-                    {
-                        emotionCardAbilityBase.SetEmotionCard(__instance);
-                        __instance._abilityList.RemoveAll(x => x.GetType().Name.Substring("EmotionCardAbility_".Length).Trim() == text);
-                        __instance._abilityList.Add(emotionCardAbilityBase);
-                    }
-                }/*
-                List<string> list = new List<string>();
-                list.AddRange(xmlInfo.Script);
-                foreach (EmotionCardAbilityBase emotionCardAbility in __instance._abilityList)
-                {
-                    list.Remove(emotionCardAbility.GetType().Name.Substring("EmotionCardAbility_".Length).Trim());
-                }
-                foreach (string text in list)
-                {
-                    EmotionCardAbilityBase emotionCardAbilityBase = FindEmotionCardAbility(text.Trim());
-                    if (emotionCardAbilityBase != null)
-                    {
-                        emotionCardAbilityBase.SetEmotionCard(__instance);
-                        __instance._abilityList.Add(emotionCardAbilityBase);
-                    }
-                }*/
-            }
-            catch (Exception ex)
-            {
-                File.WriteAllText(Application.dataPath + "/Mods/SetEmotionAbilityerror.log", ex.Message + Environment.NewLine + ex.StackTrace);
-            }
-        }
-        public static EmotionCardAbilityBase FindEmotionCardAbility(string name)
-        {
-            if (!string.IsNullOrWhiteSpace(name) && CustomEmotionCardAbility.TryGetValue(name, out Type type))
-            {
-                return Activator.CreateInstance(type) as EmotionCardAbilityBase;
-            }
-            foreach (Type type2 in Assembly.LoadFile(Application.dataPath + "/Managed/Assembly-CSharp.dll").GetTypes())
-            {
-                if (type2.Name == "EmotionCardAbility_" + name.Trim())
-                {
-                    return Activator.CreateInstance(type2) as EmotionCardAbilityBase;
-                }
-            }
-            return null;
-        }
-        //EmotionCard Preview Artwork
-        [HarmonyPatch(typeof(UIAbnormalityCardPreviewSlot), "Init")]
-        [HarmonyPostfix]
-        private static void UIAbnormalityCardPreviewSlot_Init_Post(UIAbnormalityCardPreviewSlot __instance, EmotionCardXmlInfo card)
-        {
-            try
-            {
-                if (ArtWorks == null)
-                {
-                    GetArtWorks();
-                }
-                if (ArtWorks.ContainsKey(card.Artwork))
-                {
-                    __instance.artwork.sprite = ArtWorks[card.Artwork];
-                }
-            }
-            catch (Exception ex)
-            {
-                File.WriteAllText(Application.dataPath + "/Mods/EmotionCardPreviewArtworkerror.log", ex.Message + Environment.NewLine + ex.StackTrace);
-            }
-        }
-        //EmotionCard DiceAction Artwork
-        [HarmonyPatch(typeof(BattleUnitDiceActionUI_EmotionCard), "Init")]
-        [HarmonyPostfix]
-        private static void BattleUnitDiceActionUI_EmotionCard_Init_Post(BattleUnitDiceActionUI_EmotionCard __instance, BattleEmotionCardModel card)
-        {
-            try
-            {
-                if (ArtWorks == null)
-                {
-                    GetArtWorks();
-                }
-                string artwork = card.XmlInfo.Artwork;
-                if (ArtWorks.ContainsKey(artwork))
-                {
-                    __instance.artwork.sprite = ArtWorks[artwork];
-                }
-            }
-            catch (Exception ex)
-            {
-                File.WriteAllText(Application.dataPath + "/Mods/EmotionCardDiceActionArtworkerror.log", ex.Message + Environment.NewLine + ex.StackTrace);
-            }
-        }
-        //EmotionCardInven Passive Artwork
-        [HarmonyPatch(typeof(UIEmotionPassiveCardInven), "SetSprites")]
-        [HarmonyPostfix]
-        private static void UIEmotionPassiveCardInven_SetSprites_Post(UIEmotionPassiveCardInven __instance)
-        {
-            try
-            {
-                if (ArtWorks == null)
-                {
-                    GetArtWorks();
-                }
-                string artwork = __instance._card.Artwork;
-                if (ArtWorks.ContainsKey(artwork))
-                {
-                    __instance._artwork.sprite = ArtWorks[artwork];
-                }
-            }
-            catch (Exception ex)
-            {
-                File.WriteAllText(Application.dataPath + "/Mods/EmotionCardInvenPassiveArtworkerror.log", ex.Message + Environment.NewLine + ex.StackTrace);
-            }
-        }
-        //EmotionCard Passive Artwork
-        [HarmonyPatch(typeof(EmotionPassiveCardUI), "SetSprites")]
-        [HarmonyPostfix]
-        private static void EmotionPassiveCardUI_SetSprites_Post(EmotionPassiveCardUI __instance)
-        {
-            try
-            {
-                if (ArtWorks == null)
-                {
-                    GetArtWorks();
-                }
-                string artwork = __instance._card.Artwork;
-                if (ArtWorks.ContainsKey(artwork))
-                {
-                    __instance._artwork.sprite = ArtWorks[artwork];
-                }
-            }
-            catch (Exception ex)
-            {
-                File.WriteAllText(Application.dataPath + "/Mods/EmotionCardPassiveArtworkerror.log", ex.Message + Environment.NewLine + ex.StackTrace);
-            }
-        }
+			public void Init(BattleUnitInformationUI_PassiveList.BattleUnitInformationPassiveSlot origin)
+			{
+				txt_PassiveDesc = origin.txt_PassiveDesc;
+				img_Icon = origin.img_Icon;
+				img_IconGlow = origin.img_IconGlow;
+				Rect = origin.Rect;
+			}
 
-        //EGO
-        //EGOCardName
-        [HarmonyPatch(typeof(BattleDiceCardUI), "SetEgoCardForPopup")]
-        [HarmonyPostfix]
-        private static void BattleDiceCardUI_SetEgoCardForPopup_Post(BattleDiceCardUI __instance, EmotionEgoXmlInfo egoxmlinfo)
-        {
-            try
-            {
-                DiceCardXmlInfo cardXmlInfo = ItemXmlDataList.instance.GetCardItem(egoxmlinfo.CardId);
-                string cardName = "";
-                if (cardXmlInfo._textId <= 0)
-                {
-                    cardName = GetCardName(cardXmlInfo.id);
-                }
-                else
-                {
-                    cardName = GetCardName(new LorId(cardXmlInfo.workshopID, cardXmlInfo._textId));
-                }
-                if (cardName != "Not Found")
-                {
-                    __instance.txt_cardName.text = cardName;
-                }
-            }
-            catch { }
-        }
-        //EGOId
-        [HarmonyPatch(typeof(EmotionEgoXmlInfo), "CardId", MethodType.Getter)]
-        [HarmonyPrefix]
-        private static bool EmotionEgoXmlInfo_get_CardId_Pre(EmotionEgoXmlInfo __instance, ref LorId __result)
-        {
-            try
-            {
-                if (OrcTools.EgoDic.ContainsKey(__instance))
-                {
-                    __result = OrcTools.EgoDic[__instance];
-                    return false;
-                }
-            }
-            catch (Exception ex)
-            {
-                File.WriteAllText(Application.dataPath + "/Mods/EgoCardIderror.log", ex.Message + Environment.NewLine + ex.StackTrace);
-            }
-            return true;
-        }
-        //EGOData
-        [HarmonyPatch(typeof(EmotionEgoXmlList), "GetData", new Type[] { typeof(LorId) })]
-        [HarmonyPrefix]
-        private static bool EmotionEgoXmlList_GetData_Pre(LorId id, ref EmotionEgoXmlInfo __result)
-        {
-            try
-            {
-                foreach (KeyValuePair<EmotionEgoXmlInfo, LorId> keyValuePair in OrcTools.EgoDic)
-                {
-                    if (keyValuePair.Value == id)
-                    {
-                        __result = keyValuePair.Key;
-                        return false;
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                Singleton<ModContentManager>.Instance.AddErrorLog(ex.Message + Environment.NewLine + ex.StackTrace);
-                File.WriteAllText(Application.dataPath + "/Mods/EgoCardIderror.log", ex.Message + Environment.NewLine + ex.StackTrace);
-            }
-            return true;
-        }
-        //EGOName
-        [HarmonyPatch(typeof(EmotionEgoCardUI), "Init")]
-        [HarmonyPrefix]
-        private static bool EmotionEgoCardUI_Init_Pre(EmotionEgoCardUI __instance, EmotionEgoXmlInfo card)
-        {
-            try
-            {
-                if (OrcTools.EgoDic.ContainsKey(card))
-                {
-                    __instance._card = card;
-                    DiceCardXmlInfo cardItem = ItemXmlDataList.instance.GetCardItem(OrcTools.EgoDic[card], false);
-                    __instance._cardName.text = cardItem.Name;
-                    __instance.gameObject.SetActive(true);
-                    return false;
-                }
-            }
-            catch (Exception ex)
-            {
-                Singleton<ModContentManager>.Instance.AddErrorLog(ex.Message + Environment.NewLine + ex.StackTrace);
-                File.WriteAllText(Application.dataPath + "/Mods/EgoCardUIIniterror.log", ex.Message + Environment.NewLine + ex.StackTrace);
-            }
-            return true;
-        }
+			public BattleUnitInformationUI_PassiveList.BattleUnitInformationPassiveSlot CopyThis()
+			{
+				var helperCopy = Instantiate(this, transform.parent);
+				helperCopy.gameObject.SetActive(false);
+				var result = new BattleUnitInformationUI_PassiveList.BattleUnitInformationPassiveSlot
+				{
+					Rect = helperCopy.Rect,
+					txt_PassiveDesc = helperCopy.txt_PassiveDesc,
+					img_Icon = helperCopy.img_Icon,
+					img_IconGlow = helperCopy.img_IconGlow
+				};
+				return result;
+			}
+		}
+		//Card
+		//CardName
+		[HarmonyPatch(typeof(BattleDiceCardModel), nameof(BattleDiceCardModel.GetName))]
+		[HarmonyPrefix]
+		static bool BattleDiceCardModel_GetName_Pre(BattleDiceCardModel __instance, ref string __result)
+		{
+			try
+			{
+				string cardName;
+				if (__instance.XmlData._textId <= 0)
+				{
+					cardName = GetCardName(__instance.GetID());
+				}
+				else
+				{
+					cardName = GetCardName(new LorId(__instance.XmlData.workshopID, __instance.XmlData._textId));
+				}
+				if (cardName != "Not Found")
+				{
+					__result = cardName;
+					return false;
+				}
+			}
+			catch { }
+			return true;
+		}
+		//CardItemName
+		[HarmonyPatch(typeof(DiceCardItemModel), nameof(DiceCardItemModel.GetName))]
+		[HarmonyPrefix]
+		public static bool DiceCardItemModel_GetName_Pre(DiceCardItemModel __instance, ref string __result)
+		{
+			try
+			{
+				string cardName;
+				if (__instance.ClassInfo._textId <= 0)
+				{
+					cardName = GetCardName(__instance.GetID());
+				}
+				else
+				{
+					cardName = GetCardName(new LorId(__instance.ClassInfo.workshopID, __instance.ClassInfo._textId));
+				}
+				if (cardName != "Not Found")
+				{
+					__result = cardName;
+					return false;
+				}
+			}
+			catch { }
+			return true;
+		}
+		//CardXmlName
+		[HarmonyPatch(typeof(DiceCardXmlInfo), nameof(DiceCardXmlInfo.Name), MethodType.Getter)]
+		[HarmonyPrefix]
+		static bool DiceCardXmlInfo_get_Name_Pre(DiceCardXmlInfo __instance, ref string __result)
+		{
+			try
+			{
+				string cardName;
+				if (__instance._textId <= 0)
+				{
+					cardName = GetCardName(__instance.id);
+				}
+				else
+				{
+					cardName = GetCardName(new LorId(__instance.workshopID, __instance._textId));
+				}
+				if (cardName != "Not Found")
+				{
+					__result = cardName;
+					return false;
+				}
+			}
+			catch { }
+			return true;
+		}
+		//DiceCardUIName
+		[HarmonyPatch(typeof(BattleDiceCardUI), nameof(BattleDiceCardUI.SetCard))]
+		[HarmonyPostfix]
+		[HarmonyPriority(Priority.High)]
+		static void BattleDiceCardUI_SetCard_Post(BattleDiceCardUI __instance, BattleDiceCardModel cardModel)
+		{
+			try
+			{
+				string cardName;
+				if (cardModel.XmlData._textId <= 0)
+				{
+					cardName = GetCardName(cardModel.GetID());
+				}
+				else
+				{
+					cardName = GetCardName(new LorId(cardModel.XmlData.workshopID, cardModel.XmlData._textId));
+				}
+				if (cardName != "Not Found")
+				{
+					__instance.txt_cardName.text = cardName;
+				}
+			}
+			catch { }
+		}
+		//Get CardSprite
+		[HarmonyPatch(typeof(AssetBundleManagerRemake), nameof(AssetBundleManagerRemake.LoadCardSprite))]
+		[HarmonyPrefix]
+		static bool AssetBundleManagerRemake_LoadCardSprite_Pre(string name, ref Sprite __result)
+		{
+			try
+			{
+				if (name == null)
+				{
+					return true;
+				}
+				else
+				{
+					if (ArtWorks == null)
+					{
+						GetArtWorks();
+					}
+					if (ArtWorks.TryGetValue(name, out Sprite sprite))
+					{
+						__result = sprite;
+						return false;
+					}
+				}
+			}
+			catch (Exception ex)
+			{
+				File.WriteAllText(Application.dataPath + "/Mods/LoadCardSpriteerror.log", ex.Message + Environment.NewLine + ex.StackTrace);
+			}
+			return true;
+		}
+		//Get CardSprite
+		[HarmonyPatch(typeof(CustomizingCardArtworkLoader), nameof(CustomizingCardArtworkLoader.GetSpecificArtworkSprite))]
+		[HarmonyPostfix]
+		static Sprite CustomizingCardArtworkLoader_GetSpecificArtworkSprite_Post(Sprite cardArtwork, string name)
+		{
+			try
+			{
+				if (cardArtwork == null)
+				{
+					cardArtwork = AssetBundleManagerRemake.Instance.LoadCardSprite(name);
+				}
+			}
+			catch (Exception ex)
+			{
+				File.WriteAllText(Application.dataPath + "/Mods/LoadCardSprite2error.log", ex.Message + Environment.NewLine + ex.StackTrace);
+			}
+			return cardArtwork;
+		}
+		//If has script and is not creating a new playingcard,return _script
+		/*[HarmonyPatch(typeof(BattleDiceCardModel), nameof(BattleDiceCardModel.CreateDiceCardSelfAbilityScript))]
+		[HarmonyPrefix]
+		static bool BattleDiceCardModel_CreateDiceCardSelfAbilityScript_Pre(BattleDiceCardModel __instance, ref DiceCardSelfAbilityBase __result)
+		{
+			try
+			{
+				if (__instance._script != null)
+				{
+					System.Diagnostics.StackTrace stackTrace = new System.Diagnostics.StackTrace();
+					string name = stackTrace.GetFrame(2).GetMethod().Name;
+					if (!name.Contains("AddCard") && !name.Contains("AllowTargetChanging"))
+					{
+						__result = __instance._script;
+						return false;
+					}
+				}
+			}
+			catch (Exception ex)
+			{
+				File.WriteAllText(Application.dataPath + "/Mods/ScriptFixPreerror.txt", ex.Message + Environment.NewLine + ex.StackTrace);
+			}
+			return true;
+		}*/
+		//If has script of the same type, return _script; if has script of a different type, replace _script
+		//If has script,create a playingcard for cardModel in hand
+		[HarmonyPatch(typeof(BattleDiceCardModel), nameof(BattleDiceCardModel.CreateDiceCardSelfAbilityScript))]
+		[HarmonyPostfix]
+		static void BattleDiceCardModel_CreateDiceCardSelfAbilityScript_Post(BattleDiceCardModel __instance, ref DiceCardSelfAbilityBase __result)
+		{
+			try
+			{
+				if (__result == null)
+				{
+					__instance._script = null;
+					return;
+				}
+				if (__instance._script == null || __instance._script.GetType() != __result.GetType())
+				{
+					__instance._script = __result;
+				}
+				else
+				{
+					__result = __instance._script;
+				}
+				if (__result.card == null)
+				{
+					BattlePlayingCardDataInUnitModel card = new BattlePlayingCardDataInUnitModel
+					{
+						owner = __instance.owner,
+						card = __instance,
+						cardAbility = __result
+					};
+					__result.card = card;
+				}
+				else if (!__result.card.isKeepedCard)
+				{
+					__result.card.cardAbility = __result;
+				}
+			}
+			catch (Exception ex)
+			{
+				File.WriteAllText(Application.dataPath + "/Mods/ScriptFixPosterror.txt", ex.Message + Environment.NewLine + ex.StackTrace);
+			}
+		}
+		//Apply owner for personal card
+		/*
+		[HarmonyPatch(typeof(BattlePersonalEgoCardDetail), nameof(BattlePersonalEgoCardDetail.AddCard), new Type[] { typeof(LorId) })]
+		[HarmonyPrefix]
+		static bool BattlePersonalEgoCardDetail_AddCard_Pre(BattlePersonalEgoCardDetail __instance, LorId cardId)
+		{
+			try
+			{
+				DiceCardXmlInfo cardItem = ItemXmlDataList.instance.GetCardItem(cardId, false);
+				if (cardItem == null)
+				{
+					return false;
+				}
+				if (!cardItem.IsPersonal())
+				{
+					return false;
+				}
+				if (__instance._cardsAll.FindAll((BattleDiceCardModel x) => x.GetID() == cardId).Count == 0)
+				{
+					BattleDiceCardModel battleDiceCardModel = BattleDiceCardModel.CreatePlayingCard(cardItem);
+					battleDiceCardModel.owner = __instance._self;
+					__instance._cardsAll.Add(battleDiceCardModel);
+					__instance._cardInHand.Add(battleDiceCardModel);
+					if (battleDiceCardModel.XmlData.IsEgo())
+					{
+						battleDiceCardModel.ResetCoolTime();
+						battleDiceCardModel.SetMaxCooltime();
+						battleDiceCardModel.SetCurrentCostMax();
+					}
+				}
+				return false;
+			}
+			catch (Exception ex)
+			{
+				File.WriteAllText(Application.dataPath + "/Mods/PersonalEGOAddCarderror.log", ex.Message + Environment.NewLine + ex.StackTrace);
+			}
+			return true;
+		}
+		*/
+		[HarmonyPatch(typeof(BattlePersonalEgoCardDetail), nameof(BattlePersonalEgoCardDetail.AddCard), new Type[] { typeof(LorId) })]
+		[HarmonyTranspiler]
+		static IEnumerable<CodeInstruction> BattlePersonalEgoCardDetail_AddCard_In(IEnumerable<CodeInstruction> instructions)
+		{
+			var method = Method(typeof(BattleDiceCardModel), nameof(BattleDiceCardModel.CreatePlayingCard));
+			foreach (var instruction in instructions)
+			{
+				yield return instruction;
+				if (instruction.Is(Call, method))
+				{
+					yield return new CodeInstruction(Dup);
+					yield return new CodeInstruction(Ldarg_0);
+					yield return new CodeInstruction(Ldfld, Field(typeof(BattlePersonalEgoCardDetail), nameof(BattlePersonalEgoCardDetail._self)));
+					yield return new CodeInstruction(Stfld, Field(typeof(BattleDiceCardModel), nameof(BattleDiceCardModel.owner)));
+				}
+			}
+		}
+		//CardSelfAbilityKeywords
+		[HarmonyPatch(typeof(BattleCardAbilityDescXmlList), nameof(BattleCardAbilityDescXmlList.GetAbilityKeywords_byScript))]
+		[HarmonyPrefix]
+		[HarmonyPriority(Priority.HigherThanNormal)]
+		static void BattleCardAbilityDescXmlList_GetAbilityKeywords_byScript_Pre(BattleCardAbilityDescXmlList __instance, string scriptName)
+		{
+			if (!__instance._dictionaryKeywordCache.ContainsKey(scriptName))
+			{
+				try
+				{
+					if (AssemblyManager.Instance.CreateInstance_DiceCardAbility(scriptName) is DiceCardAbilityBase cardAbility)
+					{
+						__instance._dictionaryKeywordCache[scriptName] = cardAbility.Keywords.ToList();
+						return;
+					}
+				}
+				catch (Exception ex)
+				{
+					File.WriteAllText(Application.dataPath + "/Mods/KeywordsbyScripterror.log", ex.Message + Environment.NewLine + ex.StackTrace);
+				}
+				try
+				{
+					if (AssemblyManager.Instance.CreateInstance_DiceCardSelfAbility(scriptName) is DiceCardSelfAbilityBase cardSelfAbility)
+					{
+						__instance._dictionaryKeywordCache[scriptName] = cardSelfAbility.Keywords.ToList();
+						return;
+					}
+				}
+				catch (Exception ex)
+				{
+					File.WriteAllText(Application.dataPath + "/Mods/KeywordsbyScripterror.log", ex.Message + Environment.NewLine + ex.StackTrace);
+				}
+				__instance._dictionaryKeywordCache[scriptName] = new List<string>();
+			}
+		}
 
-        //Story
-        //StoryIcon
-        [HarmonyPatch(typeof(UISpriteDataManager), "GetStoryIcon")]
-        [HarmonyPrefix]
-        private static bool UISpriteDataManager_GetStoryIcon_Pre(string story, ref UIIconManager.IconSet __result)
-        {
-            try
-            {
-                if (story == null)
-                {
-                    return true;
-                }
-                else
-                {
-                    if (ArtWorks == null)
-                    {
-                        GetArtWorks();
-                    }
-                    if (ArtWorks.TryGetValue(story, out Sprite sprite))
-                    {
-                        __result = new UIIconManager.IconSet
-                        {
-                            type = story,
-                            icon = ArtWorks[story],
-                            iconGlow = ArtWorks[story]
-                        };
-                        if (ArtWorks.ContainsKey(story + "_Glow"))
-                        {
-                            __result.iconGlow = ArtWorks[story + "_Glow"];
-                        }
-                        return false;
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                File.WriteAllText(Application.dataPath + "/Mods/StroyIconerror.log", ex.Message + Environment.NewLine + ex.StackTrace);
-            }
-            return true;
-        }
-        //书库
-        [HarmonyPatch(typeof(UIStoryArchivesPanel), "InitData")]
-        [HarmonyPrefix]
-        private static bool UIStoryArchivesPanel_InitData_Pre(UIStoryArchivesPanel __instance)
-        {
-            try
-            {
-                __instance.episodeBooksData = new List<BookXmlInfo>();
-                __instance.chapterBooksData = new List<BookXmlInfo>();
-                List<BookModel> bookModels = Singleton<BookInventoryModel>.Instance.GetBookListAll();
-                List<BookXmlInfo> bookXmlInfoList = new List<BookXmlInfo>();
-                for (int i = 0; i < bookModels.Count; i++)
-                {
-                    if (!bookXmlInfoList.Exists(x => x.id == bookModels[i].ClassInfo.id) && !bookModels[i].ClassInfo.optionList.Contains(BookOption.Basic))
-                        bookXmlInfoList.Add(bookModels[i].ClassInfo);
-                }
-                foreach (BookXmlInfo bookXmlInfo in bookXmlInfoList)
-                {
-                    if (!bookXmlInfo.id.IsWorkshop())
-                    {
-                        if (bookXmlInfo.episode > 1)
-                        {
-                            __instance.episodeBooksData.Add(bookXmlInfo);
-                        }
-                        else
-                        {
-                            __instance.chapterBooksData.Add(bookXmlInfo);
-                        }
-                    }
-                    else if (bookXmlInfo is BookXmlInfo_New)
-                    {
-                        __instance.episodeBooksData.Add(bookXmlInfo);
-                    }
-                    else
-                    {
-                        __instance.chapterBooksData.Add(bookXmlInfo);
-                    }
-                }
-                __instance.episodeBooksData.Sort((x, y) => x.id.id.CompareTo(y.id.id));
-                __instance.chapterBooksData.Sort((x, y) => x.id.id.CompareTo(y.id.id));
-                __instance.sephirahStoryPanel.SetData();
-                __instance.battleStoryPanel.SetData();
-                __instance.creatureRebattlePanel.SetData();
-                if (__instance.episodeBooksData.Count >= 1)
-                {
-                    __instance.bookStoryPanel.SetData();
-                }
-                return false;
-            }
-            catch (Exception ex)
-            {
-                File.WriteAllText(Application.dataPath + "/Mods/StoryArchivesIniterror.log", ex.Message + Environment.NewLine + ex.StackTrace);
-            }
-            return true;
-        }
-        //书库剧情槽位
-        [HarmonyPatch(typeof(UIBookStoryChapterSlot), "SetEpisodeSlots")]
-        [HarmonyPrefix]
-        private static bool UIBookStoryChapterSlot_SetEpisodeSlots_Pre(UIBookStoryChapterSlot __instance)
-        {
-            try
-            {
-                int i = __instance.episodeIdx[__instance.chapter - 1] + 1;
-                int j = 0;
-                while (i < __instance.episodeIdx[__instance.chapter] + 1)
-                {
-                    if (i != 0 && __instance.panel.panel.GetEpisodeBooksData((UIStoryLine)i).Count > 0)
-                    {
-                        if (__instance.EpisodeSlots.Count <= j)
-                        {
-                            __instance.InstatiateAdditionalSlot();
-                        }
-                        __instance.EpisodeSlots[j].Init(__instance.panel.panel.GetEpisodeBooksData((UIStoryLine)i), __instance);
-                        j++;
-                    }
-                    i++;
-                }
-                Dictionary<LorId, List<BookXmlInfo>> dictionary = new Dictionary<LorId, List<BookXmlInfo>>();
-                foreach (BookXmlInfo bookXmlInfo in __instance.panel.panel.GetEpisodeBooksDataAll())
-                {
-                    if (bookXmlInfo is BookXmlInfo_New && Singleton<StageClassInfoList>.Instance.GetData((bookXmlInfo as BookXmlInfo_New).LorEpisode).chapter == __instance.chapter && !Enum.TryParse(bookXmlInfo.BookIcon, out UIStoryLine uistoryLine))
-                    {
-                        if (!dictionary.ContainsKey((bookXmlInfo as BookXmlInfo_New).LorEpisode))
-                        {
-                            dictionary[(bookXmlInfo as BookXmlInfo_New).LorEpisode] = new List<BookXmlInfo>();
-                        }
-                        dictionary[(bookXmlInfo as BookXmlInfo_New).LorEpisode].Add(bookXmlInfo);
-                    }
-                }
-                if (dictionary.Count > 0)
-                {
-                    foreach (KeyValuePair<LorId, List<BookXmlInfo>> keyValuePair in dictionary)
-                    {
-                        if (__instance.EpisodeSlots.Count <= j)
-                        {
-                            __instance.InstatiateAdditionalSlot();
-                        }
-                        __instance.EpisodeSlots[j].Init(keyValuePair.Value, __instance);
-                        if (OrcTools.StageNameDic.TryGetValue(keyValuePair.Key, out string stagename))
-                        {
-                            __instance.EpisodeSlots[j].episodeText.text = stagename;
-                        }
-                        j++;
-                    }
-                }
-                if (__instance.panel.panel.GetChapterBooksData(__instance.chapter).Count > 0)
-                {
-                    if (__instance.EpisodeSlots.Count <= j)
-                    {
-                        UIBookStoryEpisodeSlot item = UnityEngine.Object.Instantiate(__instance.EpisodeSlotModel, __instance.EpisodeSlotsListRect);
-                        __instance.EpisodeSlots.Add(item);
-                    }
-                    __instance.EpisodeSlots[j].Init(__instance.chapter, __instance.panel.panel.GetChapterBooksData(__instance.chapter), __instance);
-                    j++;
-                }
-                while (j < __instance.EpisodeSlots.Count)
-                {
-                    __instance.EpisodeSlots[j].Deactive();
-                    j++;
-                }
-                return false;
-            }
-            catch (Exception ex)
-            {
-                File.WriteAllText(Application.dataPath + "/Mods/UBSCSSESerror.log", ex.Message + Environment.NewLine + ex.StackTrace);
-            }
-            return true;
-        }
-        //EpisodeSlotName
-        [HarmonyPatch(typeof(UIBookStoryPanel), "OnSelectEpisodeSlot")]
-        [HarmonyPostfix]
-        private static void UIBookStoryPanel_OnSelectEpisodeSlot_Post(UIBookStoryPanel __instance, UIBookStoryEpisodeSlot slot)
-        {
-            try
-            {
-                if (slot != null && slot.books.Count > 0 && slot.books[0] is BookXmlInfo_New && OrcTools.StageNameDic.TryGetValue((slot.books[0] as BookXmlInfo_New).LorEpisode, out string stagename))
-                {
-                    __instance.selectedEpisodeText.text = stagename;
-                }
-            }
-            catch (Exception ex)
-            {
-                File.WriteAllText(Application.dataPath + "/Mods/OnSelectEpisodeSloterror.log", ex.Message + Environment.NewLine + ex.StackTrace);
-            }
-        }
-        //MoreLanguageStoryIdentify
-        [HarmonyPatch(typeof(StorySerializer), "HasEffectFile")]
-        [HarmonyPrefix]
-        private static bool StorySerializer_HasEffectFile_Pre(StageStoryInfo stageStoryInfo, ref bool __result)
-        {
-            try
-            {
-                if (stageStoryInfo == null)
-                {
-                    return false;
-                }
-                if (stageStoryInfo.IsMod)
-                {
-                    string modPath = Singleton<ModContentManager>.Instance.GetModPath(stageStoryInfo.packageId);
-                    string storyFilePath = Path.Combine(modPath, "Data", "StoryText");
-                    string[] array = stageStoryInfo.story.Split(new char[]
-                    {
-                         '.'
-                    });
-                    if (Directory.Exists(storyFilePath))
-                    {
-                        foreach (FileInfo fileInfo in new DirectoryInfo(storyFilePath).GetFiles())
-                        {
-                            if (Path.GetFileNameWithoutExtension(fileInfo.FullName) == array[0])
-                            {
-                                __result = true;
-                            }
-                        }
-                    }
-                    storyFilePath = Path.Combine(modPath, "Data", "StoryText", TextDataModel.CurrentLanguage);
-                    if (Directory.Exists(storyFilePath))
-                    {
-                        foreach (FileInfo fileInfo in new DirectoryInfo(storyFilePath).GetFiles())
-                        {
-                            if (Path.GetFileNameWithoutExtension(fileInfo.FullName) == array[0])
-                            {
-                                __result = true;
-                            }
-                        }
-                    }
-                    return false;
-                }
-            }
-            catch (Exception ex)
-            {
-                File.WriteAllText(Application.dataPath + "/Mods/HasEffectFileerror.log", ex.Message + Environment.NewLine + ex.StackTrace);
-            }
-            return true;
-        }
-        //LoadStageStory
-        [HarmonyPatch(typeof(StorySerializer), "LoadStageStory")]
-        [HarmonyPrefix]
-        private static bool StorySerializer_LoadStageStory_Pre(StageStoryInfo stageStoryInfo, ref bool __result)
-        {
-            try
-            {
-                if (stageStoryInfo == null)
-                {
-                    return false;
-                }
-                if (stageStoryInfo.IsMod)
-                {
-                    string modPath = Singleton<ModContentManager>.Instance.GetModPath(stageStoryInfo.packageId);
-                    string storyFilePath = Path.Combine(modPath, "Data", "StoryText");
-                    string effectFilePath = Path.Combine(modPath, "Data", "StoryEffect");
-                    string storyPath = Path.Combine(modPath, "Data", "StoryText", stageStoryInfo.story);
-                    string effectPath = Path.Combine(modPath, "Data", "StoryEffect", stageStoryInfo.story);
-                    string[] array = stageStoryInfo.story.Split(new char[]
-                    {
-                         '.'
-                    });
-                    if (Directory.Exists(effectFilePath))
-                    {
-                        foreach (FileInfo fileInfo in new DirectoryInfo(effectFilePath).GetFiles())
-                        {
-                            if (Path.GetFileNameWithoutExtension(fileInfo.FullName) == array[0])
-                            {
-                                effectPath = fileInfo.FullName;
-                            }
-                        }
-                    }
-                    if (Directory.Exists(storyFilePath))
-                    {
-                        foreach (FileInfo fileInfo in new DirectoryInfo(storyFilePath).GetFiles())
-                        {
-                            if (Path.GetFileNameWithoutExtension(fileInfo.FullName) == array[0])
-                            {
-                                storyPath = fileInfo.FullName;
-                            }
-                        }
-                    }
-                    storyFilePath = Path.Combine(modPath, "Data", "StoryText", TextDataModel.CurrentLanguage);
-                    if (Directory.Exists(storyFilePath))
-                    {
-                        foreach (FileInfo fileInfo in new DirectoryInfo(storyFilePath).GetFiles())
-                        {
-                            if (Path.GetFileNameWithoutExtension(fileInfo.FullName) == array[0])
-                            {
-                                storyPath = fileInfo.FullName;
-                            }
-                        }
-                    }
-                    __result = StorySerializer.LoadStoryFile(storyPath, effectPath, modPath);
-                    return false;
-                }
-            }
-            catch (Exception ex)
-            {
-                File.WriteAllText(Application.dataPath + "/Mods/LoadStageStoryerror.log", ex.Message + Environment.NewLine + ex.StackTrace);
-            }
-            return true;
-        }
-        //BattleStoryCG
-        [HarmonyPatch(typeof(UIBattleStoryInfoPanel), "SetData")]
-        [HarmonyPostfix]
-        private static void UIBattleStoryInfoPanel_SetData_Post(UIBattleStoryInfoPanel __instance, StageClassInfo stage)
-        {
-            try
-            {
-                if (stage != null && stage.id.IsWorkshop())
-                {
-                    string path = Path.Combine(Singleton<ModContentManager>.Instance.GetModPath(stage.workshopID), "Resource", "StoryBgSprite", StorySerializer.effectDefinition.cg.src);
-                    Sprite result = GetModStoryCG(stage.id, path);
-                    if (result != null)
-                    {
-                        __instance.CG.sprite = result;
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                File.WriteAllText(Application.dataPath + "/Mods/UIStoryInfo_SDerror.log", ex.Message + Environment.NewLine + ex.StackTrace);
-            }
-        }
-        //StorySceneCG
-        [HarmonyPatch(typeof(StoryScene.StoryManager), "LoadBackgroundSprite")]
-        [HarmonyPrefix]
-        private static bool StoryManager_LoadBackgroundSprite_Pre(StoryScene.StoryManager __instance, string src, ref Sprite __result)
-        {
-            try
-            {
-                Sprite sprite = Resources.Load<Sprite>("StoryResource/BgSprites/" + src);
-                if (sprite == null && !__instance._loadedCustomSprites.TryGetValue("bgsprite:" + src, out sprite))
-                {
-                    if (!File.Exists(Path.Combine(ModUtil.GetModBgSpritePath(StorySerializer.curModPath), src)))
-                    {
-                        src += ".png";
-                    }
-                    sprite = SpriteUtil.LoadSprite(Path.Combine(ModUtil.GetModBgSpritePath(StorySerializer.curModPath), src), new Vector2(0.5f, 0.5f));
-                    if (sprite != null)
-                    {
-                        __instance._loadedCustomSprites.Add("bgsprite:" + src, sprite);
-                    }
-                }
-                __result = sprite;
-                return false;
-            }
-            catch (Exception ex)
-            {
-                File.WriteAllText(Application.dataPath + "/Mods/LoadBackgroundSpriteerror.log", ex.Message + Environment.NewLine + ex.StackTrace);
-            }
-            return true;
-        }
-        public static Sprite GetModStoryCG(LorId StageId, string Path)
-        {
-            if (ModStoryCG.TryGetValue(StageId, out ModStroyCG result))
-            {
-                return result.sprite;
-            }
-            else if (File.Exists(Path))
-            {
-                Texture2D texture2D = new Texture2D(2, 2);
-                texture2D.LoadImage(File.ReadAllBytes(Path));
-                Sprite value = Sprite.Create(texture2D, new Rect(0f, 0f, texture2D.width, texture2D.height), new Vector2(0.5f, 0.5f));
-                ModStoryCG[StageId] = new ModStroyCG
-                {
-                    path = Path,
-                    sprite = value,
-                };
-                return value;
-            }
-            else if (File.Exists(Path + ".png"))
-            {
-                Texture2D texture2D = new Texture2D(2, 2);
-                texture2D.LoadImage(File.ReadAllBytes(Path + ".png"));
-                Sprite value = Sprite.Create(texture2D, new Rect(0f, 0f, texture2D.width, texture2D.height), new Vector2(0.5f, 0.5f));
-                ModStoryCG[StageId] = new ModStroyCG
-                {
-                    path = Path,
-                    sprite = value,
-                };
-                return value;
-            }
-            return null;
-        }
-        //EntryCG
-        [HarmonyPatch(typeof(StageController), "GameOver")]
-        [HarmonyPostfix]
-        private static void StageController_GameOver_Post(StageController __instance)
-        {
-            try
-            {
-                if (ModStoryCG.ContainsKey(__instance._stageModel.ClassInfo.id))
-                {
-                    ModSaveTool.SaveString("ModLastStroyCG", ModStoryCG[__instance._stageModel.ClassInfo.id].path, "BaseMod");
-                }
-                else if (TryAddModStoryCG(__instance._stageModel.ClassInfo))
-                {
-                    ModSaveTool.SaveString("ModLastStroyCG", ModStoryCG[__instance._stageModel.ClassInfo.id].path, "BaseMod");
-                }
-                else
-                {
-                    ModSaveTool.SaveString("ModLastStroyCG", "", "BaseMod");
-                }
+		//RangeSpecial
+		[HarmonyPatch(typeof(UISpriteDataManager), nameof(UISpriteDataManager.GetRangeIconSprite))]
+		[HarmonyPrefix]
+		static bool UISpriteDataManager_GetRangeIconSprite_Pre(ref Sprite __result, CardRange range)
+		{
+			try
+			{
+				if (ArtWorks == null)
+				{
+					GetArtWorks();
+				}
+				if (range == CardRange.Special)
+				{
+					__result = ArtWorks["CommonPage_RightTop_Type_SpecialAttack"];
+					return false;
+				}
+			}
+			catch (Exception ex)
+			{
+				File.WriteAllText(Application.dataPath + "/Mods/SpecialRangeIconerror.log", ex.Message + Environment.NewLine + ex.StackTrace);
+			}
+			return true;
+		}
+		//CardBufIcon
+		[HarmonyPatch(typeof(BattleDiceCardBuf), nameof(BattleDiceCardBuf.GetBufIcon))]
+		[HarmonyPrefix]
+		static bool BattleDiceCardBuf_GetBufIcon_Pre(BattleDiceCardBuf __instance, ref Sprite __result)
+		{
+			if (ArtWorks == null)
+			{
+				GetArtWorks();
+			}
+			if (!__instance._iconInit)
+			{
+				try
+				{
+					string keywordIconId = __instance.keywordIconId;
+					if (!string.IsNullOrWhiteSpace(keywordIconId) && ArtWorks.TryGetValue("CardBuf_" + keywordIconId, out Sprite sprite) && sprite != null)
+					{
+						__instance._iconInit = true;
+						__instance._bufIcon = sprite;
+						__result = sprite;
+						return false;
+					}
+				}
+				catch { }
+			}
+			return true;
+		}
+		//costtozero real
+		/*
+		[HarmonyPatch(typeof(BattleDiceCardModel), nameof(BattleDiceCardModel.GetCost))]
+		[HarmonyPrefix]
+		static bool BattleDiceCardModel_GetCost_Pre(ref int __result, BattleDiceCardModel __instance)
+		{
+			try
+			{
+				if (__instance._script != null && __instance._script.IsFixedCost())
+				{
+					__result = __instance._xmlData.Spec.Cost;
+					return false;
+				}
+				int baseCost = __instance._curCost;
+				foreach (BattleDiceCardBuf battleDiceCardBuf in __instance._bufList)
+				{
+					baseCost = battleDiceCardBuf.GetCost(baseCost);
+				}
+				int abilityCostAdder = 0;
+				if (__instance.owner != null)
+				{
+					if (!__instance.XmlData.IsPersonal())
+					{
+						abilityCostAdder += __instance.owner.emotionDetail.GetCardCostAdder(__instance);
+						abilityCostAdder += __instance.owner.bufListDetail.GetCardCostAdder(__instance);
+					}
+					if (__instance._script != null)
+					{
+						abilityCostAdder += __instance._script.GetCostAdder(__instance.owner, __instance);
+					}
+				}
+				int finalCost = baseCost + __instance._costAdder + abilityCostAdder;
+				if (__instance._costZero)
+				{
+					finalCost = 0;
+				}
+				if (__instance.owner != null && __instance._script != null && __instance._script != null)
+				{
+					finalCost = __instance._script.GetCostLast(__instance.owner, __instance, finalCost);
+				}
+				__result = Mathf.Max(0, finalCost);
+				return false;
+			}
+			catch (Exception ex)
+			{
+				File.WriteAllText(Application.dataPath + "/Mods/GetCostRemakeerror.log", ex.Message + Environment.NewLine + ex.StackTrace);
+			}
+			return true;
+		}
+		*/
+		//costtozero real
+		//also apply script GetCostAdder and GetCostLast for personal/ego
+		[HarmonyPatch(typeof(BattleDiceCardModel), nameof(BattleDiceCardModel.GetCost))]
+		[HarmonyTranspiler]
+		static IEnumerable<CodeInstruction> BattleDiceCardModel_GetCost_In(IEnumerable<CodeInstruction> instructions, ILGenerator ilgen)
+		{
+			var codes = instructions.ToList();
+			CodeInstruction jump = null;
+			var ownerField = Field(typeof(BattleDiceCardModel), nameof(BattleDiceCardModel.owner));
+			var scriptField = Field(typeof(BattleDiceCardModel), nameof(BattleDiceCardModel._script));
+			var fixMethod = Method(typeof(Harmony_Patch), nameof(BattleDiceCardModel_GetCost_TryFixOwnerForScript));
+			int i = 0;
+			for (; i < codes.Count; i++)
+			{
+				if (codes[i].Is(Ldfld, ownerField) && codes[i + 1].Branches(out var label))
+				{
+					codes.InsertRange(i + 1, new CodeInstruction[]
+					{
+						new CodeInstruction(Ldarg_0),
+						new CodeInstruction(Call, fixMethod)
+					});
+					jump = new CodeInstruction(Brtrue, label);
+					codes.InsertRange(i + 4, new CodeInstruction[]
+					{
+						new CodeInstruction(Ldarg_0),
+						new CodeInstruction(Call, Method(typeof(Harmony_Patch), nameof(BattleDiceCardModel_GetCost_IsOnlySelfScript))),
+						jump
+					});
 
-            }
-            catch (Exception ex)
-            {
-                File.WriteAllText(Application.dataPath + "/Mods/SaveModCGerror.log", ex.Message + Environment.NewLine + ex.StackTrace);
-            }
-        }
-        private static bool TryAddModStoryCG(StageClassInfo stageClassInfo)
-        {
-            if (stageClassInfo.GetStartStory() == null)
-            {
-                return false;
-            }
-            if (!stageClassInfo.id.IsWorkshop())
-            {
-                return false;
-            }
-            string modPath = Singleton<ModContentManager>.Instance.GetModPath(stageClassInfo.GetStartStory().packageId);
-            if (string.IsNullOrWhiteSpace(modPath) || string.IsNullOrWhiteSpace(stageClassInfo.GetStartStory().story))
-            {
-                return false;
-            }
-            string effectPath = Path.Combine(modPath, "Data", "StoryEffect", stageClassInfo.GetStartStory().story);
-            string[] array = stageClassInfo.GetStartStory().story.Split(new char[]
-            {
-                        '.'
-            });
-            string cg = string.Empty;
-            if (File.Exists(Path.Combine(modPath, "Data", "StoryEffect", array[0] + ".xml")))
-            {
-                effectPath = Path.Combine(modPath, "Data", "StoryEffect", array[0] + ".xml");
-            }
-            if (File.Exists(Path.Combine(modPath, "Data", "StoryEffect", array[0] + ".txt")))
-            {
-                effectPath = Path.Combine(modPath, "Data", "StoryEffect", array[0] + ".txt");
-            }
-            if (File.Exists(effectPath))
-            {
-                using (StreamReader streamReader2 = new StreamReader(effectPath))
-                {
-                    cg = ((SceneEffect)new XmlSerializer(typeof(SceneEffect)).Deserialize(streamReader2)).cg.src;
-                }
-            }
-            if (string.IsNullOrWhiteSpace(cg))
-            {
-                return false;
-            }
-            string path = Path.Combine(modPath, "Resource", "StoryBgSprite", cg);
-            return GetModStoryCG(stageClassInfo.id, path) != null;
-        }
-        //EntryCG
-        [HarmonyPatch(typeof(EntryScene), "SetCG")]
-        [HarmonyPostfix]
-        private static void EntryScene_SetCG_Post(EntryScene __instance)
-        {
-            try
-            {
-                string stroycg = ModSaveTool.GetModSaveData("BaseMod").GetString("ModLastStroyCG");
-                if (!string.IsNullOrWhiteSpace(stroycg) && File.Exists(stroycg))
-                {
-                    Texture2D texture2D = new Texture2D(1, 1);
-                    texture2D.LoadImage(File.ReadAllBytes(stroycg));
-                    Sprite value = Sprite.Create(texture2D, new Rect(0f, 0f, texture2D.width, texture2D.height), new Vector2(0.5f, 0.5f));
-                    __instance.CGImage.sprite = value;
-                }
-            }
-            catch (Exception ex)
-            {
-                Singleton<ModContentManager>.Instance.AddErrorLog(ex.Message + Environment.NewLine + ex.StackTrace);
-                File.WriteAllText(Application.dataPath + "/Mods/SetEntrySceneCGerror.log", ex.Message + Environment.NewLine + ex.StackTrace);
-            }
-        }
-        //Condition
-        [HarmonyPatch(typeof(StageExtraCondition), "IsUnlocked")]
-        [HarmonyPrefix]
-        private static bool StageExtraCondition_IsUnlocked_Pre(StageExtraCondition __instance, ref bool __result)
-        {
-            try
-            {
-                if (LibraryModel.Instance.GetLibraryLevel() < __instance.needLevel)
-                {
-                    __result = false;
-                    return false;
-                }
-                if (!OrcTools.StageConditionDic.ContainsKey(__instance))
-                {
-                    return true;
-                }
-                foreach (LorId stageId in OrcTools.StageConditionDic[__instance])
-                {
-                    if (LibraryModel.Instance.ClearInfo.GetClearCount(stageId) <= 0)
-                    {
-                        __result = false;
-                        return false;
-                    }
-                }
-                __result = true;
-                return false;
-            }
-            catch (Exception ex)
-            {
-                Singleton<ModContentManager>.Instance.AddErrorLog(ex.Message + Environment.NewLine + ex.StackTrace);
-                File.WriteAllText(Application.dataPath + "/Mods/StageConditionerror.log", ex.Message + Environment.NewLine + ex.StackTrace);
-            }
-            return true;
-        }
-        //Condition
-        [HarmonyPatch(typeof(UIInvitationRightMainPanel), "SendInvitation")]
-        [HarmonyPrefix]
-        private static bool UIInvitationRightMainPanel_SendInvitation_Pre(UIInvitationRightMainPanel __instance)
-        {
-            try
-            {
-                StageClassInfo bookRecipe = __instance.GetBookRecipe();
-                if (bookRecipe == null)
-                {
-                    return true;
-                }
-                if (bookRecipe.extraCondition == null)
-                {
-                    return true;
-                }
-                if (!OrcTools.StageConditionDic.ContainsKey(bookRecipe.extraCondition))
-                {
-                    return true;
-                }
-                if (__instance.ob_tutorialSendButtonhighlight.activeSelf)
-                {
-                    __instance.ob_tutorialSendButtonhighlight.SetActive(false);
-                    SingletonBehavior<UIMainAutoTooltipManager>.Instance.AllCloseTooltip();
-                }
-                if (__instance.ob_tutorialConfirmButtonhighlight.activeSelf)
-                {
-                    __instance.ob_tutorialConfirmButtonhighlight.SetActive(false);
-                }
-                if (bookRecipe != null)
-                {
-                    if (LibraryModel.Instance.GetChapter() < bookRecipe.chapter)
-                    {
-                        UIAlarmPopup.instance.SetAlarmText(UIAlarmType.ClosedStage, UIAlarmButtonType.Default, null, "", "");
-                    }
-                    else
-                    {
-                        bool flag = true;
-                        foreach (LorId stageId in OrcTools.StageConditionDic[bookRecipe.extraCondition])
-                        {
-                            if (LibraryModel.Instance.ClearInfo.GetClearCount(stageId) == 0)
-                            {
-                                flag = false;
-                                break;
-                            }
-                        }
-                        if (!flag)
-                        {
-                            UIAlarmPopup.instance.SetAlarmText(UIAlarmType.ClosedStage, UIAlarmButtonType.Default, null, "", "");
-                        }
-                        else
-                        {
-                            __instance.confirmAreaRoot.SetActive(true);
-                            if (bookRecipe.id == 2 && !LibraryModel.Instance.IsClearRats())
-                            {
-                                __instance.ob_tutorialConfirmButtonhighlight.gameObject.SetActive(true);
-                                SingletonBehavior<UIMainAutoTooltipManager>.Instance.OpenTooltip(UIAutoTooltipType.Invitation_Click_ConfirmButton, __instance.ob_tutorialConfirmButtonhighlight.transform as RectTransform, false, null, UIToolTipPanelType.Normal, UITooltipPanelPositionType.None, false, null);
-                            }
-                        }
-                    }
-                }
-                else
-                {
-                    UIAlarmPopup.instance.SetAlarmText(UIAlarmType.ClosedStage, UIAlarmButtonType.Default, null, "", "");
-                }
-                UIControlManager.Instance.SelectSelectableForcely(__instance.confirmButtonSelectable, false);
-                return false;
-            }
-            catch (Exception ex)
-            {
-                Singleton<ModContentManager>.Instance.AddErrorLog(ex.Message + Environment.NewLine + ex.StackTrace);
-                File.WriteAllText(Application.dataPath + "/Mods/SendInvitationerror.log", ex.Message + Environment.NewLine + ex.StackTrace);
-            }
-            return true;
-        }
+					for (i += 7; i < codes.Count; i++)
+					{
+						if (codes[i].opcode == Ldarg_0 && codes[i + 1].Is(Ldfld, scriptField))
+						{
+							var newLabel = ilgen.DefineLabel();
+							codes[i].labels.Add(newLabel);
+							jump.operand = newLabel;
+							i += 2;
+							break;
+						}
+					}
+					break;
+				}
+			}
+			bool checkZero = true;
+			for (; i < codes.Count; i++)
+			{
+				if (checkZero && codes[i].opcode == Add && codes[i + 1].opcode == Stloc_2)
+				{
+					codes.InsertRange(i + 2, new CodeInstruction[]
+					{
+						new CodeInstruction(Ldloca, 2),
+						new CodeInstruction(Ldarg_0),
+						new CodeInstruction(Call, Method(typeof(Harmony_Patch), nameof(BattleDiceCardModel_GetCost_CheckZero)))
+					});
+					checkZero = false;
+				}
+				else if (codes[i].Is(Ldfld, ownerField))
+				{
+					codes.InsertRange(i + 1, new CodeInstruction[]
+					{
+						new CodeInstruction(Ldarg_0),
+						new CodeInstruction(Call, fixMethod)
+					});
+				}
+			}
+			return codes;
+		}
+		static void BattleDiceCardModel_GetCost_CheckZero(ref int cost, BattleDiceCardModel card)
+		{
+			if (card._costZero)
+			{
+				cost = 0;
+			}
+		}
+		static bool BattleDiceCardModel_GetCost_IsOnlySelfScript(BattleDiceCardModel card)
+		{
+			return card.XmlData.IsEgo() || card.XmlData.IsPersonal() || card.owner == null;
+		}
+		static BattleUnitModel BattleDiceCardModel_GetCost_TryFixOwnerForScript(BattleUnitModel owner, BattleDiceCardModel card)
+		{
+			return owner ?? card?._script?.card?.owner;
+		}
 
-        //EquipPageInvenPanel
-        //MoreEuipPageUI
-        [HarmonyPatch(typeof(UIOriginEquipPageList), "UpdateEquipPageList")]
-        [HarmonyPrefix]
-        private static bool UIOriginEquipPageList_UpdateEquipPageList_Pre(UIOriginEquipPageList __instance)
-        {
-            try
-            {
-                List<UIOriginEquipPageSlot> list = __instance.equipPageSlotList;
-                int i;
-                for (i = 0; i < __instance.currentScreenBookModelList.Count; i++)
-                {
-                    if (i == list.Count)
-                    {
-                        UIOriginEquipPageSlot uioriginEquipPageSlot = UnityEngine.Object.Instantiate(list[0], list[0].transform.parent);
-                        /*UIOriginEquipPageSlot uioriginEquipPageSlot = UtilTools.DuplicateEquipPageSlot(list[0], __instance);*/
-                        uioriginEquipPageSlot.Initialized();
-                        list.Add(uioriginEquipPageSlot);
-                    }
-                    list[i].SetActiveSlot(true);
-                    list[i].SetData(__instance.currentScreenBookModelList[i]);
-                }
-                if (i < list.Count)
-                {
-                    for (int j = i; j < list.Count; j++)
-                    {
-                        list[j].SetActiveSlot(false);
-                    }
-                }
-                return false;
-            }
-            catch (Exception ex)
-            {
-                File.WriteAllText(Application.dataPath + "/Mods/UIOEPLUEPLerror.log", ex.Message + Environment.NewLine + ex.StackTrace);
-            }
-            return true;
-        }
-        //UIEquipPageScrollList
-        [HarmonyPatch(typeof(UIEquipPageScrollList), "SetData")]
-        [HarmonyPrefix]
-        private static bool UIEquipPageScrollList_SetData_Pre(UIEquipPageScrollList __instance, List<BookModel> books, UnitDataModel unit, bool init = false)
-        {
-            try
-            {
-                ModEpMatch = new Dictionary<LorId, UIStoryLine>();
-                if (init)
-                {
-                    __instance.CurrentSelectedBook = null;
-                    __instance.currentslotcount = 0;
-                }
-                __instance._selectedUnit = unit;
-                __instance._originBookModelList.Clear();
-                __instance.currentBookModelList.Clear();
-                __instance.isActiveScrollBar = false;
-                __instance._originBookModelList.AddRange(books);
-                __instance.currentBookModelList.AddRange(books);
-                __instance.currentBookModelList = __instance.FilterBookModels(__instance.currentBookModelList);
-                __instance.totalkeysdata.Clear();
-                __instance.CurrentSelectedBook = null;
-                __instance.heightdatalist.Clear();
-                __instance.currentStoryBooksDic.Clear();
-                int num = 200;
-                /*int num = Enum.GetValues(typeof(UIStoryLine)).Length - 1;*/
-                foreach (BookModel bookModel in __instance.currentBookModelList)
-                {
-                    string bookIcon = bookModel.ClassInfo.BookIcon;
-                    UIStoryKeyData uistoryKeyData;
-                    if (bookModel.IsWorkshop || !Enum.IsDefined(typeof(UIStoryLine), bookIcon))
-                    {
-                        if (bookModel.ClassInfo is BookXmlInfo_New)
-                        {
-                            if (!ModEpMatch.ContainsKey((bookModel.ClassInfo as BookXmlInfo_New).LorEpisode))
-                            {
-                                num++;
-                                ModEpMatch.Add((bookModel.ClassInfo as BookXmlInfo_New).LorEpisode, (UIStoryLine)num);
-                                uistoryKeyData = new UIStoryKeyData(bookModel.ClassInfo.Chapter, bookModel.ClassInfo.id.packageId)
-                                {
-                                    StoryLine = (UIStoryLine)num
-                                };
-                                __instance.totalkeysdata.Add(uistoryKeyData);
-                            }
-                            else
-                            {
-                                uistoryKeyData = __instance.totalkeysdata.Find((UIStoryKeyData x) => x.workshopId == bookModel.ClassInfo.id.packageId && x.chapter == bookModel.ClassInfo.Chapter && x.StoryLine == ModEpMatch[(bookModel.ClassInfo as BookXmlInfo_New).LorEpisode]);
-                            }
-                        }
-                        else
-                        {
-                            uistoryKeyData = __instance.totalkeysdata.Find((UIStoryKeyData x) => x.chapter == bookModel.ClassInfo.Chapter && x.workshopId == bookModel.ClassInfo.workshopID);
-                            if (uistoryKeyData == null)
-                            {
-                                uistoryKeyData = new UIStoryKeyData(bookModel.ClassInfo.Chapter, bookModel.ClassInfo.id.packageId);
-                                __instance.totalkeysdata.Add(uistoryKeyData);
-                            }
-                        }
-                    }
-                    else
-                    {
-                        if (!Enum.IsDefined(typeof(UIStoryLine), bookIcon))
-                        {
-                            Debug.LogError(bookIcon + "스토리 string enum 변환 오류");
-                            continue;
-                        }
-                        UIStoryLine storyLine = (UIStoryLine)Enum.Parse(typeof(UIStoryLine), bookIcon);
-                        uistoryKeyData = __instance.totalkeysdata.Find((UIStoryKeyData x) => x.chapter == bookModel.ClassInfo.Chapter && x.StoryLine == storyLine);
-                        if (uistoryKeyData == null)
-                        {
-                            uistoryKeyData = new UIStoryKeyData(bookModel.ClassInfo.Chapter, storyLine);
-                            __instance.totalkeysdata.Add(uistoryKeyData);
-                        }
-                    }
-                    if (!__instance.currentStoryBooksDic.ContainsKey(uistoryKeyData))
-                    {
-                        List<BookModel> list = new List<BookModel>
-                            {
-                                bookModel
-                            };
-                        __instance.currentStoryBooksDic.Add(uistoryKeyData, list);
-                    }
-                    else
-                    {
-                        __instance.currentStoryBooksDic[uistoryKeyData].Add(bookModel);
-                    }
-                }
-                __instance.totalkeysdata.Sort(delegate (UIStoryKeyData x, UIStoryKeyData y)
-                {
-                    if (x.chapter == -1 && y.chapter == -1)
-                    {
-                        return 0;
-                    }
-                    if (x.chapter < y.chapter)
-                    {
-                        return -1;
-                    }
-                    if (x.chapter > y.chapter)
-                    {
-                        return 1;
-                    }
-                    int comparenum = x.workshopId.CompareTo(y.workshopId);
-                    if (comparenum > 0)
-                    {
-                        return -1;
-                    }
-                    if (comparenum < 0)
-                    {
-                        return 1;
-                    }
-                    if (x.StoryLine < y.StoryLine)
-                    {
-                        return -1;
-                    }
-                    if (x.StoryLine > y.StoryLine)
-                    {
-                        return 1;
-                    }
-                    return 0;
-                });
-                __instance.totalkeysdata.Reverse();
-                __instance.CalculateSlotsHeight();
-                __instance.UpdateSlotList();
-                __instance.SetScrollBar();
-                __instance.isClickedUpArrow = false;
-                __instance.isClickedDownArrow = false;
-                LayoutRebuilder.ForceRebuildLayoutImmediate(__instance.rect_slotListRoot);
-                UIOriginEquipPageSlot saveFirstChild = __instance._equipPagesPanelSlotList[0].EquipPageSlotList[0];
-                __instance.SetSaveFirstChild(saveFirstChild);
-                return false;
-            }
-            catch (Exception ex)
-            {
-                File.WriteAllText(Application.dataPath + "/Mods/EPSLSDerror.log", ex.Message + Environment.NewLine + ex.StackTrace);
-            }
-            return true;
-        }
-        //UISettingEquipPageScrollList
-        [HarmonyPatch(typeof(UISettingEquipPageScrollList), "SetData")]
-        [HarmonyPrefix]
-        private static bool UISettingEquipPageScrollList_SetData_Pre(UISettingEquipPageScrollList __instance, List<BookModel> books, UnitDataModel unit, bool init = false)
-        {
-            try
-            {
-                ModEpMatch = new Dictionary<LorId, UIStoryLine>();
-                if (init)
-                {
-                    __instance.CurrentSelectedBook = null;
-                    __instance.currentslotcount = 0;
-                }
-                __instance._selectedUnit = unit;
-                __instance._originBookModelList.Clear();
-                __instance.currentBookModelList.Clear();
-                __instance.isActiveScrollBar = false;
-                __instance._originBookModelList.AddRange(books);
-                __instance.currentBookModelList.AddRange(books);
-                __instance.currentBookModelList = __instance.FilterBookModels(__instance.currentBookModelList);
-                __instance.totalkeysdata.Clear();
-                __instance.CurrentSelectedBook = null;
-                __instance.heightdatalist.Clear();
-                __instance.currentStoryBooksDic.Clear();
-                int num = 200;
-                /*int num = Enum.GetValues(typeof(UIStoryLine)).Length - 1;*/
-                foreach (BookModel bookModel in __instance.currentBookModelList)
-                {
-                    string bookIcon = bookModel.ClassInfo.BookIcon;
-                    UIStoryKeyData uistoryKeyData;
-                    if (bookModel.IsWorkshop || !Enum.IsDefined(typeof(UIStoryLine), bookIcon))
-                    {
-                        if (bookModel.ClassInfo is BookXmlInfo_New)
-                        {
-                            if (!ModEpMatch.ContainsKey((bookModel.ClassInfo as BookXmlInfo_New).LorEpisode))
-                            {
-                                num++;
-                                ModEpMatch.Add((bookModel.ClassInfo as BookXmlInfo_New).LorEpisode, (UIStoryLine)num);
-                                uistoryKeyData = new UIStoryKeyData(bookModel.ClassInfo.Chapter, bookModel.ClassInfo.id.packageId)
-                                {
-                                    StoryLine = (UIStoryLine)num
-                                };
-                                __instance.totalkeysdata.Add(uistoryKeyData);
-                            }
-                            else
-                            {
-                                uistoryKeyData = __instance.totalkeysdata.Find((UIStoryKeyData x) => x.workshopId == bookModel.ClassInfo.id.packageId && x.chapter == bookModel.ClassInfo.Chapter && x.StoryLine == ModEpMatch[(bookModel.ClassInfo as BookXmlInfo_New).LorEpisode]);
-                            }
-                        }
-                        else
-                        {
-                            uistoryKeyData = __instance.totalkeysdata.Find((UIStoryKeyData x) => x.chapter == bookModel.ClassInfo.Chapter && x.workshopId == bookModel.ClassInfo.workshopID);
-                            if (uistoryKeyData == null)
-                            {
-                                uistoryKeyData = new UIStoryKeyData(bookModel.ClassInfo.Chapter, bookModel.ClassInfo.id.packageId);
-                                __instance.totalkeysdata.Add(uistoryKeyData);
-                            }
-                        }
-                    }
-                    else
-                    {
-                        if (!Enum.IsDefined(typeof(UIStoryLine), bookIcon))
-                        {
-                            Debug.LogError(bookIcon + "스토리 string enum 변환 오류");
-                            continue;
-                        }
-                        UIStoryLine storyLine = (UIStoryLine)Enum.Parse(typeof(UIStoryLine), bookIcon);
-                        uistoryKeyData = __instance.totalkeysdata.Find((UIStoryKeyData x) => x.chapter == bookModel.ClassInfo.Chapter && x.StoryLine == storyLine);
-                        if (uistoryKeyData == null)
-                        {
-                            uistoryKeyData = new UIStoryKeyData(bookModel.ClassInfo.Chapter, storyLine);
-                            __instance.totalkeysdata.Add(uistoryKeyData);
-                        }
-                    }
-                    if (!__instance.currentStoryBooksDic.ContainsKey(uistoryKeyData))
-                    {
-                        List<BookModel> list = new List<BookModel>
-                            {
-                                bookModel
-                            };
-                        __instance.currentStoryBooksDic.Add(uistoryKeyData, list);
-                    }
-                    else
-                    {
-                        __instance.currentStoryBooksDic[uistoryKeyData].Add(bookModel);
-                    }
-                }
-                __instance.totalkeysdata.Sort(delegate (UIStoryKeyData x, UIStoryKeyData y)
-                {
-                    if (x.chapter == -1 && y.chapter == -1)
-                    {
-                        return 0;
-                    }
-                    if (x.chapter < y.chapter)
-                    {
-                        return -1;
-                    }
-                    if (x.chapter > y.chapter)
-                    {
-                        return 1;
-                    }
-                    int comparenum = x.workshopId.CompareTo(y.workshopId);
-                    if (comparenum > 0)
-                    {
-                        return -1;
-                    }
-                    if (comparenum < 0)
-                    {
-                        return 1;
-                    }
-                    if (x.StoryLine < y.StoryLine)
-                    {
-                        return -1;
-                    }
-                    if (x.StoryLine > y.StoryLine)
-                    {
-                        return 1;
-                    }
-                    return 0;
-                });
-                __instance.totalkeysdata.Reverse();
-                __instance.CalculateSlotsHeight();
-                __instance.UpdateSlotList();
-                __instance.SetScrollBar();
-                __instance.isClickedUpArrow = false;
-                __instance.isClickedDownArrow = false;
-                LayoutRebuilder.ForceRebuildLayoutImmediate(__instance.rect_slotListRoot);
-                UIOriginEquipPageSlot saveFirstChild = __instance._equipPagesPanelSlotList[0].EquipPageSlotList[0];
-                __instance.SetSaveFirstChild(saveFirstChild);
-                return false;
-            }
-            catch (Exception ex)
-            {
-                File.WriteAllText(Application.dataPath + "/Mods/SEPSLSDerror.log", ex.Message + Environment.NewLine + ex.StackTrace);
-            }
-            return true;
-        }
-        //UISettingInvenEquipPageListSlot
-        [HarmonyPatch(typeof(UISettingInvenEquipPageListSlot), "SetBooksData")]
-        [HarmonyPrefix]
-        private static bool UISettingInvenEquipPageListSlot_SetBooksData_Pre(UISettingInvenEquipPageListSlot __instance, List<BookModel> books, UIStoryKeyData storyKey)
-        {
-            try
-            {
-                if (storyKey.StoryLine < (UIStoryLine)Enum.GetValues(typeof(UIStoryLine)).Length)
-                {
-                    return true;
-                }
-                if (books.Count < 0)
-                {
-                    return true;
-                }
-                if (books.Count >= 0)
-                {
-                    if (!(books[0].ClassInfo is BookXmlInfo_New))
-                    {
-                        return true;
-                    }
-                    StageClassInfo data = Singleton<StageClassInfoList>.Instance.GetData((books[0].ClassInfo as BookXmlInfo_New).LorEpisode);
-                    if (data == null)
-                    {
-                        return true;
-                    }
-                    UIIconManager.IconSet storyIcon = UISpriteDataManager.instance.GetStoryIcon(data.storyType);
-                    if (storyIcon != null)
-                    {
-                        __instance.img_IconGlow.enabled = true;
-                        __instance.img_Icon.enabled = true;
-                        __instance.img_Icon.sprite = storyIcon.icon;
-                        __instance.img_IconGlow.sprite = storyIcon.iconGlow;
-                    }
-                    if (OrcTools.StageNameDic.TryGetValue(data.id, out string stageName))
-                    {
-                        __instance.txt_StoryName.text = "workshop " + stageName;
-                    }
-                }
-                __instance.SetFrameColor(UIColorManager.Manager.GetUIColor(UIColor.Default));
-                List<BookModel> list = __instance.ApplyFilterBooksInStory(books);
-                /*List<BookModel> list = new List<BookModel>((List<BookModel>)typeof(UISettingInvenEquipPageListSlot).GetMethod("ApplyFilterBooksInStory", AccessTools.all).Invoke(__instance, new object[]
-                    {
-                        books
-                    }));*/
-                __instance.SetEquipPagesData(list);
-                BookModel bookModel = list.Find((BookModel x) => x == UI.UIController.Instance.CurrentUnit.bookItem);
-                if (__instance.listRoot.CurrentSelectedBook == null && bookModel != null)
-                {
-                    __instance.listRoot.CurrentSelectedBook = bookModel;
-                }
-                if (__instance.listRoot.CurrentSelectedBook != null)
-                {
-                    UIOriginEquipPageSlot uioriginEquipPageSlot = __instance.equipPageSlotList.Find((UIOriginEquipPageSlot x) => x.BookDataModel == __instance.listRoot.CurrentSelectedBook);
-                    if (uioriginEquipPageSlot != null)
-                    {
-                        uioriginEquipPageSlot.SetHighlighted(true, true, false);
-                    }
-                }
-                __instance.SetSlotSize();
-                return false;
-            }
-            catch (Exception ex)
-            {
-                File.WriteAllText(Application.dataPath + "/Mods/SIEPLSSBDerror.log", ex.Message + Environment.NewLine + ex.StackTrace);
-            }
-            return true;
-        }
-        //UIInvenEquipPageListSlot
-        [HarmonyPatch(typeof(UIInvenEquipPageListSlot), "SetBooksData")]
-        [HarmonyPrefix]
-        private static bool UIInvenEquipPageListSlot_SetBooksData_Pre(UIInvenEquipPageListSlot __instance, List<BookModel> books, UIStoryKeyData storyKey)
-        {
-            try
-            {
-                if (storyKey.StoryLine < (UIStoryLine)Enum.GetValues(typeof(UIStoryLine)).Length)
-                {
-                    return true;
-                }
-                if (books.Count < 0)
-                {
-                    return true;
-                }
-                if (books.Count >= 0)
-                {/*
-                    LorId key = new LorId(-1);
-                    foreach (KeyValuePair<LorId, int> keyValuePair in ModEpMatch)
-                    {
-                        {
-                            if (keyValuePair.Value == (int)storyKey.StoryLine)
-                            {
-                                key = keyValuePair.Key;
-                                break;
-                            }
-                        }
-                    }
-                    if (key.id <= 0)
-                    {
-                        return true;
-                    }
-                    StageClassInfo data = Singleton<StageClassInfoList>.Instance.GetData(key);*/
-                    if (!(books[0].ClassInfo is BookXmlInfo_New))
-                    {
-                        return true;
-                    }
-                    StageClassInfo data = Singleton<StageClassInfoList>.Instance.GetData((books[0].ClassInfo as BookXmlInfo_New).LorEpisode);
-                    if (data == null)
-                    {
-                        return true;
-                    }
-                    UIIconManager.IconSet storyIcon = UISpriteDataManager.instance.GetStoryIcon(data.storyType);
-                    if (storyIcon != null)
-                    {
-                        __instance.img_IconGlow.enabled = true;
-                        __instance.img_Icon.enabled = true;
-                        __instance.img_Icon.sprite = storyIcon.icon;
-                        __instance.img_IconGlow.sprite = storyIcon.iconGlow;
-                    }
-                    if (OrcTools.StageNameDic.TryGetValue(data.id, out string stageName))
-                    {
-                        __instance.txt_StoryName.text = "workshop " + stageName;
-                    }
-                }
-                __instance.SetFrameColor(UIColorManager.Manager.GetUIColor(UIColor.Default));
-                List<BookModel> list = __instance.ApplyFilterBooksInStory(books);
-                /*List<BookModel> list = new List<BookModel>((List<BookModel>)typeof(UIInvenEquipPageListSlot).GetMethod("ApplyFilterBooksInStory", AccessTools.all).Invoke(__instance, new object[]
-                    {
-                        books
-                    }));*/
-                __instance.SetEquipPagesData(list);
-                BookModel bookModel = list.Find((BookModel x) => x == UI.UIController.Instance.CurrentUnit.bookItem);
-                if (__instance.listRoot.CurrentSelectedBook == null && bookModel != null)
-                {
-                    __instance.listRoot.CurrentSelectedBook = bookModel;
-                }
-                if (__instance.listRoot.CurrentSelectedBook != null)
-                {
-                    UIOriginEquipPageSlot uioriginEquipPageSlot = __instance.equipPageSlotList.Find((UIOriginEquipPageSlot x) => x.BookDataModel == __instance.listRoot.CurrentSelectedBook);
-                    if (uioriginEquipPageSlot != null)
-                    {
-                        uioriginEquipPageSlot.SetHighlighted(true, true, false);
-                    }
-                }
-                __instance.SetSlotSize();
-                return false;
-            }
-            catch (Exception ex)
-            {
-                File.WriteAllText(Application.dataPath + "/Mods/IEPLSSBDerror.log", ex.Message + Environment.NewLine + ex.StackTrace);
-            }
-            return true;
-        }
+		//set script owner for floor ego and other unusual cards (so that cost scripts can work for them too)
+		[HarmonyPatch(typeof(BattleUnitCardsInHandUI), nameof(BattleUnitCardsInHandUI.UpdateCardList))]
+		[HarmonyPostfix]
+		[HarmonyPriority(Priority.VeryLow)]
+		static void BattleUnitCardsInHandUI_UpdateCardList_Post(BattleUnitCardsInHandUI __instance)
+		{
+			try
+			{
+				bool reload = false;
+				var owner = __instance.SelectedModel ?? __instance.HOveredModel;
+				if (owner == null)
+				{
+					return;
+				}
+				foreach (var card in __instance._activatedCardList)
+				{
+					var bcard = card.CardModel?._script?.card;
+					if (bcard != null && bcard.owner != owner)
+					{
+						bcard.owner = owner;
+						reload = true;
+					}
+				}
+				if (reload && !reloadGuard)
+				{
+					reloadGuard = true;
+					try
+					{
+						__instance.UpdateCardList();
+					}
+					catch { }
+					reloadGuard = false;
+				}
+			}
+			catch { }
+		}
+		static bool reloadGuard = false;
 
-        //CustomMapManager
-        //InitCustomMap
-        [HarmonyPatch(typeof(StageController), "InitializeMap")]
-        [HarmonyPrefix]
-        private static bool StageController_InitializeMap_Pre(StageController __instance)
-        {
-            try
-            {
-                if (__instance.stageType != StageType.Invitation)
-                {
-                    return true;
-                }
-                else
-                {
-                    SingletonBehavior<BattleSceneRoot>.Instance.HideAllFloorMap();
-                    List<string> mapInfo = __instance.GetStageModel().ClassInfo.mapInfo;
-                    if (mapInfo != null && mapInfo.Count > 0)
-                    {
-                        try
-                        {
-                            foreach (string text in mapInfo)
-                            {
-                                if (string.IsNullOrWhiteSpace(text))
-                                {
-                                    continue;
-                                }
-                                string[] array = text.Split(new char[]
-                                {
-                                    '_'
-                                });
-                                if (array[0].ToLower() == "custom")
-                                {
-                                    string mapName = text.Substring("custom_".Length).Trim();
-                                    string resourcePath = Singleton<ModContentManager>.Instance.GetModPath(__instance.GetStageModel().ClassInfo.workshopID) + "/CustomMap_" + mapName;
-                                    if (CustomMapManager.TryGetValue(mapName + "MapManager", out Type mapmanager))
-                                    {
-                                        Debug.Log("Find MapManager:" + mapName);
-                                        if (mapmanager == null)
-                                        {
-                                            return true;
-                                        }
-                                        GameObject gameObject = Util.LoadPrefab("LibraryMaps/KETHER_Map", SingletonBehavior<BattleSceneRoot>.Instance.transform);
-                                        GameObject borderFrame = gameObject.GetComponent<MapManager>().borderFrame;
-                                        GameObject backgroundRoot = gameObject.GetComponent<MapManager>().backgroundRoot;
-                                        UnityEngine.Object.Destroy(gameObject.GetComponent<MapManager>());
-                                        gameObject.name = "InvitationMap_" + text;
-                                        MapManager mapManager = (MapManager)gameObject.AddComponent(mapmanager);
-                                        mapManager.borderFrame = borderFrame;
-                                        mapManager.backgroundRoot = backgroundRoot;
-                                        if (mapManager is CustomMapManager)
-                                        {
-                                            (mapManager as CustomMapManager).CustomInit();
-                                        }
-                                        SingletonBehavior<BattleSceneRoot>.Instance.InitInvitationMap(mapManager);
-                                    }
-                                    else if (Directory.Exists(resourcePath))
-                                    {
-                                        Debug.Log("Find SimpleMap:" + resourcePath);
-                                        GameObject gameObject = Util.LoadPrefab("LibraryMaps/KETHER_Map", SingletonBehavior<BattleSceneRoot>.Instance.transform);
-                                        GameObject borderFrame = gameObject.GetComponent<MapManager>().borderFrame;
-                                        GameObject backgroundRoot = gameObject.GetComponent<MapManager>().backgroundRoot;
-                                        UnityEngine.Object.Destroy(gameObject.GetComponent<MapManager>());
-                                        gameObject.name = "InvitationMap_" + text;
-                                        SimpleMapManager simpleMapManager = (SimpleMapManager)gameObject.AddComponent(typeof(SimpleMapManager));
-                                        simpleMapManager.borderFrame = borderFrame;
-                                        simpleMapManager.backgroundRoot = backgroundRoot;
-                                        simpleMapManager.SimpleInit(resourcePath, mapName);
-                                        simpleMapManager.CustomInit();
-                                        SingletonBehavior<BattleSceneRoot>.Instance.InitInvitationMap(simpleMapManager);
-                                    }
-                                }
-                                else
-                                {
-                                    GameObject gameObject2 = Util.LoadPrefab("InvitationMaps/InvitationMap_" + text, SingletonBehavior<BattleSceneRoot>.Instance.transform);
-                                    gameObject2.name = "InvitationMap_" + text;
-                                    SingletonBehavior<BattleSceneRoot>.Instance.InitInvitationMap(gameObject2.GetComponent<MapManager>());
-                                }
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            File.WriteAllText(Application.dataPath + "/Mods/stageerror.log", ex.Message + Environment.NewLine + ex.StackTrace);
-                            SingletonBehavior<BattleSceneRoot>.Instance.InitFloorMap(__instance.CurrentFloor);
-                        }
-                    }
-                }
-                SingletonBehavior<BattleSceneRoot>.Instance.InitFloorMap(__instance.CurrentFloor);
-                return false;
-            }
-            catch (Exception ex)
-            {
-                File.WriteAllText(Application.dataPath + "/Mods/InitializeMaperror.log", ex.Message + Environment.NewLine + ex.StackTrace);
-            }
-            return true;
-        }
-        //EgoMap
-        [HarmonyPatch(typeof(BattleSceneRoot), "ChangeToEgoMap")]
-        [HarmonyPrefix]
-        private static bool BattleSceneRoot_ChangeToEgoMap_Pre(string mapName)
-        {
-            try
-            {
-                MapChangeFilter mapChangeFilter = SingletonBehavior<BattleSceneRoot>.Instance._mapChangeFilter;
-                GameObject gameObject = null;
-                string[] array = mapName.Split(new char[]
-                {
-            '_'
-                });
-                if (array[0].ToLower() == "custom" && CustomMapManager.TryGetValue(mapName.Substring("custom_".Length).Trim() + "MapManager", out Type mapmanager))
-                {
-                    if (mapmanager == null)
-                    {
-                        return true;
-                    }
-                    gameObject = Util.LoadPrefab("LibraryMaps/KETHER_Map", SingletonBehavior<BattleSceneRoot>.Instance.transform);
-                    GameObject borderFrame = gameObject.GetComponent<MapManager>().borderFrame;
-                    GameObject backgroundRoot = gameObject.GetComponent<MapManager>().backgroundRoot;
-                    try
-                    {
-                        UnityEngine.Object.Destroy(gameObject.GetComponent<MapManager>());
-                    }
-                    catch { }
-                    gameObject.name = "EGO_CardMap_" + mapName;
-                    MapManager mapManager = (MapManager)gameObject.AddComponent(mapmanager);
-                    mapManager.borderFrame = borderFrame;
-                    mapManager.backgroundRoot = backgroundRoot;
-                    if (mapManager is CustomMapManager)
-                    {
-                        (mapManager as CustomMapManager).CustomInit();
-                    }
-                    if (gameObject != null)
-                    {
-                        mapChangeFilter.StartMapChangingEffect(Direction.RIGHT, true);
-                        MapManager component = gameObject.GetComponent<MapManager>();
-                        gameObject.name = "CreatureMap_" + mapName;
-                        component.isBossPhase = false;
-                        component.isEgo = true;
-                        if (SingletonBehavior<BattleSceneRoot>.Instance.currentMapObject.isCreature)
-                        {
-                            UnityEngine.Object.Destroy(SingletonBehavior<BattleSceneRoot>.Instance.currentMapObject.gameObject);
-                        }
-                        else
-                        {
-                            SingletonBehavior<BattleSceneRoot>.Instance.currentMapObject.EnableMap(false);
-                        }
-                        if (component != null)
-                        {
-                            if (SingletonBehavior<BattleSceneRoot>.Instance.currentMapObject != null && SingletonBehavior<BattleSceneRoot>.Instance.currentMapObject.isCreature)
-                            {
-                                UnityEngine.Object.Destroy(SingletonBehavior<BattleSceneRoot>.Instance.currentMapObject.gameObject);
-                                SingletonBehavior<BattleSceneRoot>.Instance.currentMapObject = null;
-                            }
-                            SingletonBehavior<BattleSceneRoot>.Instance.currentMapObject = component;
-                            SingletonBehavior<BattleSceneRoot>.Instance.currentMapObject.ActiveMap(true);
-                            SingletonBehavior<BattleSceneRoot>.Instance.currentMapObject.InitializeMap();
-                            return false;
-                        }
-                        else
-                        {
-                            Debug.LogError("Ego map not found");
-                        }
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                File.WriteAllText(Application.dataPath + "/Mods/ChangeToEgoMaperror.log", ex.Message + Environment.NewLine + ex.StackTrace);
-            }
-            return true;
-        }
-        //CanChangeMap
-        [HarmonyPatch(typeof(StageController), "CanChangeMap")]
-        [HarmonyPostfix]
-        private static void StageController_CanChangeMap_Post(ref bool __result)
-        {
-            if (BattleSceneRoot.Instance.currentMapObject is CustomMapManager customMap)
-            {
-                __result = customMap.IsMapChangable();
-            }
-        }
-        //Not be used now
-        public static GameObject FindBaseMap(string name)
-        {
-            GameObject gameObject = null;
-            if (name == "malkuth")
-            {
-                gameObject = Util.LoadPrefab("LibraryMaps/MALKUTH_Map", SingletonBehavior<BattleSceneRoot>.Instance.transform);
-            }
-            if (name == "yesod")
-            {
-                gameObject = Util.LoadPrefab("LibraryMaps/YESOD_Map", SingletonBehavior<BattleSceneRoot>.Instance.transform);
-            }
-            if (name == "hod")
-            {
-                gameObject = Util.LoadPrefab("LibraryMaps/HOD_Map", SingletonBehavior<BattleSceneRoot>.Instance.transform);
-            }
-            if (name == "netzach")
-            {
-                gameObject = Util.LoadPrefab("LibraryMaps/NETZACH_Map", SingletonBehavior<BattleSceneRoot>.Instance.transform);
-            }
-            if (name == "tiphereth")
-            {
-                gameObject = Util.LoadPrefab("LibraryMaps/TIPHERETH_Map", SingletonBehavior<BattleSceneRoot>.Instance.transform);
-            }
-            if (name == "gebura")
-            {
-                gameObject = Util.LoadPrefab("LibraryMaps/GEBURAH_Map", SingletonBehavior<BattleSceneRoot>.Instance.transform);
-            }
-            if (name == "chesed")
-            {
-                gameObject = Util.LoadPrefab("LibraryMaps/CHESED_Map", SingletonBehavior<BattleSceneRoot>.Instance.transform);
-            }
-            if (name == "keter")
-            {
-                gameObject = Util.LoadPrefab("LibraryMaps/KETHER_Map", SingletonBehavior<BattleSceneRoot>.Instance.transform);
-            }
-            if (name == "hokma")
-            {
-                gameObject = Util.LoadPrefab("LibraryMaps/HOKMA_Map", SingletonBehavior<BattleSceneRoot>.Instance.transform);
-            }
-            if (name == "binah")
-            {
-                gameObject = Util.LoadPrefab("LibraryMaps/BINAH_Map", SingletonBehavior<BattleSceneRoot>.Instance.transform);
-            }
-            if (gameObject == null)
-            {
-                try
-                {
-                    gameObject = Util.LoadPrefab("InvitationMaps/InvitationMap_" + name, SingletonBehavior<BattleSceneRoot>.Instance.transform);
-                }
-                catch (Exception)
-                {
-                    gameObject = null;
-                }
-            }
-            if (gameObject == null)
-            {
-                try
-                {
-                    gameObject = Util.LoadPrefab("CreatureMaps/CreatureMap_" + name, SingletonBehavior<BattleSceneRoot>.Instance.transform);
-                }
-                catch (Exception)
-                {
-                    gameObject = null;
-                }
-            }
-            GameObject result;
-            if (gameObject != null)
-            {
-                result = gameObject;
-            }
-            else
-            {
-                result = gameObject;
-            }
-            return result;
-        }
+		//BattleDiceBehavior ignorepower lead to dicevalue zero
+		[HarmonyPatch(typeof(BattleDiceBehavior), nameof(BattleDiceBehavior.UpdateDiceFinalValue))]
+		[HarmonyPrefix]
+		[HarmonyPriority(Priority.Last)]
+		static void BattleDiceBehavior_UpdateDiceFinalValue_Pre(BattleDiceBehavior __instance)
+		{
+			__instance._diceFinalResultValue = Math.Max(1, __instance._diceResultValue);
+		}
 
-        //Others
-        //AutoMod1
-        [HarmonyPatch(typeof(UIStoryProgressPanel), "SelectedSlot")]
-        [HarmonyPrefix]
-        private static void UIStoryProgressPanel_SelectedSlot_Pre(UIStoryProgressIconSlot slot)
-        {
-            try
-            {
-                if (slot == null || slot._storyData == null)
-                {
-                    return;
-                }
-                if (slot._storyData[0].workshopID != "")
-                {
-                    IsModStorySelected = true;
-                }
-                else
-                {
-                    IsModStorySelected = false;
-                }
-            }
-            catch (Exception ex)
-            {
-                File.WriteAllText(Application.dataPath + "/Mods/CheckSelectedSloterror.log", ex.Message + Environment.NewLine + ex.StackTrace);
-            }
-        }
-        //AutoMod2
-        [HarmonyPatch(typeof(UIInvitationRightMainPanel), "SetCustomInvToggle")]
-        [HarmonyPostfix]
-        private static void UIInvitationRightMainPanel_SetCustomInvToggle_Post(UIInvitationRightMainPanel __instance)
-        {
-            if (IsModStorySelected)
-            {
-                __instance._workshopInvitationToggle.isOn = true;
-            }
-        }
-        //ErrorNull for delete card from deck
-        [HarmonyPatch(typeof(ItemXmlDataList), "GetCardItem", new Type[] { typeof(LorId), typeof(bool) })]
-        [HarmonyPrefix]
-        private static bool ItemXmlDataList_GetCardItem_Pre(ItemXmlDataList __instance, ref DiceCardXmlInfo __result, LorId id, bool errNull = false)
-        {
-            try
-            {
-                if (__instance._cardInfoTable.TryGetValue(id, out DiceCardXmlInfo result))
-                {
-                    __result = result;
-                    return false;
-                }
-                if (!errNull)
-                {
-                    if (errNullCard == null)
-                    {
-                        errNullCard = new DiceCardXmlInfo(id)
-                        {
-                            Artwork = "Basic1",
-                            Rarity = Rarity.Common,
-                            DiceBehaviourList = new List<DiceBehaviour>
-                            {
-                                new DiceBehaviour
-                                {
-                                 Min = 1,
-                                 Dice = 4,
-                                 Type = BehaviourType.Def,
-                                 Detail = BehaviourDetail.Evasion
-                                }
-                            },
-                            Chapter = 1,
-                            Priority = 0,
-                            isError = true
-                        };
-                    }
-                    __result = errNullCard;
-                    return false;
-                }
-                __result = null;
-                return false;
-            }
-            catch (Exception ex)
-            {
-                Singleton<ModContentManager>.Instance.AddErrorLog(ex.Message + Environment.NewLine + ex.StackTrace);
-                File.WriteAllText(Application.dataPath + "/Mods/GetCardItemerror.log", ex.Message + Environment.NewLine + ex.StackTrace);
-            }
-            return true;
-        }
-        //0book to "∞"
-        [HarmonyPatch(typeof(UIInvitationDropBookSlot), "SetData_DropBook")]
-        [HarmonyPostfix]
-        private static void UIInvitationDropBookSlot_SetData_DropBook_Post(UIInvitationDropBookSlot __instance, LorId bookId)
-        {
-            try
-            {
-                if (Singleton<DropBookInventoryModel>.Instance.GetBookCount(bookId) == 0)
-                {
-                    __instance.txt_bookNum.text = "∞";
-                }
-            }
-            catch { }
-        }
-        //ChangeLanguage
-        [HarmonyPatch(typeof(TextDataModel), "InitTextData")]
-        [HarmonyPostfix]
-        private static void TextDataModel_InitTextData_Post()
-        {
-            try
-            {
-                LocalizedTextLoader_New.ExportOriginalFiles();
-                LocalizedTextLoader_New.LoadModFiles(Singleton<ModContentManager>.Instance._loadedContents);
-            }
-            catch (Exception ex)
-            {
-                Singleton<ModContentManager>.Instance.AddErrorLog(ex.Message + Environment.NewLine + ex.StackTrace);
-                File.WriteAllText(Application.dataPath + "/Mods/InitTextDataerror.log", ex.Message + Environment.NewLine + ex.StackTrace);
-            }
-        }
-        //LoadStory
-        [HarmonyPatch(typeof(StorySerializer), "LoadStory", new Type[] { typeof(bool) })]
-        [HarmonyPostfix]
-        private static void StorySerializer_LoadStory_Post()
-        {
-            try
-            {
-                StorySerializer_new.ExportStory();
-            }
-            catch (Exception ex)
-            {
-                Singleton<ModContentManager>.Instance.AddErrorLog(ex.Message + Environment.NewLine + ex.StackTrace);
-                File.WriteAllText(Application.dataPath + "/Mods/LoadStoryerror.log", ex.Message + Environment.NewLine + ex.StackTrace);
-            }
-        }
-        //DiceAttackEffect
-        [HarmonyPatch(typeof(DiceEffectManager), "CreateBehaviourEffect")]
-        [HarmonyPrefix]
-        private static bool DiceEffectManager_CreateBehaviourEffect_Pre(ref DiceAttackEffect __result, string resource, float scaleFactor, BattleUnitView self, BattleUnitView target, float time = 1f)
-        {
-            try
-            {
-                if (resource == null || string.IsNullOrWhiteSpace(resource))
-                {
-                    __result = null;
-                    return false;
-                }
-                else
-                {
-                    if (CustomEffects.ContainsKey(resource))
-                    {
-                        Type componentType = CustomEffects[resource];
-                        DiceAttackEffect diceAttackEffect3 = new GameObject(resource).AddComponent(componentType) as DiceAttackEffect;
-                        diceAttackEffect3.Initialize(self, target, time);
-                        diceAttackEffect3.SetScale(scaleFactor);
-                        __result = diceAttackEffect3;
-                        return false;
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                File.WriteAllText(Application.dataPath + "/Mods/CreateBehaviourEffecterror.log", ex.Message + Environment.NewLine + ex.StackTrace);
-            }
-            return true;
-        }
-        //More Waves UI
-        [HarmonyPatch(typeof(UIBattleSettingWaveList), "SetData")]
-        [HarmonyPrefix]
-        private static bool UIBattleSettingWaveList_SetData_Pre(UIBattleSettingWaveList __instance, StageModel stage)
-        {
-            try
-            {
-                if (__instance.gameObject.GetComponent<ScrollRect>() == null)
-                {
-                    if (ArtWorks == null)
-                    {
-                        GetArtWorks();
-                    }
-                    Image image = __instance.gameObject.AddComponent<Image>();
-                    image.sprite = ArtWorks["UIBattleSettingWaveList_Mask"];
-                    image.color = new Color(0f, 0f, 0f, 0f);
-                    (__instance.transform as RectTransform).sizeDelta = new Vector2(400f, stage.waveList.Count * 250f / 3f);
-                    ScrollRect scrollRect = __instance.gameObject.AddComponent<ScrollRect>();
-                    scrollRect.scrollSensitivity = 15f;
-                    scrollRect.content = (__instance.transform as RectTransform);
-                    scrollRect.horizontal = false;
-                    scrollRect.movementType = ScrollRect.MovementType.Elastic;
-                    scrollRect.elasticity = 0.1f;
-                }
-                if (stage.waveList.Count > __instance.waveSlots.Count)
-                {
-                    int num = stage.waveList.Count - __instance.waveSlots.Count;
-                    for (int i = 0; i < num; i++)
-                    {
-                        UIBattleSettingWaveSlot uibattleSettingWaveSlot = UnityEngine.Object.Instantiate(__instance.waveSlots[0], __instance.waveSlots[0].transform.parent);
-                        InitUIBattleSettingWaveSlot(uibattleSettingWaveSlot, __instance);
-                        List<UIBattleSettingWaveSlot> list = new List<UIBattleSettingWaveSlot>
-                        {
-                            uibattleSettingWaveSlot
-                        };
-                        list.AddRange(__instance.waveSlots);
-                        __instance.waveSlots = list;
-                    }
-                }
-                if (stage.waveList.Count < __instance.waveSlots.Count)
-                {
-                    int num2 = __instance.waveSlots.Count - stage.waveList.Count;
-                    int num3 = 0;
-                    while (num3 < num2 && __instance.waveSlots.Count != 5)
-                    {
-                        UIBattleSettingWaveSlot uibattleSettingWaveSlot2 = __instance.waveSlots[__instance.waveSlots.Count - 1];
-                        __instance.waveSlots.Remove(uibattleSettingWaveSlot2);
-                        UnityEngine.Object.DestroyImmediate(uibattleSettingWaveSlot2);
-                        num3++;
-                    }
-                }
-                InitUIBattleSettingWaveSlots(__instance.waveSlots);
-                foreach (UIBattleSettingWaveSlot uibattleSettingWaveSlot3 in __instance.waveSlots)
-                {
-                    uibattleSettingWaveSlot3.gameObject.SetActive(false);
-                }
-                for (int j = 0; j < stage.waveList.Count; j++)
-                {
-                    UIBattleSettingWaveSlot uibattleSettingWaveSlot4 = __instance.waveSlots[j];
-                    uibattleSettingWaveSlot4.SetData(stage.waveList[j]);
-                    uibattleSettingWaveSlot4.gameObject.SetActive(true);
-                    if (stage.waveList[j].IsUnavailable())
-                    {
-                        uibattleSettingWaveSlot4.SetDefeat();
-                    }
-                    if (j == stage.waveList.Count - 1)
-                    {
-                        uibattleSettingWaveSlot4.ActivateArrow(false);
-                    }
-                }
-                int num4 = Singleton<StageController>.Instance.CurrentWave - 1;
-                if (num4 < 0 || __instance.waveSlots.Count <= num4)
-                {
-                    Debug.LogError("Index Error");
-                }
-                else
-                {
-                    __instance.waveSlots[num4].SetHighlighted();
-                }
-            }
-            catch (Exception ex)
-            {
-                File.WriteAllText(Application.dataPath + "/Mods/UIBSWLerror.log", ex.Message + Environment.NewLine + ex.StackTrace);
-            }
-           (__instance.transform as RectTransform).sizeDelta = new Vector2(400f, stage.waveList.Count * 250f / 3f);
-            return false;
-        }
-        private static void InitUIBattleSettingWaveSlot(UIBattleSettingWaveSlot slot, UIBattleSettingWaveList list)
-        {
-            slot.panel = list;
-            var rect = slot.transform as RectTransform;
-            slot.rect = rect;
-            var waveIcon = rect.Find("[Rect]WaveIcon");
-            var circle = waveIcon.Find("[Image]CircleFrame");
-            var circleGlow = waveIcon.Find("[Image]CircleFrameGlow");
-            var icon = waveIcon.Find("[Image]Icon");
-            var iconGlow = waveIcon.Find("[Image]IconGlow");
-            slot.img_circle = circle.GetComponent<Image>();
-            slot.hsv_Circle = circle.GetComponent<_2dxFX_HSV>();
-            slot.img_circleglow = circleGlow.GetComponent<Image>();
-            slot.hsv_CircleGlow = circleGlow.GetComponent<_2dxFX_HSV>();
-            slot.img_Icon = icon.GetComponent<Image>();
-            slot.hsv_Icon = icon.GetComponent<_2dxFX_HSV>();
-            slot.img_IconGlow = iconGlow.GetComponent<Image>();
-            slot.hsv_IconGlow = iconGlow.GetComponent<_2dxFX_HSV>();
-            var text = rect.Find("[Text]AlarmText");
-            slot.txt_Alarm = text.GetComponent<TextMeshProUGUI>();
-            slot.materialsetter_txtAlarm = text.GetComponent<TextMeshProMaterialSetter>();
-            slot.arrow = rect.Find("[Image]Arrow (1)").GetComponent<Image>();
-            slot.defeatColor = new Color(0.454902f, 0.1098039f, 0f, 1f);
-            slot.anim = slot.GetComponent<Animator>();
-            slot.cg = slot.GetComponent<CanvasGroup>();
-            slot.transform.localPosition = new Vector2(120f, 0f);
-            slot.gameObject.SetActive(false);
-        }
-        private static void InitUIBattleSettingWaveSlots(List<UIBattleSettingWaveSlot> slots)
-        {
-            for (int i = 0; i < slots.Count; i++)
-            {
-                slots[i].gameObject.transform.localScale = new Vector3(1f, 1f);
-            }
-        }
-        //over 999 dicevalue
-        [HarmonyPatch(typeof(BattleSimpleActionUI_Dice), "SetDiceValue")]
-        [HarmonyPrefix]
-        private static bool BattleSimpleActionUI_Dice_SetDiceValue_Pre(BattleSimpleActionUI_Dice __instance, bool enable, int diceValue)
-        {
-            try
-            {
-                int num = 0;
-                int num2 = diceValue;
-                List<GameObject> list = new List<GameObject>();
-                List<GameObject> list2 = new List<GameObject>();
-                for (int i = 0; i < __instance.layout_numbers.childCount; i++)
-                {
-                    list.Add(__instance.layout_numbers.GetChild(i).gameObject);
-                    list2.Add(__instance.layout_numberbgs.GetChild(i).gameObject);
-                    __instance.layout_numbers.GetChild(i).gameObject.SetActive(false);
-                    __instance.layout_numberbgs.GetChild(i).gameObject.SetActive(false);
-                }
-                bool flag;
-                do
-                {
-                    num++;
-                    num2 /= 10;
-                    flag = (num2 == 0);
-                }
-                while (!flag);
-                int num3 = num - __instance.layout_numbers.childCount;
-                for (int j = 0; j < num3; j++)
-                {
-                    GameObject gameObject = UnityEngine.Object.Instantiate(__instance.layout_numbers.GetChild(0).gameObject, __instance.layout_numbers);
-                    list.Add(gameObject);
-                    gameObject.gameObject.SetActive(false);
-                    GameObject gameObject2 = UnityEngine.Object.Instantiate(__instance.layout_numberbgs.GetChild(0).gameObject, __instance.layout_numberbgs);
-                    list2.Add(gameObject2);
-                    gameObject2.gameObject.SetActive(false);
-                }
-                if (enable)
-                {
-                    List<Sprite> battleDice_NumberAutoSlice = UISpriteDataManager.instance.BattleDice_NumberAutoSlice;
-                    List<Sprite> battleDice_numberAutoSliceBg = UISpriteDataManager.instance.BattleDice_numberAutoSliceBg;
-                    for (int k = 0; k < num; k++)
-                    {
-                        int index = diceValue % 10;
-                        Sprite sprite = battleDice_NumberAutoSlice[index];
-                        Image component = list[list.Count - k - 1].GetComponent<Image>();
-                        component.sprite = sprite;
-                        component.SetNativeSize();
-                        component.gameObject.SetActive(true);
-                        Sprite sprite2 = battleDice_numberAutoSliceBg[index];
-                        Image component2 = list2[list.Count - k - 1].GetComponent<Image>();
-                        component2.sprite = sprite2;
-                        component2.SetNativeSize();
-                        component2.gameObject.SetActive(true);
-                        component2.rectTransform.anchoredPosition = component.rectTransform.anchoredPosition;
-                        diceValue /= 10;
-                    }
-                }
-                return false;
-            }
-            catch (Exception ex)
-            {
-                File.WriteAllText(Application.dataPath + "/Mods/SetDiceValueerror.log", ex.Message + Environment.NewLine + ex.StackTrace);
-            }
-            return true;
-        }
-        //VersionViewer
-        [HarmonyPatch(typeof(VersionViewer), "Start")]
-        [HarmonyPrefix]
-        private static bool VersionViewer_Start_Pre(VersionViewer __instance)
-        {
-            __instance.GetComponent<Text>().text = GlobalGameManager.Instance.ver;
-            __instance.GetComponent<Text>().fontSize = 30;
-            __instance.gameObject.transform.localPosition = new Vector3(-830f, -460f);
-            return false;
-        }
-        //CopyCheck
-        [HarmonyPatch(typeof(DiceCardXmlInfo), "Copy")]
-        [HarmonyPostfix]
-        private static void DiceCardXmlInfo_Copy_Post(DiceCardXmlInfo __instance, ref DiceCardXmlInfo __result)
-        {
-            __result.Keywords = __instance.Keywords;
-            if (__instance is DiceCardXmlInfo_New)
-            {
-                __result = new DiceCardXmlInfo_New()
-                {
-                    workshopID = __result.workshopID,
-                    workshopName = __result.workshopName,
-                    Artwork = __result.Artwork,
-                    Chapter = __result.Chapter,
-                    category = __result.category,
-                    DiceBehaviourList = __result.DiceBehaviourList,
-                    _textId = __result._textId,
-                    optionList = __result.optionList,
-                    Keywords = __result.Keywords,
-                    Priority = __result.Priority,
-                    Rarity = __result.Rarity,
-                    Script = __result.Script,
-                    ScriptDesc = __result.ScriptDesc,
-                    Spec = __result.Spec,
-                    SpecialEffect = __result.SpecialEffect,
-                    SkinChange = __result.SkinChange,
-                    SkinChangeType = __result.SkinChangeType,
-                    SkinHeight = __result.SkinHeight,
-                    MapChange = __result.MapChange,
-                    PriorityScript = __result.PriorityScript
-                };
-                foreach (BookCategory category in (__instance as DiceCardXmlInfo_New).categoryList)
-                {
-                    (__result as DiceCardXmlInfo_New).categoryList.Add(category);
-                }
-            }
-        }
-        /*
-        //Mod_Update
-        //Using For Reload
-        [HarmonyPatch(typeof(DebugConsoleScript), "Update")]
-        [HarmonyPrefix]
-        private static void Mod_Update()
-        {
-            try
-            {
-                if (!IsEditing && entryScene != null && Input.GetKeyDown(KeyCode.R))
-                {
-                    File.WriteAllText(Application.dataPath + "/Mods/PressSuccess.log", "success");
-                    entryScene.OnCompleteInitializePlatform_xboxlive(true);
-                }
-                IsEditing = true;
-            }
-            catch (Exception ex)
-            {
-                Singleton<ModContentManager>.Instance.AddErrorLog(ex.Message + Environment.NewLine + ex.StackTrace);
-                File.WriteAllText(Application.dataPath + "/Mods/Updateerror.log", ex.Message + Environment.NewLine + ex.StackTrace);
-            }
-        }
-        //Using For Reload
-        [HarmonyPatch(typeof(ModContentManager), "SetActiveContents")]
-        [HarmonyPrefix]
-        private static void ModContentManager_SetActiveContents_Pre(List<ModContent> __instance._loadedContents)
-        {
-            __instance._loadedContents.Clear();
-        }
-        //Using For Reload
-        [HarmonyPatch(typeof(UIModPopup), "Close")]
-        [HarmonyPrefix]
-        private static void UIModPopup_Close_Post()
-        {
-            try
-            {
-                if (IsEditing)
-                {
-                    ReloadModFiles();
-                    LoadAssemblyFiles();
-                    LoadModFiles();
-                }
-            }
-            catch (Exception ex)
-            {
-                Singleton<ModContentManager>.Instance.AddErrorLog(ex.Message + Environment.NewLine + ex.StackTrace);
-                File.WriteAllText(Application.dataPath + "/Mods/ModSettingerror.log", ex.Message + Environment.NewLine + ex.StackTrace);
-            }
-            IsEditing = false;
-        }*/
+		//Passive
+		//PassiveName
+		[HarmonyPatch(typeof(BookPassiveInfo), nameof(BookPassiveInfo.name), MethodType.Getter)]
+		[HarmonyPrefix]
+		static bool BookPassiveInfo_get_name_Pre(BookPassiveInfo __instance, ref string __result)
+		{
+			try
+			{
+				string passiveName = PassiveDescXmlList.Instance.GetName(__instance.passive.id);
+				if (!string.IsNullOrWhiteSpace(passiveName))
+				{
+					__result = passiveName;
+					return false;
+				}
+			}
+			catch { }
+			return true;
+		}
+		//PassiveDesc
+		[HarmonyPatch(typeof(BookPassiveInfo), nameof(BookPassiveInfo.desc), MethodType.Getter)]
+		[HarmonyPrefix]
+		static bool BookPassiveInfo_get_desc_Pre(BookPassiveInfo __instance, ref string __result)
+		{
+			try
+			{
+				string passiveDesc = PassiveDescXmlList.Instance.GetDesc(__instance.passive.id);
+				if (!string.IsNullOrWhiteSpace(passiveDesc))
+				{
+					__result = passiveDesc;
+					return false;
+				}
+			}
+			catch { }
+			return true;
+		}
 
-        //ModItemSort
-        //BookSort
-        [HarmonyPatch(typeof(UIInvitationDropBookList), "ApplyFilterAll")]
-        [HarmonyPostfix]
-        private static void UIInvitationDropBookList_ApplyFilterAll_Post(UIInvitationDropBookList __instance)
-        {
-            try
-            {
-                if (ModPid == null)
-                {
-                    ModPid = new List<string>();
-                    foreach (ModContentInfo modContentInfo in Singleton<ModContentManager>.Instance.GetAllMods())
-                    {
-                        if (!modContentInfo.invInfo.workshopInfo.uniqueId.ToLower().EndsWith("@origin") && !ModPid.Contains(modContentInfo.invInfo.workshopInfo.uniqueId) && modContentInfo.activated)
-                        {
-                            ModPid.Add(modContentInfo.invInfo.workshopInfo.uniqueId);
-                        }
-                    }
-                    ModPid.Sort();
-                }
-                List<LorId> list = new List<LorId>();
-                list.AddRange(__instance._currentBookIdList);
-                __instance._currentBookIdList.Clear();
-                foreach (string id in ModPid)
-                {
-                    __instance._currentBookIdList.AddRange(list.FindAll((LorId x) => x.packageId == id));
-                }
-                __instance._currentBookIdList.AddRange(list.FindAll((LorId x) => x.packageId == ""));
-                __instance.SelectablePanel.ChildSelectable = __instance.BookSlotList[0].selectable;
-                __instance.UpdateBookListPage(false);
-            }
-            catch (Exception ex)
-            {
-                File.WriteAllText(Application.dataPath + "/Mods/ModBookSort_Invi.log", ex.Message + Environment.NewLine + ex.StackTrace);
-            }
-        }
-        //BookSort
-        [HarmonyPatch(typeof(UIInvenFeedBookList), "ApplyFilterAll")]
-        [HarmonyPostfix]
-        private static void UIInvenFeedBookList_ApplyFilterAll_Post(UIInvenFeedBookList __instance)
-        {
-            try
-            {
-                if (ModPid == null)
-                {
-                    ModPid = new List<string>();
-                    foreach (ModContentInfo modContentInfo in Singleton<ModContentManager>.Instance.GetAllMods())
-                    {
-                        if (!modContentInfo.invInfo.workshopInfo.uniqueId.ToLower().EndsWith("@origin") && !ModPid.Contains(modContentInfo.invInfo.workshopInfo.uniqueId))
-                        {
-                            ModPid.Add(modContentInfo.invInfo.workshopInfo.uniqueId);
-                        }
-                    }
-                    ModPid.Sort();
-                }
-                List<LorId> list = new List<LorId>();
-                list.AddRange(__instance._currentBookIdList);
-                __instance._currentBookIdList.Clear();
-                foreach (string id in ModPid)
-                {
-                    __instance._currentBookIdList.AddRange(list.FindAll((LorId x) => x.packageId == id));
-                }
-                __instance._currentBookIdList.AddRange(list.FindAll((LorId x) => x.packageId == ""));
-                __instance.UpdateBookListPage(false);
-            }
-            catch (Exception ex)
-            {
-                File.WriteAllText(Application.dataPath + "/Mods/ModBookSort_Feed.log", ex.Message + Environment.NewLine + ex.StackTrace);
-            }
-        }
-        //CardSort
-        [HarmonyPatch(typeof(UIInvenCardListScroll), "ApplyFilterAll")]
-        [HarmonyPrefix]
-        private static bool UIInvenCardListScroll_ApplyFilterAll_Pre(UIInvenCardListScroll __instance)
-        {
-            try
-            {
-                __instance._currentCardListForFilter.Clear();
-                List<DiceCardItemModel> cardsByDetailFilterUI = __instance.GetCardsByDetailFilterUI(__instance.GetCardBySearchFilterUI(__instance.GetCardsByCostFilterUI(__instance.GetCardsByGradeFilterUI(__instance._originCardList))));
-                cardsByDetailFilterUI.Sort(new Comparison<DiceCardItemModel>(ModCardItemSort));
-                if (__instance._unitdata != null)
-                {
-                    Predicate<DiceCardItemModel> cond1 = (DiceCardItemModel x) => true;
-                    switch (__instance._unitdata.bookItem.ClassInfo.RangeType)
-                    {
-                        case EquipRangeType.Melee:
-                            cond1 = ((DiceCardItemModel x) => x.GetSpec().Ranged != CardRange.Far);
-                            break;
-                        case EquipRangeType.Range:
-                            cond1 = ((DiceCardItemModel x) => x.GetSpec().Ranged > CardRange.Near);
-                            break;
-                        case EquipRangeType.Hybrid:
-                            cond1 = ((DiceCardItemModel x) => true);
-                            break;
-                    }
-                    List<DiceCardXmlInfo> onlyCards = __instance._unitdata.bookItem.GetOnlyCards();
-                    Predicate<DiceCardItemModel> cond2 = ((DiceCardItemModel x) => onlyCards.Exists((DiceCardXmlInfo y) => y.id == x.GetID()));
-                    foreach (DiceCardItemModel item in cardsByDetailFilterUI.FindAll((DiceCardItemModel x) => x.ClassInfo.optionList.Contains(CardOption.OnlyPage) && !cond2(x)))
-                    {
-                        cardsByDetailFilterUI.Remove(item);
-                    }
-                    __instance._currentCardListForFilter.AddRange(cardsByDetailFilterUI.FindAll((DiceCardItemModel x) => (!x.ClassInfo.optionList.Contains(CardOption.OnlyPage)) ? cond1(x) : cond2(x)));
-                    __instance._currentCardListForFilter.AddRange(cardsByDetailFilterUI.FindAll((DiceCardItemModel x) => (x.ClassInfo.optionList.Contains(CardOption.OnlyPage) ? (cond2(x) ? 1 : 0) : (cond1(x) ? 1 : 0)) == 0));
-                }
-                else
-                {
-                    __instance._currentCardListForFilter.AddRange(cardsByDetailFilterUI);
-                }
-                int num = __instance.GetMaxRow();
-                __instance.scrollBar.SetScrollRectSize(__instance.column * __instance.slotWidth, (num + (float)__instance.row - 1f) * __instance.slotHeight);
-                __instance.scrollBar.SetWindowPosition(0f, 0f);
-                __instance.selectablePanel.ChildSelectable = __instance.slotList[0].selectable;
-                __instance.SetCardsData(__instance.GetCurrentPageList());
-                return false;
-            }
-            catch (Exception ex)
-            {
-                File.WriteAllText(Application.dataPath + "/Mods/ModCardSort.log", ex.Message + Environment.NewLine + ex.StackTrace);
-            }
-            return true;
-        }
-        private static int ModCardItemSort(DiceCardItemModel a, DiceCardItemModel b)
-        {
-            int num = b.ClassInfo.optionList.Contains(CardOption.OnlyPage) ? 1 : 0;
-            int num2 = a.ClassInfo.optionList.Contains(CardOption.OnlyPage) ? 1 : 0;
-            int num3 = (b.ClassInfo.isError ? -1 : num) - (a.ClassInfo.isError ? -1 : num2);
-            int result;
-            if (num3 != 0)
-            {
-                result = num3;
-            }
-            else
-            {
-                num3 = a.GetSpec().Cost - b.GetSpec().Cost;
-                if (num3 != 0)
-                {
-                    result = num3;
-                }
-                else
-                {
-                    num3 = a.ClassInfo.workshopID.CompareTo(b.ClassInfo.workshopID);
-                    result = ((num3 != 0) ? num3 : (a.GetID().id - b.GetID().id));
-                }
-            }
-            return result;
-        }
+		//BattleUnitBuff
+		//ReadyBuf
+		/*
+		[HarmonyPatch(typeof(BattleUnitBufListDetail), nameof(BattleUnitBufListDetail.OnRoundStart))]
+		[HarmonyPrefix]
+		static bool BattleUnitBufListDetail_OnRoundStart_Pre(BattleUnitBufListDetail __instance)
+		{
+			try
+			{
+				foreach (BattleUnitBuf ReadyBuf in __instance._readyBufList)
+				{
+					if (!ReadyBuf.IsDestroyed())
+					{
+						BattleUnitBuf buf = __instance._bufList.Find((BattleUnitBuf x) => x.GetType() == ReadyBuf.GetType() && !x.IsDestroyed());
+						if (buf != null && !ReadyBuf.independentBufIcon && buf.GetBufIcon() != null)
+						{
+							buf.stack += ReadyBuf.stack;
+							buf.OnAddBuf(ReadyBuf.stack);
+						}
+						else
+						{
+							__instance.AddBuf(ReadyBuf);
+							ReadyBuf.OnAddBuf(ReadyBuf.stack);
+						}
+					}
+				}
+				__instance._readyBufList.Clear();
+				foreach (BattleUnitBuf ReadyReadyBuf in __instance._readyReadyBufList)
+				{
+					if (!ReadyReadyBuf.IsDestroyed())
+					{
+						BattleUnitBuf rbuf = __instance._readyBufList.Find((BattleUnitBuf x) => x.GetType() == ReadyReadyBuf.GetType() && !x.IsDestroyed());
+						if (rbuf != null && !ReadyReadyBuf.independentBufIcon && rbuf.GetBufIcon() != null)
+						{
+							rbuf.stack += ReadyReadyBuf.stack;
+							rbuf.OnAddBuf(ReadyReadyBuf.stack);
+						}
+						else
+						{
+							__instance._readyBufList.Add(ReadyReadyBuf);
+							ReadyReadyBuf.OnAddBuf(ReadyReadyBuf.stack);
+						}
+					}
+				}
+				__instance._readyReadyBufList.Clear();
+				if (__instance._self.faction == Faction.Player && StageController.Instance.GetStageModel().ClassInfo.chapter == 3)
+				{
+					int kewordBufStack = __instance.GetKewordBufStack(KeywordBuf.Endurance);
+					__instance._self.UnitData.historyInStage.maxEndurance = Mathf.Max(__instance._self.UnitData.historyInStage.maxEndurance, kewordBufStack);
+				}
+				foreach (BattleUnitBuf battleUnitBuf3 in __instance._bufList.ToArray())
+				{
+					try
+					{
+						if (!battleUnitBuf3.IsDestroyed())
+						{
+							battleUnitBuf3.OnRoundStart();
+						}
+					}
+					catch (Exception exception)
+					{
+						Debug.LogException(exception);
+					}
+				}
+				__instance.CheckDestroyedBuf();
+				__instance.CheckAchievements();
+				return false;
+			}
+			catch (Exception ex)
+			{
+				File.WriteAllText(Application.dataPath + "/Mods/ReadyBufFixerror.log", ex.Message + Environment.NewLine + ex.StackTrace);
+			}
+			return true;
+		}
+		*/
+		[HarmonyPatch(typeof(BattleUnitBufListDetail), nameof(BattleUnitBufListDetail.OnRoundStart))]
+		[HarmonyTranspiler]
+		static IEnumerable<CodeInstruction> BattleUnitBufListDetail_OnRoundStart_In(IEnumerable<CodeInstruction> instructions, ILGenerator ilgen)
+		{
+			var newBufLocal = ilgen.DeclareLocal(typeof(BattleUnitBuf));
+			var oldBufListLocal = ilgen.DeclareLocal(typeof(BattleUnitBuf));
+			var bufPredicateLocal = ilgen.DeclareLocal(typeof(Predicate<BattleUnitBuf>));
+			var currentBufProperty = PropertyGetter(typeof(List<BattleUnitBuf>.Enumerator), nameof(List<BattleUnitBuf>.Enumerator.Current));
+			var independentIconProperty = PropertyGetter(typeof(BattleUnitBuf), nameof(BattleUnitBuf.independentBufIcon));
+			var iconGetterMethod = Method(typeof(BattleUnitBuf), nameof(BattleUnitBuf.GetBufIcon));
+			var unityEqualityMethod = Method(typeof(UnityEngine.Object), "op_Equality", new Type[] { typeof(UnityEngine.Object), typeof(UnityEngine.Object) });
+			var bufFindMethod = Method(typeof(List<BattleUnitBuf>), nameof(List<BattleUnitBuf>.Find));
+			var helper = Method(typeof(Harmony_Patch), nameof(BattleUnitBufListDetail_OnRoundStart_FindSameTypeBuf));
+			foreach (var instruction in instructions)
+			{
+				var patchingFind = instruction.Is(Callvirt, bufFindMethod);
+				if (patchingFind)
+				{
+					yield return new CodeInstruction(Stloc, bufPredicateLocal);
+					yield return new CodeInstruction(Dup);
+					yield return new CodeInstruction(Stloc, oldBufListLocal);
+					yield return new CodeInstruction(Ldloc, bufPredicateLocal);
+				}
+				yield return instruction;
+				if (patchingFind)
+				{
+					yield return new CodeInstruction(Ldloc, newBufLocal);
+					yield return new CodeInstruction(Ldloc, oldBufListLocal);
+					yield return new CodeInstruction(Call, helper);
+				}
+				else if (instruction.Is(Call, currentBufProperty))
+				{
+					yield return new CodeInstruction(Dup);
+					yield return new CodeInstruction(Stloc, newBufLocal);
+				}
+				else if (instruction.Is(Callvirt, independentIconProperty))
+				{
+					yield return new CodeInstruction(Ldloc, newBufLocal);
+					yield return new CodeInstruction(Callvirt, iconGetterMethod);
+					yield return new CodeInstruction(Ldnull);
+					yield return new CodeInstruction(Call, unityEqualityMethod);
+					yield return new CodeInstruction(Or);
+				}
+			}
+		}
+		//if matching buf was already found, return it; otherwise do a new search according to the alternative condition
+		static BattleUnitBuf BattleUnitBufListDetail_OnRoundStart_FindSameTypeBuf(BattleUnitBuf oldBuf, BattleUnitBuf newBuf, List<BattleUnitBuf> list)
+		{
+			if (oldBuf != null)
+			{
+				return oldBuf;
+			}
+			return list.Find((BattleUnitBuf x) => x.GetType() == newBuf.GetType() && !x.IsDestroyed());
+		}
+		//CanAddBuf Apply owner
+		[HarmonyPatch(typeof(BattleUnitBufListDetail), nameof(BattleUnitBufListDetail.CanAddBuf))]
+		[HarmonyPrefix]
+		static void BattleUnitBufListDetail_CanAddBuf_Pre(BattleUnitBufListDetail __instance, BattleUnitBuf buf)
+		{
+			try
+			{
+				if (buf == null || __instance._self == null)
+				{
+					return;
+				}
+				buf._owner = __instance._self;
+			}
+			catch { }
+		}
+		//GetBufIcon
+		[HarmonyPatch(typeof(BattleUnitBuf), nameof(BattleUnitBuf.GetBufIcon))]
+		[HarmonyPrefix]
+		static void BattleUnitBuf_GetBufIcon_Pre(BattleUnitBuf __instance)
+		{
+			if (ArtWorks == null)
+			{
+				GetArtWorks();
+			}
+			if (BattleUnitBuf._bufIconDictionary == null)
+			{
+				BattleUnitBuf._bufIconDictionary = new Dictionary<string, Sprite>();
+			}
+			if (BattleUnitBuf._bufIconDictionary.Count == 0)
+			{
+				Sprite[] array = Resources.LoadAll<Sprite>("Sprites/BufIconSheet/");
+				if (array != null && array.Length != 0)
+				{
+					for (int i = 0; i < array.Length; i++)
+					{
+						BattleUnitBuf._bufIconDictionary[array[i].name] = array[i];
+					}
+				}
+			}
+			string keywordIconId = __instance.keywordIconId;
+			if (!string.IsNullOrWhiteSpace(keywordIconId) && !BattleUnitBuf._bufIconDictionary.ContainsKey(keywordIconId) && ArtWorks.TryGetValue(keywordIconId, out Sprite sprite))
+			{
+				BattleUnitBuf._bufIconDictionary[keywordIconId] = sprite;
+			}
+		}
 
-        //ModSetting
-        //SaveModSetting
-        [HarmonyPatch(typeof(SaveManager), "SavePlayData")]
-        [HarmonyPrefix]
-        private static void SaveManager_SavePlayData_Pre()
-        {
-            try
-            {
-                ModSaveTool.SaveModSaveData();/*
-                if (File.Exists(SaveManager.savePath + "/Player.log"))
-                {
-                    if (File.Exists(Application.dataPath + "/Mods/Player.log"))
-                    {
-                        File.Delete(Application.dataPath + "/Mods/Player.log");
-                    }
-                    File.Copy(SaveManager.savePath + "/Player.log", Application.dataPath + "/Mods/Player.log");
-                }*/
-            }
-            catch (Exception ex)
-            {
-                File.WriteAllText(Application.dataPath + "/Mods/SaveFailed.log", ex.Message + Environment.NewLine + ex.StackTrace);
-            }
-        }
-        //RemoveUnknownSaves
-        [HarmonyPatch(typeof(GameOpeningController), "StopOpening")]
-        [HarmonyPostfix]
-        private static void GameOpeningController_StopOpening_Post()
-        {
-            try
-            {
-                LoadCoreThumbs();
-                LoadCoreSounds();
-            }
-            catch (Exception ex)
-            {
-                File.WriteAllText(Application.dataPath + "/Mods/LoadFromModSaveDataerror.txt", ex.Message + Environment.NewLine + ex.StackTrace);
-            }
-        }
-        //CustomGift
-        //CreateGiftData
-        [HarmonyPatch(typeof(CharacterAppearance), "CreateGiftData")]
-        [HarmonyPrefix]
-        private static bool CharacterAppearance_CreateGiftData_Pre(CharacterAppearance __instance, ref GiftAppearance __result, GiftModel gift, string resPath)
-        {
-            try
-            {
-                if (__instance.CustomAppearance == null)
-                {
-                    __result = null;
-                    return false;
-                }
-                else
-                {
-                    string[] array = resPath.Split(new char[]
-                    {
-                        '/'
-                    });
-                    string[] array2 = array[array.Length - 1].Split(new char[]
-                    {
-                         '_'
-                    });
-                    if (array2[1].ToLower() != "custom")
-                    {
-                        return true;
-                    }
-                    else
-                    {
-                        bool flag = false;
-                        GiftAppearance giftAppearance = null;
-                        Dictionary<GiftPosition, GiftAppearance> dictionary = __instance._giftAppearanceDic;
-                        if (dictionary.ContainsKey(gift.ClassInfo.Position))
-                        {
-                            giftAppearance = dictionary[gift.ClassInfo.Position];
-                            if (giftAppearance.ResourceName != resPath)
-                            {
-                                dictionary.Remove(gift.ClassInfo.Position);
-                                UnityEngine.Object.Destroy(giftAppearance.gameObject);
-                                flag = true;
-                            }
-                        }
-                        else
-                        {
-                            flag = true;
-                        }
-                        if (flag)
-                        {
-                            giftAppearance = UnityEngine.Object.Instantiate(Resources.Load<GameObject>("Prefabs/Gifts/Gifts_NeedRename/Gift_Challenger"), __instance.transform).GetComponent<GiftAppearance>();
-                            SpriteRenderer spriteRenderer = giftAppearance._frontSpriteRenderer;
-                            SpriteRenderer spriteRenderer2 = giftAppearance._sideSpriteRenderer;
-                            SpriteRenderer spriteRenderer3 = giftAppearance._frontBackSpriteRenderer;
-                            SpriteRenderer spriteRenderer4 = giftAppearance._sideBackSpriteRenderer;
-                            spriteRenderer.gameObject.transform.localScale = new Vector2(1f, 1f);
-                            if (CustomGiftAppearance.GiftArtWork.ContainsKey(array2[2] + "_front"))
-                            {
-                                spriteRenderer.sprite = CustomGiftAppearance.GiftArtWork[array2[2] + "_front"];
-                            }
-                            else
-                            {
-                                spriteRenderer.gameObject.SetActive(false);
-                                giftAppearance._frontSpriteRenderer = null;
-                            }
-                            spriteRenderer2.gameObject.transform.localScale = new Vector2(1f, 1f);
-                            if (CustomGiftAppearance.GiftArtWork.ContainsKey(array2[2] + "_side"))
-                            {
-                                spriteRenderer2.sprite = CustomGiftAppearance.GiftArtWork[array2[2] + "_side"];
-                            }
-                            else
-                            {
-                                spriteRenderer2.gameObject.SetActive(false);
-                                giftAppearance._sideSpriteRenderer = null;
-                            }
-                            spriteRenderer3.gameObject.transform.localScale = new Vector2(1f, 1f);
-                            if (CustomGiftAppearance.GiftArtWork.ContainsKey(array2[2] + "_frontBack"))
-                            {
-                                spriteRenderer3.sprite = CustomGiftAppearance.GiftArtWork[array2[2] + "_frontBack"];
-                            }
-                            else
-                            {
-                                spriteRenderer3.gameObject.SetActive(false);
-                                giftAppearance._frontBackSpriteRenderer = null;
-                            }
-                            spriteRenderer4.gameObject.transform.localScale = new Vector2(1f, 1f);
-                            if (CustomGiftAppearance.GiftArtWork.ContainsKey(array2[2] + "_sideBack"))
-                            {
-                                spriteRenderer4.sprite = CustomGiftAppearance.GiftArtWork[array2[2] + "_sideBack"];
-                            }
-                            else
-                            {
-                                spriteRenderer4.gameObject.SetActive(false);
-                                giftAppearance._sideBackSpriteRenderer = null;
-                            }
-                            dictionary.Add(gift.ClassInfo.Position, giftAppearance);
-                        }
-                        if (giftAppearance != null)
-                        {
-                            string layer = __instance._layerName;
-                            CharacterMotion motion = __instance._currentMotion;
-                            giftAppearance.Init(gift, layer);
-                            giftAppearance.RefreshAppearance(__instance.CustomAppearance, motion);
-                        }
-                        __result = giftAppearance;
-                        return false;
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                File.WriteAllText(Application.dataPath + "/Mods/CACGDerror.log", ex.Message + Environment.NewLine + ex.StackTrace);
-            }
-            return true;
-        }
-        //GiftPassive
-        [HarmonyPatch(typeof(GiftModel), "CreateScripts")]
-        [HarmonyPrefix]
-        private static bool GiftModel_CreateScripts_Pre(GiftModel __instance, ref List<PassiveAbilityBase> __result)
-        {
-            try
-            {
-                List<PassiveAbilityBase> list = new List<PassiveAbilityBase>();
-                foreach (int num in __instance.ClassInfo.ScriptList)
-                {
-                    PassiveAbilityBase passiveAbilityBase = FindGiftPassiveAbility(num.ToString().Trim());
-                    if (passiveAbilityBase != null)
-                    {
-                        passiveAbilityBase.name = __instance.GetName();
-                        passiveAbilityBase.desc = __instance.GiftDesc;
-                        list.Add(passiveAbilityBase);
-                    }
-                }
-                __result = list;
-                return false;
-            }
-            catch (Exception ex)
-            {
-                File.WriteAllText(Application.dataPath + "/Mods/GMCSerror.log", ex.Message + Environment.NewLine + ex.StackTrace);
-            }
-            return true;
-        }
-        public static PassiveAbilityBase FindGiftPassiveAbility(string name)
-        {
-            if (!string.IsNullOrWhiteSpace(name) && CustomGiftPassive.TryGetValue(name, out Type type))
-            {
-                return Activator.CreateInstance(type) as PassiveAbilityBase;
-            }
-            foreach (Type type2 in Assembly.LoadFile(Application.dataPath + "/Managed/Assembly-CSharp.dll").GetTypes())
-            {
-                if (type2.Name == "GiftPassiveAbility_" + name)
-                {
-                    return Activator.CreateInstance(type2) as PassiveAbilityBase;
-                }
-            }
-            return null;
-        }
-        //GiftDataSlot
-        [HarmonyPatch(typeof(UIGiftDataSlot), "SetData")]
-        [HarmonyPrefix]
-        private static bool UIGiftDataSlot_SetData_Pre(UIGiftDataSlot __instance, GiftModel data)
-        {
-            try
-            {
-                if (data == null)
-                {
-                    __instance.gameObject.SetActive(false);
-                    return false;
-                }
-                else
-                {
-                    __instance.img_giftImage.enabled = true;
-                    __instance.img_xmark.enabled = false;
-                    __instance.img_giftMask.enabled = true;
-                    __instance.OpenInit();
-                    string[] array = data.GetResourcePath().Split(new char[]
-                    {
-                         '/'
-                    });
-                    string[] array2 = array[array.Length - 1].Split(new char[]
-                    {
-                         '_'
-                    });
-                    GiftAppearance giftAppearance;
-                    if (array2[1].ToLower() != "custom")
-                    {
-                        return true;
-                    }
-                    giftAppearance = CustomGiftAppearance.CreateCustomGift(array2);
-                    giftAppearance.gameObject.SetActive(false);
-                    if (giftAppearance != null)
-                    {
-                        if (giftAppearance is GiftAppearance_Aura)
-                        {
-                            __instance.img_giftImage.enabled = true;
-                            __instance.img_giftImage.sprite = UISpriteDataManager.instance.GiftAuraIcon;
-                            __instance.img_giftImage.rectTransform.localScale = new Vector2(0.8f, 0.8f);
-                        }
-                        else
-                        {
-                            __instance.img_giftImage.sprite = giftAppearance.GetGiftPreview();
-                            __instance.img_giftImage.rectTransform.localScale = Vector2.one;
-                        }
-                        if (__instance.img_giftImage.sprite == null)
-                        {
-                            __instance.img_giftImage.enabled = false;
-                        }
-                    }
-                    else
-                    {
-                        __instance.img_giftImage.enabled = false;
-                        __instance.img_giftMask.enabled = false;
-                    }
-                    __instance.txt_giftName.text = data.GetName();
-                    __instance.txt_giftNameDetail.text = data.GiftDesc;
-                    __instance.img_giftImage.gameObject.SetActive(true);
-                    string id = "";
-                    switch (data.ClassInfo.Position)
-                    {
-                        case GiftPosition.Eye:
-                            id = "ui_gift_eye";
-                            break;
-                        case GiftPosition.Nose:
-                            id = "ui_gift_nose";
-                            break;
-                        case GiftPosition.Cheek:
-                            id = "ui_gift_cheek";
-                            break;
-                        case GiftPosition.Mouth:
-                            id = "ui_gift_mouth";
-                            break;
-                        case GiftPosition.Ear:
-                            id = "ui_gift_ear";
-                            break;
-                        case GiftPosition.HairAccessory:
-                            id = "ui_gift_headdress1";
-                            break;
-                        case GiftPosition.Hood:
-                            id = "ui_gift_headdress2";
-                            break;
-                        case GiftPosition.Mask:
-                            id = "ui_gift_headdress3";
-                            break;
-                        case GiftPosition.Helmet:
-                            id = "ui_gift_headdress4";
-                            break;
-                    }
-                    __instance.txt_giftPartName.text = TextDataModel.GetText(id, Array.Empty<object>());
-                    return false;
-                }
-            }
-            catch (Exception ex)
-            {
-                File.WriteAllText(Application.dataPath + "/Mods/GiftSetDataerror.log", ex.Message + Environment.NewLine + ex.StackTrace);
-            }
-            return true;
-        }
-        //UIGiftInvenSlot
-        [HarmonyPatch(typeof(UIGiftInvenSlot), "SetData")]
-        [HarmonyPrefix]
-        private static bool UIGiftInvenSlot_SetData_Pre(UIGiftInvenSlot __instance, GiftModel gift, UIGiftInventory inven)
-        {
-            try
-            {
-                __instance.gameObject.SetActive(true);
-                __instance.giftData = gift;
-                __instance.panel = inven;
-                if (gift == null)
-                {
-                    return false;
-                }
-                string id = "";
-                switch (gift.ClassInfo.Position)
-                {
-                    case GiftPosition.Eye:
-                        id = "ui_gift_eye";
-                        break;
-                    case GiftPosition.Nose:
-                        id = "ui_gift_nose";
-                        break;
-                    case GiftPosition.Cheek:
-                        id = "ui_gift_cheek";
-                        break;
-                    case GiftPosition.Mouth:
-                        id = "ui_gift_mouth";
-                        break;
-                    case GiftPosition.Ear:
-                        id = "ui_gift_ear";
-                        break;
-                    case GiftPosition.HairAccessory:
-                        id = "ui_gift_headdress1";
-                        break;
-                    case GiftPosition.Hood:
-                        id = "ui_gift_headdress2";
-                        break;
-                    case GiftPosition.Mask:
-                        id = "ui_gift_headdress3";
-                        break;
-                    case GiftPosition.Helmet:
-                        id = "ui_gift_headdress4";
-                        break;
-                }
-                string[] array = gift.GetResourcePath().Split(new char[]
-                {
-                '/'
-                });
-                string[] array2 = array[array.Length - 1].Split(new char[]
-                {
-                '_'
-                });
-                GiftAppearance giftAppearance;
-                if (array2[1].ToLower() != "custom")
-                {
-                    return true;
-                }
-                else
-                {
-                    giftAppearance = CustomGiftAppearance.CreateCustomGift(array2);
-                    giftAppearance.gameObject.SetActive(false);
-                }
-                __instance.img_Gift.enabled = true;
-                if (giftAppearance != null)
-                {
-                    if (giftAppearance is GiftAppearance_Aura)
-                    {
-                        __instance.img_Gift.sprite = UISpriteDataManager.instance.GiftAuraIcon;
-                        __instance.img_Gift.rectTransform.localScale = new Vector2(0.8f, 0.8f);
-                    }
-                    else
-                    {
-                        __instance.img_Gift.sprite = giftAppearance.GetGiftPreview();
-                        __instance.img_Gift.rectTransform.localScale = new Vector2(1f, 1f);
-                    }
-                }
-                if (__instance.img_Gift.sprite == null)
-                {
-                    __instance.img_Gift.enabled = false;
-                }
-                __instance.txt_Part.text = TextDataModel.GetText(id, Array.Empty<object>());
-                __instance.txt_Name.text = gift.GetName();
-                __instance.txt_desc.text = gift.GiftDesc;
-                __instance.txt_getcondition.text = gift.GiftAcquireCondition;
-                __instance.conditionTextGameObject.SetActive(true);
-                return false;
-            }
-            catch (Exception ex)
-            {
-                File.WriteAllText(Application.dataPath + "/Mods/GiftInvSetDataerror.log", ex.Message + Environment.NewLine + ex.StackTrace);
-            }
-            return true;
-        }
-        //UIGiftPreviewSlot
-        [HarmonyPatch(typeof(UIGiftPreviewSlot), "UpdateSlot")]
-        [HarmonyPrefix]
-        private static bool UIGiftPreviewSlot_UpdateSlot_Pre(UIGiftPreviewSlot __instance)
-        {
-            try
-            {
-                if (__instance.Gift != null)
-                {
-                    __instance.txt_GiftName.gameObject.SetActive(true);
-                    __instance.txt_GiftName.text = __instance.Gift.GetName();
-                    __instance.txt_GiftDesc.text = __instance.Gift.GiftDesc;
-                    __instance.img_Gift.gameObject.SetActive(true);
-                    __instance.img_Gift.enabled = true;
-                    string[] array = __instance.Gift.GetResourcePath().Split(new char[]
-                    {
-                        '/'
-                    });
-                    string[] array2 = array[array.Length - 1].Split(new char[]
-                    {
-                        '_'
-                    });
-                    GiftAppearance giftAppearance;
-                    if (array2[1].ToLower() != "custom")
-                    {
-                        return true;
-                    }
-                    else
-                    {
-                        giftAppearance = CustomGiftAppearance.CreateCustomGift(array2);
-                        giftAppearance.gameObject.SetActive(false);
-                    }
-                    if (giftAppearance != null)
-                    {
-                        if (giftAppearance is GiftAppearance_Aura)
-                        {
-                            __instance.img_Gift.sprite = UISpriteDataManager.instance.GiftAuraIcon;
-                            __instance.img_Gift.rectTransform.localScale = new Vector2(0.8f, 0.8f);
-                        }
-                        else
-                        {
-                            __instance.img_Gift.sprite = giftAppearance.GetGiftPreview();
-                            __instance.img_Gift.rectTransform.localScale = new Vector2(1f, 1f);
-                        }
-                    }
-                    if (__instance.img_Gift.sprite == null)
-                    {
-                        __instance.img_Gift.enabled = false;
-                    }
-                    __instance.detailcRect.SetActive(__instance.panel.giftDetailToggle.isOn);
-                }
-                else
-                {
-                    __instance.txt_GiftName.gameObject.SetActive(false);
-                    __instance.img_Gift.gameObject.SetActive(false);
-                    __instance.detailcRect.SetActive(false);
-                }
-                __instance.SetEyeButton(__instance.isEyeOpen);
-                __instance.SetHighlight(false);
-                __instance.SetEyeHighlight(false);
-                return false;
-            }
-            catch (Exception ex)
-            {
-                File.WriteAllText(Application.dataPath + "/Mods/GiftUpdateSloterror.log", ex.Message + Environment.NewLine + ex.StackTrace);
-            }
-            return true;
-        }
-        //LoadGift
-        [HarmonyPatch(typeof(GiftInventory), "LoadFromSaveData")]
-        [HarmonyPrefix]
-        private static bool GiftInventory_LoadFromSaveData_Pre(GiftInventory __instance, SaveData data)
-        {
-            try
-            {
-                SaveData data2 = data.GetData("equipList");
-                SaveData data3 = data.GetData("unequipList");
-                SaveData data4 = data.GetData("offList");
-                foreach (SaveData saveData in data2)
-                {
-                    if (!(Singleton<GiftXmlList>.Instance.GetData(saveData.GetIntSelf()) == null))
-                    {
-                        GiftModel giftModel = null;
-                        try
-                        {
-                            giftModel = new GiftModel(Singleton<GiftXmlList>.Instance.GetData(saveData.GetIntSelf()));
-                        }
-                        catch
-                        {
-                            giftModel = null;
-                        }
-                        if (giftModel != null)
-                        {
-                            __instance.AddGift(giftModel);
-                            __instance.Equip(giftModel);
-                        }
-                    }
-                }
-                foreach (SaveData saveData2 in data3)
-                {
-                    if (!(Singleton<GiftXmlList>.Instance.GetData(saveData2.GetIntSelf()) == null))
-                    {
-                        GiftModel giftModel2 = null;
-                        try
-                        {
-                            giftModel2 = new GiftModel(Singleton<GiftXmlList>.Instance.GetData(saveData2.GetIntSelf()));
-                        }
-                        catch
-                        {
-                            giftModel2 = null;
-                        }
-                        if (giftModel2 != null)
-                        {
-                            __instance.AddGift(giftModel2);
-                        }
-                    }
-                }
-                if (data4 != null)
-                {
-                    foreach (SaveData idData in data4)
-                    {
-                        if (__instance.GetEquippedList().Find((GiftModel x) => x.ClassInfo.id == idData.GetIntSelf()) != null)
-                        {
-                            __instance.GetEquippedList().Find((GiftModel x) => x.ClassInfo.id == idData.GetIntSelf()).isShowEquipGift = false;
-                        }
-                    }
-                }
-                return false;
-            }
-            catch (Exception ex)
-            {
-                File.WriteAllText(Application.dataPath + "/Mods/LoadGiftSaveerror.log", ex.Message + Environment.NewLine + ex.StackTrace);
-            }
-            return true;
-        }
-        //BehaviorAbilityData
-        [HarmonyPatch(typeof(BattleCardBehaviourResult), "GetAbilityDataAfterRoll")]
-        [HarmonyPostfix]
-        private static List<EffectTypoData> BattleCardBehaviourResult_GetAbilityDataAfterRoll_Post(List<EffectTypoData> list, BattleCardBehaviourResult __instance)
-        {
-            try
-            {
-                if (CustomEffectTypoData.TryGetValue(__instance, out List<EffectTypoData> addedlist))
-                {
-                    list.AddRange(addedlist);
-                    CustomEffectTypoData.Remove(__instance);
-                }
-            }
-            catch { }
-            return list;
-        }
-        [HarmonyPatch(typeof(BattleActionTypoSlot), "SetData")]
-        [HarmonyPostfix]
-        private static void BattleActionTypoSlot_SetData_Post(BattleActionTypoSlot __instance, EffectTypoData data)
-        {
-            try
-            {
-                if (data != null && data is EffectTypoData_New)
-                {
-                    if ((data as EffectTypoData_New).battleUIPassiveSet != null)
-                    {
-                        EffectTypoData_New.BattleUIPassiveSet newBattleUIPassiveSet = (data as EffectTypoData_New).battleUIPassiveSet;
-                        BattleUIPassiveSet uIPassiveSet = new BattleUIPassiveSet()
-                        {
-                            type = (data as EffectTypoData_New).type,
-                            frame = newBattleUIPassiveSet.frame,
-                            Icon = newBattleUIPassiveSet.Icon,
-                            IconGlow = newBattleUIPassiveSet.IconGlow,
-                            textColor = newBattleUIPassiveSet.textColor,
-                            IconColor = newBattleUIPassiveSet.IconColor,
-                            IconGlowColor = newBattleUIPassiveSet.IconGlowColor,
-                        };
-                        UISpriteDataManager.instance.BattleUIEffectSetDic[uIPassiveSet.type] = uIPassiveSet;
-                    }
-                    if (UISpriteDataManager.instance.BattleUIEffectSetDic.TryGetValue((data as EffectTypoData_New).type, out BattleUIPassiveSet battleUIPassiveSet))
-                    {
-                        __instance.img_Icon.sprite = battleUIPassiveSet.Icon;
-                        __instance.img_Icon.color = battleUIPassiveSet.IconColor;
-                        if (battleUIPassiveSet.IconGlow != null)
-                        {
-                            __instance.img_IconGlow.enabled = true;
-                            __instance.img_IconGlow.sprite = battleUIPassiveSet.IconGlow;
-                            __instance.img_IconGlow.color = battleUIPassiveSet.IconGlowColor;
-                        }
-                        else
-                        {
-                            __instance.img_IconGlow.enabled = false;
-                        }
-                        __instance.img_Frame.sprite = battleUIPassiveSet.frame;
-                        __instance.txt_desc.color = battleUIPassiveSet.textColor;
-                        __instance.txt_title.color = battleUIPassiveSet.textColor;
-                        Color underlayColor = SingletonBehavior<DirectingDataSetter>.Instance.OnGrayScale ? (battleUIPassiveSet.textColor * battleUIPassiveSet.textColor.grayscale) : (battleUIPassiveSet.textColor * SingletonBehavior<DirectingDataSetter>.Instance.graycolor);
-                        __instance.msetter_title.underlayColor = underlayColor;
+		//EmotionCard
+		//EmotionCardAbilityApply
+		/*
+		[HarmonyPatch(typeof(BattleEmotionCardModel), MethodType.Constructor, new Type[] { typeof(EmotionCardXmlInfo), typeof(BattleUnitModel) })]
+		[HarmonyPostfix]
+		static void BattleEmotionCardModel_ctor_Post(BattleEmotionCardModel __instance, EmotionCardXmlInfo xmlInfo, BattleUnitModel owner)
+		{
+			try
+			{
+				if (__instance._xmlInfo == null)
+				{
+					__instance._xmlInfo = xmlInfo;
+				}
+				if (__instance._owner == null)
+				{
+					__instance._owner = owner;
+				}
+				if (__instance._abilityList == null)
+				{
+					__instance._abilityList = new List<EmotionCardAbilityBase>();
+				}
+				foreach (string text in xmlInfo.Script)
+				{
+					EmotionCardAbilityBase emotionCardAbilityBase = FindEmotionCardAbility(text.Trim());
+					if (emotionCardAbilityBase != null)
+					{
+						emotionCardAbilityBase.SetEmotionCard(__instance);
+						__instance._abilityList.RemoveAll(x => x.GetType().Name.Substring("EmotionCardAbility_".Length).Trim() == text);
+						__instance._abilityList.Add(emotionCardAbilityBase);
+					}
+				}/*
+				List<string> list = new List<string>();
+				list.AddRange(xmlInfo.Script);
+				foreach (EmotionCardAbilityBase emotionCardAbility in __instance._abilityList)
+				{
+					list.Remove(emotionCardAbility.GetType().Name.Substring("EmotionCardAbility_".Length).Trim());
+				}
+				foreach (string text in list)
+				{
+					EmotionCardAbilityBase emotionCardAbilityBase = FindEmotionCardAbility(text.Trim());
+					if (emotionCardAbilityBase != null)
+					{
+						emotionCardAbilityBase.SetEmotionCard(__instance);
+						__instance._abilityList.Add(emotionCardAbilityBase);
+					}
+				}/
+			}
+			catch (Exception ex)
+			{
+				File.WriteAllText(Application.dataPath + "/Mods/SetEmotionAbilityerror.log", ex.Message + Environment.NewLine + ex.StackTrace);
+			}
+		}
+		*/
 
-                        Vector2 sizeDelta2 = __instance.img_Frame.rectTransform.sizeDelta;
-                        sizeDelta2.y = ((data.Title != "") ? __instance.TitleFrameHeight : __instance.defaultFrameHeight);
-                        __instance.img_Frame.rectTransform.sizeDelta = sizeDelta2;
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                File.WriteAllText(Application.dataPath + "/Mods/CustomEffectUISeterror.log", ex.Message + Environment.NewLine + ex.StackTrace);
-            }
-        }
+		[HarmonyPatch(typeof(BattleEmotionCardModel), MethodType.Constructor, new Type[] { typeof(EmotionCardXmlInfo), typeof(BattleUnitModel) })]
+		[HarmonyTranspiler]
+		static IEnumerable<CodeInstruction> BattleEmotionCardModel_ctor_In(IEnumerable<CodeInstruction> instructions, ILGenerator ilgen)
+		{
+			var codes = instructions.ToList();
+			var trueJumpLabel = ilgen.DefineLabel();
+			var falseJumpLabel = ilgen.DefineLabel();
+			var moveNextMethod = Method(typeof(List<string>.Enumerator), nameof(List<string>.Enumerator.MoveNext));
+			var createInstanceMethod = Method(typeof(Activator), nameof(Activator.CreateInstance), new Type[] { typeof(Type) });
+			var getTypeMethod = Method(typeof(Type), nameof(Type.GetType), new Type[] { typeof(string) });
+			for (int i = 0; i < codes.Count; i++)
+			{
+				if ((codes[i].opcode == Ldloca || codes[i].opcode == Ldloca_S) && TryGetIntValue(codes[i].operand, out int index) && index == 0)
+				{
+					if (i < codes.Count - 1 && codes[i + 1].Is(Call, moveNextMethod))
+					{
+						yield return new CodeInstruction(Nop).WithLabels(falseJumpLabel);
+					}
+				}
+				else if (codes[i].Is(Call, createInstanceMethod))
+				{
+					yield return new CodeInstruction(Dup);
+					yield return new CodeInstruction(Brtrue, trueJumpLabel);
+					yield return new CodeInstruction(Pop);
+					yield return new CodeInstruction(Br, falseJumpLabel);
+					yield return new CodeInstruction(Nop).WithLabels(trueJumpLabel);
+				}
+				yield return codes[i];
+				if (codes[i].Is(Call, getTypeMethod))
+				{
+					yield return new CodeInstruction(Ldloc_1);
+					yield return new CodeInstruction(Call, Method(typeof(Harmony_Patch), nameof(BattleEmotionCardModel_ctor_CheckCustomAbility)));
+				}
+			}
+		}
+		static Type BattleEmotionCardModel_ctor_CheckCustomAbility(Type oldType, string name)
+		{
+			return FindEmotionCardAbilityType(name.Trim()) ?? oldType;
+		}
+		public static EmotionCardAbilityBase FindEmotionCardAbility(string name)
+		{
+			try
+			{
+				return Activator.CreateInstance(FindEmotionCardAbilityType(name)) as EmotionCardAbilityBase;
+			}
+			catch
+			{
+				return null;
+			}
+		}
+		public static Type FindEmotionCardAbilityType(string name)
+		{
+			if (string.IsNullOrWhiteSpace(name))
+			{
+				name = null;
+			}
+			else
+			{
+				name = name.Trim();
+				if (CustomEmotionCardAbility.TryGetValue(name, out Type type))
+				{
+					return type;
+				}
+			}
 
-        //Skeleton
-        //[HarmonyPatch(typeof(SkeletonJson), "ReadSkeletonData", new Type[] { typeof(TextReader) })]
-        //[HarmonyPrefix]
-        private static bool SkeletonJson_ReadSkeletonData_Pre(ref SkeletonData __result, TextReader reader, SkeletonJson __instance)
-        {
-            bool result;
-            try
-            {
-                if (reader == null)
-                {
-                    throw new ArgumentNullException("reader", "reader cannot be null.");
-                }
-                float scale = __instance.Scale;
-                SkeletonData skeletonData = new SkeletonData();
-                if (!(Json.Deserialize(reader) is Dictionary<string, object> dictionary))
-                {
-                    throw new Exception("Invalid JSON.");
-                }
-                if (dictionary.ContainsKey("skeleton"))
-                {
-                    Dictionary<string, object> dictionary2 = (Dictionary<string, object>)dictionary["skeleton"];
-                    skeletonData.Hash = (string)dictionary2["hash"];
-                    skeletonData.Version = (string)dictionary2["spine"];
-                    skeletonData.X = SkeletonJSON_new.GetFloat(dictionary2, "x", 0f);
-                    skeletonData.Y = SkeletonJSON_new.GetFloat(dictionary2, "y", 0f);
-                    skeletonData.Width = SkeletonJSON_new.GetFloat(dictionary2, "width", 0f);
-                    skeletonData.Height = SkeletonJSON_new.GetFloat(dictionary2, "height", 0f);
-                    skeletonData.Fps = SkeletonJSON_new.GetFloat(dictionary2, "fps", 30f);
-                    skeletonData.ImagesPath = SkeletonJSON_new.GetString(dictionary2, "images", null);
-                    skeletonData.AudioPath = SkeletonJSON_new.GetString(dictionary2, "audio", null);
-                }
-                if (dictionary.ContainsKey("bones"))
-                {
-                    foreach (object obj in ((List<object>)dictionary["bones"]))
-                    {
-                        Dictionary<string, object> dictionary3 = (Dictionary<string, object>)obj;
-                        BoneData boneData = null;
-                        if (dictionary3.ContainsKey("parent"))
-                        {
-                            boneData = skeletonData.FindBone((string)dictionary3["parent"]);
-                            if (boneData == null)
-                            {
-                                string str = "Parent bone not found: ";
-                                object obj2 = dictionary3["parent"];
-                                throw new Exception(str + (obj2?.ToString()));
-                            }
-                        }
-                        BoneData boneData2 = new BoneData(skeletonData.Bones.Count, (string)dictionary3["name"], boneData)
-                        {
-                            Length = SkeletonJSON_new.GetFloat(dictionary3, "length", 0f) * scale,
-                            X = SkeletonJSON_new.GetFloat(dictionary3, "x", 0f) * scale,
-                            Y = SkeletonJSON_new.GetFloat(dictionary3, "y", 0f) * scale,
-                            Rotation = SkeletonJSON_new.GetFloat(dictionary3, "rotation", 0f),
-                            ScaleX = SkeletonJSON_new.GetFloat(dictionary3, "scaleX", 1f),
-                            ScaleY = SkeletonJSON_new.GetFloat(dictionary3, "scaleY", 1f),
-                            ShearX = SkeletonJSON_new.GetFloat(dictionary3, "shearX", 0f),
-                            ShearY = SkeletonJSON_new.GetFloat(dictionary3, "shearY", 0f)
-                        };
-                        string @string = SkeletonJSON_new.GetString(dictionary3, "transform", TransformMode.Normal.ToString());
-                        boneData2.TransformMode = (TransformMode)Enum.Parse(typeof(TransformMode), @string, true);
-                        boneData2.SkinRequired = SkeletonJSON_new.GetBoolean(dictionary3, "skin", false);
-                        skeletonData.Bones.Add(boneData2);
-                    }
-                }
-                if (dictionary.ContainsKey("slots"))
-                {
-                    foreach (object obj3 in ((List<object>)dictionary["slots"]))
-                    {
-                        Dictionary<string, object> dictionary4 = (Dictionary<string, object>)obj3;
-                        string name = (string)dictionary4["name"];
-                        string text = (string)dictionary4["bone"];
-                        BoneData boneData3 = skeletonData.FindBone(text);
-                        if (boneData3 == null)
-                        {
-                            throw new Exception("Slot bone not found: " + text);
-                        }
-                        SlotData slotData = new SlotData(skeletonData.Slots.Count, name, boneData3);
-                        if (dictionary4.ContainsKey("color"))
-                        {
-                            string hexString = (string)dictionary4["color"];
-                            slotData.R = SkeletonJSON_new.ToColor(hexString, 0, 8);
-                            slotData.G = SkeletonJSON_new.ToColor(hexString, 1, 8);
-                            slotData.B = SkeletonJSON_new.ToColor(hexString, 2, 8);
-                            slotData.A = SkeletonJSON_new.ToColor(hexString, 3, 8);
-                        }
-                        if (dictionary4.ContainsKey("dark"))
-                        {
-                            string hexString2 = (string)dictionary4["dark"];
-                            slotData.R2 = SkeletonJSON_new.ToColor(hexString2, 0, 6);
-                            slotData.G2 = SkeletonJSON_new.ToColor(hexString2, 1, 6);
-                            slotData.B2 = SkeletonJSON_new.ToColor(hexString2, 2, 6);
-                            slotData.HasSecondColor = true;
-                        }
-                        slotData.AttachmentName = SkeletonJSON_new.GetString(dictionary4, "attachment", null);
-                        if (dictionary4.ContainsKey("blend"))
-                        {
-                            slotData.BlendMode = (BlendMode)Enum.Parse(typeof(BlendMode), (string)dictionary4["blend"], true);
-                        }
-                        else
-                        {
-                            slotData.BlendMode = BlendMode.Normal;
-                        }
-                        skeletonData.Slots.Add(slotData);
-                    }
-                }
-                if (dictionary.ContainsKey("ik"))
-                {
-                    foreach (object obj4 in ((List<object>)dictionary["ik"]))
-                    {
-                        Dictionary<string, object> dictionary5 = (Dictionary<string, object>)obj4;
-                        IkConstraintData ikConstraintData = new IkConstraintData((string)dictionary5["name"])
-                        {
-                            Order = SkeletonJSON_new.GetInt(dictionary5, "order", 0),
-                            SkinRequired = SkeletonJSON_new.GetBoolean(dictionary5, "skin", false)
-                        };
-                        if (dictionary5.ContainsKey("bones"))
-                        {
-                            foreach (object obj5 in ((List<object>)dictionary5["bones"]))
-                            {
-                                string text2 = (string)obj5;
-                                BoneData boneData4 = skeletonData.FindBone(text2);
-                                if (boneData4 == null)
-                                {
-                                    throw new Exception("IK bone not found: " + text2);
-                                }
-                                ikConstraintData.Bones.Add(boneData4);
-                            }
-                        }
-                        string text3 = (string)dictionary5["target"];
-                        ikConstraintData.Target = skeletonData.FindBone(text3);
-                        if (ikConstraintData.Target == null)
-                        {
-                            throw new Exception("IK target bone not found: " + text3);
-                        }
-                        ikConstraintData.Mix = SkeletonJSON_new.GetFloat(dictionary5, "mix", 1f);
-                        ikConstraintData.Softness = SkeletonJSON_new.GetFloat(dictionary5, "softness", 0f) * scale;
-                        ikConstraintData.BendDirection = (SkeletonJSON_new.GetBoolean(dictionary5, "bendPositive", true) ? 1 : -1);
-                        ikConstraintData.Compress = SkeletonJSON_new.GetBoolean(dictionary5, "compress", false);
-                        ikConstraintData.Stretch = SkeletonJSON_new.GetBoolean(dictionary5, "stretch", false);
-                        ikConstraintData.Uniform = SkeletonJSON_new.GetBoolean(dictionary5, "uniform", false);
-                        skeletonData.IkConstraints.Add(ikConstraintData);
-                    }
-                }
-                if (dictionary.ContainsKey("transform"))
-                {
-                    foreach (object obj6 in ((List<object>)dictionary["transform"]))
-                    {
-                        Dictionary<string, object> dictionary6 = (Dictionary<string, object>)obj6;
-                        TransformConstraintData transformConstraintData = new TransformConstraintData((string)dictionary6["name"])
-                        {
-                            Order = SkeletonJSON_new.GetInt(dictionary6, "order", 0),
-                            SkinRequired = SkeletonJSON_new.GetBoolean(dictionary6, "skin", false)
-                        };
-                        if (dictionary6.ContainsKey("bones"))
-                        {
-                            foreach (object obj7 in ((List<object>)dictionary6["bones"]))
-                            {
-                                string text4 = (string)obj7;
-                                BoneData boneData5 = skeletonData.FindBone(text4);
-                                if (boneData5 == null)
-                                {
-                                    throw new Exception("Transform constraint bone not found: " + text4);
-                                }
-                                transformConstraintData.Bones.Add(boneData5);
-                            }
-                        }
-                        string text5 = (string)dictionary6["target"];
-                        transformConstraintData.Target = skeletonData.FindBone(text5);
-                        if (transformConstraintData.Target == null)
-                        {
-                            throw new Exception("Transform constraint target bone not found: " + text5);
-                        }
-                        transformConstraintData.Local = SkeletonJSON_new.GetBoolean(dictionary6, "local", false);
-                        transformConstraintData.Relative = SkeletonJSON_new.GetBoolean(dictionary6, "relative", false);
-                        transformConstraintData.OffsetRotation = SkeletonJSON_new.GetFloat(dictionary6, "rotation", 0f);
-                        transformConstraintData.OffsetX = SkeletonJSON_new.GetFloat(dictionary6, "x", 0f) * scale;
-                        transformConstraintData.OffsetY = SkeletonJSON_new.GetFloat(dictionary6, "y", 0f) * scale;
-                        transformConstraintData.OffsetScaleX = SkeletonJSON_new.GetFloat(dictionary6, "scaleX", 0f);
-                        transformConstraintData.OffsetScaleY = SkeletonJSON_new.GetFloat(dictionary6, "scaleY", 0f);
-                        transformConstraintData.OffsetShearY = SkeletonJSON_new.GetFloat(dictionary6, "shearY", 0f);
-                        transformConstraintData.RotateMix = SkeletonJSON_new.GetFloat(dictionary6, "rotateMix", 1f);
-                        transformConstraintData.TranslateMix = SkeletonJSON_new.GetFloat(dictionary6, "translateMix", 1f);
-                        transformConstraintData.ScaleMix = SkeletonJSON_new.GetFloat(dictionary6, "scaleMix", 1f);
-                        transformConstraintData.ShearMix = SkeletonJSON_new.GetFloat(dictionary6, "shearMix", 1f);
-                        skeletonData.TransformConstraints.Add(transformConstraintData);
-                    }
-                }
-                if (dictionary.ContainsKey("path"))
-                {
-                    foreach (object obj8 in ((List<object>)dictionary["path"]))
-                    {
-                        Dictionary<string, object> dictionary7 = (Dictionary<string, object>)obj8;
-                        PathConstraintData pathConstraintData = new PathConstraintData((string)dictionary7["name"])
-                        {
-                            Order = SkeletonJSON_new.GetInt(dictionary7, "order", 0),
-                            SkinRequired = SkeletonJSON_new.GetBoolean(dictionary7, "skin", false)
-                        };
-                        if (dictionary7.ContainsKey("bones"))
-                        {
-                            foreach (object obj9 in ((List<object>)dictionary7["bones"]))
-                            {
-                                string text6 = (string)obj9;
-                                BoneData boneData6 = skeletonData.FindBone(text6);
-                                if (boneData6 == null)
-                                {
-                                    throw new Exception("Path bone not found: " + text6);
-                                }
-                                pathConstraintData.Bones.Add(boneData6);
-                            }
-                        }
-                        string text7 = (string)dictionary7["target"];
-                        pathConstraintData.Target = skeletonData.FindSlot(text7);
-                        if (pathConstraintData.Target == null)
-                        {
-                            throw new Exception("Path target slot not found: " + text7);
-                        }
-                        pathConstraintData.PositionMode = (PositionMode)Enum.Parse(typeof(PositionMode), SkeletonJSON_new.GetString(dictionary7, "positionMode", "percent"), true);
-                        pathConstraintData.SpacingMode = (SpacingMode)Enum.Parse(typeof(SpacingMode), SkeletonJSON_new.GetString(dictionary7, "spacingMode", "length"), true);
-                        pathConstraintData.RotateMode = (RotateMode)Enum.Parse(typeof(RotateMode), SkeletonJSON_new.GetString(dictionary7, "rotateMode", "tangent"), true);
-                        pathConstraintData.OffsetRotation = SkeletonJSON_new.GetFloat(dictionary7, "rotation", 0f);
-                        pathConstraintData.Position = SkeletonJSON_new.GetFloat(dictionary7, "position", 0f);
-                        if (pathConstraintData.PositionMode == PositionMode.Fixed)
-                        {
-                            pathConstraintData.Position *= scale;
-                        }
-                        pathConstraintData.Spacing = SkeletonJSON_new.GetFloat(dictionary7, "spacing", 0f);
-                        if (pathConstraintData.SpacingMode == SpacingMode.Length || pathConstraintData.SpacingMode == SpacingMode.Fixed)
-                        {
-                            pathConstraintData.Spacing *= scale;
-                        }
-                        pathConstraintData.RotateMix = SkeletonJSON_new.GetFloat(dictionary7, "rotateMix", 1f);
-                        pathConstraintData.TranslateMix = SkeletonJSON_new.GetFloat(dictionary7, "translateMix", 1f);
-                        skeletonData.PathConstraints.Add(pathConstraintData);
-                    }
-                }
-                if (dictionary.ContainsKey("skins"))
-                {
-                    try
-                    {
-                        foreach (KeyValuePair<string, object> keyValuePair in ((Dictionary<string, object>)dictionary["skins"]))
-                        {
-                            Skin skin = new Skin(keyValuePair.Key);
-                            foreach (KeyValuePair<string, object> keyValuePair2 in ((Dictionary<string, object>)keyValuePair.Value))
-                            {
-                                int slotIndex = skeletonData.FindSlotIndex(keyValuePair2.Key);
-                                foreach (KeyValuePair<string, object> keyValuePair3 in ((Dictionary<string, object>)keyValuePair2.Value))
-                                {
-                                    try
-                                    {
-                                        Attachment attachment = SkeletonJSON_new.ReadAttachment(__instance, (Dictionary<string, object>)keyValuePair3.Value, skin, slotIndex, keyValuePair3.Key, skeletonData);
-                                        if (attachment != null)
-                                        {
-                                            skin.SetAttachment(slotIndex, keyValuePair3.Key, attachment);
-                                        }
-                                    }
-                                    catch (Exception innerException)
-                                    {
-                                        throw new Exception(string.Concat(new object[]
-                                        {
-                                    "Error reading attachment: ",
-                                    keyValuePair3.Key,
-                                    ", skin: ",
-                                    skin
-                                        }), innerException);
-                                    }
-                                }
-                            }
-                            skeletonData.Skins.Add(skin);
-                            if (skin.Name == "default")
-                            {
-                                skeletonData.DefaultSkin = skin;
-                            }
-                        }
-                    }
-                    catch
-                    {
-                        foreach (object obj10 in ((List<object>)dictionary["skins"]))
-                        {
-                            Dictionary<string, object> dictionary8 = (Dictionary<string, object>)obj10;
-                            Skin skin2 = new Skin((string)dictionary8["name"]);
-                            if (dictionary8.ContainsKey("attachments"))
-                            {
-                                foreach (KeyValuePair<string, object> keyValuePair4 in ((Dictionary<string, object>)dictionary8["attachments"]))
-                                {
-                                    int slotIndex2 = skeletonData.FindSlotIndex(keyValuePair4.Key);
-                                    foreach (KeyValuePair<string, object> keyValuePair5 in ((Dictionary<string, object>)keyValuePair4.Value))
-                                    {
-                                        try
-                                        {
-                                            Attachment attachment2 = SkeletonJSON_new.ReadAttachment(__instance, (Dictionary<string, object>)keyValuePair5.Value, skin2, slotIndex2, keyValuePair5.Key, skeletonData);
-                                            if (attachment2 != null)
-                                            {
-                                                skin2.SetAttachment(slotIndex2, keyValuePair5.Key, attachment2);
-                                            }
-                                        }
-                                        catch (Exception innerException2)
-                                        {
-                                            throw new Exception(string.Concat(new object[]
-                                            {
-                                        "Error reading attachment: ",
-                                        keyValuePair5.Key,
-                                        ", skin: ",
-                                        skin2
-                                            }), innerException2);
-                                        }
-                                    }
-                                }
-                            }
-                            skeletonData.Skins.Add(skin2);
-                            if (skin2.Name == "default")
-                            {
-                                skeletonData.DefaultSkin = skin2;
-                            }
-                        }
-                    }
-                }
-                int i = 0;
-                int count = SkeletonJSON_new.linkedMeshes.Count;
-                while (i < count)
-                {
-                    SkeletonJSON_new.LinkedMesh linkedMesh = SkeletonJSON_new.linkedMeshes[i];
-                    Skin skin3 = (linkedMesh.skin == null) ? skeletonData.DefaultSkin : skeletonData.FindSkin(linkedMesh.skin);
-                    if (skin3 == null)
-                    {
-                        throw new Exception("Slot not found: " + linkedMesh.skin);
-                    }
-                    Attachment attachment3 = skin3.GetAttachment(linkedMesh.slotIndex, linkedMesh.parent);
-                    if (attachment3 == null)
-                    {
-                        throw new Exception("Parent mesh not found: " + linkedMesh.parent);
-                    }
-                    linkedMesh.mesh.ParentMesh = (MeshAttachment)attachment3;
-                    linkedMesh.mesh.UpdateUVs();
-                    i++;
-                }
-                SkeletonJSON_new.linkedMeshes.Clear();
-                if (dictionary.ContainsKey("events"))
-                {
-                    foreach (KeyValuePair<string, object> keyValuePair6 in ((Dictionary<string, object>)dictionary["events"]))
-                    {
-                        Dictionary<string, object> map = (Dictionary<string, object>)keyValuePair6.Value;
-                        EventData eventData = new EventData(keyValuePair6.Key)
-                        {
-                            Int = SkeletonJSON_new.GetInt(map, "int", 0),
-                            Float = SkeletonJSON_new.GetFloat(map, "float", 0f),
-                            String = SkeletonJSON_new.GetString(map, "string", string.Empty),
-                            AudioPath = SkeletonJSON_new.GetString(map, "audio", null)
-                        };
-                        if (eventData.AudioPath != null)
-                        {
-                            eventData.Volume = SkeletonJSON_new.GetFloat(map, "volume", 1f);
-                            eventData.Balance = SkeletonJSON_new.GetFloat(map, "balance", 0f);
-                        }
-                        skeletonData.Events.Add(eventData);
-                    }
-                }
-                if (dictionary.ContainsKey("animations"))
-                {
-                    foreach (KeyValuePair<string, object> keyValuePair7 in ((Dictionary<string, object>)dictionary["animations"]))
-                    {
-                        try
-                        {
-                            SkeletonJSON_new.ReadAnimation(__instance, (Dictionary<string, object>)keyValuePair7.Value, keyValuePair7.Key, skeletonData);
-                        }
-                        catch (Exception)
-                        {
-                            try
-                            {
-                                SkeletonJSON_new.ReadAnimation_new(__instance, (Dictionary<string, object>)keyValuePair7.Value, keyValuePair7.Key, skeletonData);
-                            }
-                            catch (Exception innerException3)
-                            {
-                                throw new Exception("Error reading animation: " + keyValuePair7.Key, innerException3);
-                            }
-                        }
-                    }
-                }
-                skeletonData.Bones.TrimExcess();
-                skeletonData.Slots.TrimExcess();
-                skeletonData.Skins.TrimExcess();
-                skeletonData.Events.TrimExcess();
-                skeletonData.Animations.TrimExcess();
-                skeletonData.IkConstraints.TrimExcess();
-                __result = skeletonData;
-                result = false;
-            }
-            catch (Exception)
-            {
-                try
-                {
-                    __result = ReadSkeletonData(__instance, reader);
-                    result = false;
-                }
-                catch (Exception)
-                {
-                    reader.GetType().GetField("_pos", AccessTools.all).SetValue(reader, 0);
-                    result = true;
-                }
-            }
-            return result;
-        }
-        private static SkeletonData ReadSkeletonData(SkeletonJson __instance, TextReader reader)
-        {
-            reader.GetType().GetField("_pos", AccessTools.all).SetValue(reader, 0);
-            if (reader == null)
-            {
-                throw new ArgumentNullException("reader", "reader cannot be null.");
-            }
-            float scale = __instance.Scale;
-            SkeletonData skeletonData = new SkeletonData();
-            if (!(Json.Deserialize(reader) is Dictionary<string, object> dictionary))
-            {
-                throw new Exception("Invalid JSON.");
-            }
-            if (dictionary.ContainsKey("skeleton"))
-            {
-                Dictionary<string, object> dictionary2 = (Dictionary<string, object>)dictionary["skeleton"];
-                skeletonData.Hash = (string)dictionary2["hash"];
-                if (dictionary2.ContainsKey("spine"))
-                {
-                    skeletonData.Version = (string)dictionary2["spine"];
-                }
-                else
-                {
-                    skeletonData.Version = "3.6.50";
-                }
-                skeletonData.Width = SkeletonJSON_new.GetFloat(dictionary2, "width", 0f);
-                skeletonData.Height = SkeletonJSON_new.GetFloat(dictionary2, "height", 0f);
-                skeletonData.Fps = SkeletonJSON_new.GetFloat(dictionary2, "fps", 30f);
-                skeletonData.ImagesPath = SkeletonJSON_new.GetString(dictionary2, "images", null);
-            }
-            if (dictionary.ContainsKey("bones"))
-            {
-                foreach (object obj in ((List<object>)dictionary["bones"]))
-                {
-                    Dictionary<string, object> dictionary3 = (Dictionary<string, object>)obj;
-                    BoneData boneData = null;
-                    if (dictionary3.ContainsKey("parent"))
-                    {
-                        boneData = skeletonData.FindBone((string)dictionary3["parent"]);
-                        if (boneData == null)
-                        {
-                            string str = "Parent bone not found: ";
-                            object obj2 = dictionary3["parent"];
-                            throw new Exception(str + (obj2?.ToString()));
-                        }
-                    }
-                    BoneData boneData2 = new BoneData(skeletonData.Bones.Count, (string)dictionary3["name"], boneData)
-                    {
-                        Length = SkeletonJSON_new.GetFloat(dictionary3, "length", 0f) * scale,
-                        X = SkeletonJSON_new.GetFloat(dictionary3, "x", 0f) * scale,
-                        Y = SkeletonJSON_new.GetFloat(dictionary3, "y", 0f) * scale,
-                        Rotation = SkeletonJSON_new.GetFloat(dictionary3, "rotation", 0f),
-                        ScaleX = SkeletonJSON_new.GetFloat(dictionary3, "scaleX", 1f),
-                        ScaleY = SkeletonJSON_new.GetFloat(dictionary3, "scaleY", 1f),
-                        ShearX = SkeletonJSON_new.GetFloat(dictionary3, "shearX", 0f),
-                        ShearY = SkeletonJSON_new.GetFloat(dictionary3, "shearY", 0f)
-                    };
-                    string @string = SkeletonJSON_new.GetString(dictionary3, "transform", TransformMode.Normal.ToString());
-                    boneData2.TransformMode = (TransformMode)Enum.Parse(typeof(TransformMode), @string, true);
-                    skeletonData.Bones.Add(boneData2);
-                }
-            }
-            if (dictionary.ContainsKey("slots"))
-            {
-                foreach (object obj3 in ((List<object>)dictionary["slots"]))
-                {
-                    Dictionary<string, object> dictionary4 = (Dictionary<string, object>)obj3;
-                    string name = (string)dictionary4["name"];
-                    string text = (string)dictionary4["bone"];
-                    BoneData boneData3 = skeletonData.FindBone(text);
-                    if (boneData3 == null)
-                    {
-                        throw new Exception("Slot bone not found: " + text);
-                    }
-                    SlotData slotData = new SlotData(skeletonData.Slots.Count, name, boneData3);
-                    if (dictionary4.ContainsKey("color"))
-                    {
-                        string hexString = (string)dictionary4["color"];
-                        slotData.R = SkeletonJSON_new.ToColor(hexString, 0, 8);
-                        slotData.G = SkeletonJSON_new.ToColor(hexString, 1, 8);
-                        slotData.B = SkeletonJSON_new.ToColor(hexString, 2, 8);
-                        slotData.A = SkeletonJSON_new.ToColor(hexString, 3, 8);
-                    }
-                    if (dictionary4.ContainsKey("dark"))
-                    {
-                        string hexString2 = (string)dictionary4["dark"];
-                        slotData.R2 = SkeletonJSON_new.ToColor(hexString2, 0, 6);
-                        slotData.G2 = SkeletonJSON_new.ToColor(hexString2, 1, 6);
-                        slotData.B2 = SkeletonJSON_new.ToColor(hexString2, 2, 6);
-                        slotData.HasSecondColor = true;
-                    }
-                    slotData.AttachmentName = SkeletonJSON_new.GetString(dictionary4, "attachment", null);
-                    if (dictionary4.ContainsKey("blend"))
-                    {
-                        slotData.BlendMode = (BlendMode)Enum.Parse(typeof(BlendMode), (string)dictionary4["blend"], true);
-                    }
-                    else
-                    {
-                        slotData.BlendMode = BlendMode.Normal;
-                    }
-                    skeletonData.Slots.Add(slotData);
-                }
-            }
-            if (dictionary.ContainsKey("ik"))
-            {
-                foreach (object obj4 in ((List<object>)dictionary["ik"]))
-                {
-                    Dictionary<string, object> dictionary5 = (Dictionary<string, object>)obj4;
-                    IkConstraintData ikConstraintData = new IkConstraintData((string)dictionary5["name"])
-                    {
-                        Order = SkeletonJSON_new.GetInt(dictionary5, "order", 0)
-                    };
-                    if (dictionary5.ContainsKey("bones"))
-                    {
-                        foreach (object obj5 in ((List<object>)dictionary5["bones"]))
-                        {
-                            string text2 = (string)obj5;
-                            BoneData boneData4 = skeletonData.FindBone(text2);
-                            if (boneData4 == null)
-                            {
-                                throw new Exception("IK bone not found: " + text2);
-                            }
-                            ikConstraintData.Bones.Add(boneData4);
-                        }
-                    }
-                    string text3 = (string)dictionary5["target"];
-                    ikConstraintData.Target = skeletonData.FindBone(text3);
-                    if (ikConstraintData.Target == null)
-                    {
-                        throw new Exception("IK target bone not found: " + text3);
-                    }
-                    ikConstraintData.Mix = SkeletonJSON_new.GetFloat(dictionary5, "mix", 1f);
-                    ikConstraintData.BendDirection = (SkeletonJSON_new.GetBoolean(dictionary5, "bendPositive", true) ? 1 : -1);
-                    skeletonData.IkConstraints.Add(ikConstraintData);
-                }
-            }
-            if (dictionary.ContainsKey("transform"))
-            {
-                foreach (object obj6 in ((List<object>)dictionary["transform"]))
-                {
-                    Dictionary<string, object> dictionary6 = (Dictionary<string, object>)obj6;
-                    TransformConstraintData transformConstraintData = new TransformConstraintData((string)dictionary6["name"])
-                    {
-                        Order = SkeletonJSON_new.GetInt(dictionary6, "order", 0)
-                    };
-                    if (dictionary6.ContainsKey("bones"))
-                    {
-                        foreach (object obj7 in ((List<object>)dictionary6["bones"]))
-                        {
-                            string text4 = (string)obj7;
-                            BoneData boneData5 = skeletonData.FindBone(text4);
-                            if (boneData5 == null)
-                            {
-                                throw new Exception("Transform constraint bone not found: " + text4);
-                            }
-                            transformConstraintData.Bones.Add(boneData5);
-                        }
-                    }
-                    string text5 = (string)dictionary6["target"];
-                    transformConstraintData.Target = skeletonData.FindBone(text5);
-                    if (transformConstraintData.Target == null)
-                    {
-                        throw new Exception("Transform constraint target bone not found: " + text5);
-                    }
-                    transformConstraintData.Local = SkeletonJSON_new.GetBoolean(dictionary6, "local", false);
-                    transformConstraintData.Relative = SkeletonJSON_new.GetBoolean(dictionary6, "relative", false);
-                    transformConstraintData.OffsetRotation = SkeletonJSON_new.GetFloat(dictionary6, "rotation", 0f);
-                    transformConstraintData.OffsetX = SkeletonJSON_new.GetFloat(dictionary6, "x", 0f) * scale;
-                    transformConstraintData.OffsetY = SkeletonJSON_new.GetFloat(dictionary6, "y", 0f) * scale;
-                    transformConstraintData.OffsetScaleX = SkeletonJSON_new.GetFloat(dictionary6, "scaleX", 0f);
-                    transformConstraintData.OffsetScaleY = SkeletonJSON_new.GetFloat(dictionary6, "scaleY", 0f);
-                    transformConstraintData.OffsetShearY = SkeletonJSON_new.GetFloat(dictionary6, "shearY", 0f);
-                    transformConstraintData.RotateMix = SkeletonJSON_new.GetFloat(dictionary6, "rotateMix", 1f);
-                    transformConstraintData.TranslateMix = SkeletonJSON_new.GetFloat(dictionary6, "translateMix", 1f);
-                    transformConstraintData.ScaleMix = SkeletonJSON_new.GetFloat(dictionary6, "scaleMix", 1f);
-                    transformConstraintData.ShearMix = SkeletonJSON_new.GetFloat(dictionary6, "shearMix", 1f);
-                    skeletonData.TransformConstraints.Add(transformConstraintData);
-                }
-            }
-            if (dictionary.ContainsKey("path"))
-            {
-                foreach (object obj8 in ((List<object>)dictionary["path"]))
-                {
-                    Dictionary<string, object> dictionary7 = (Dictionary<string, object>)obj8;
-                    PathConstraintData pathConstraintData = new PathConstraintData((string)dictionary7["name"])
-                    {
-                        Order = SkeletonJSON_new.GetInt(dictionary7, "order", 0)
-                    };
-                    if (dictionary7.ContainsKey("bones"))
-                    {
-                        foreach (object obj9 in ((List<object>)dictionary7["bones"]))
-                        {
-                            string text6 = (string)obj9;
-                            BoneData boneData6 = skeletonData.FindBone(text6);
-                            if (boneData6 == null)
-                            {
-                                throw new Exception("Path bone not found: " + text6);
-                            }
-                            pathConstraintData.Bones.Add(boneData6);
-                        }
-                    }
-                    string text7 = (string)dictionary7["target"];
-                    pathConstraintData.Target = skeletonData.FindSlot(text7);
-                    if (pathConstraintData.Target == null)
-                    {
-                        throw new Exception("Path target slot not found: " + text7);
-                    }
-                    pathConstraintData.PositionMode = (PositionMode)Enum.Parse(typeof(PositionMode), SkeletonJSON_new.GetString(dictionary7, "positionMode", "percent"), true);
-                    pathConstraintData.SpacingMode = (SpacingMode)Enum.Parse(typeof(SpacingMode), SkeletonJSON_new.GetString(dictionary7, "spacingMode", "length"), true);
-                    pathConstraintData.RotateMode = (RotateMode)Enum.Parse(typeof(RotateMode), SkeletonJSON_new.GetString(dictionary7, "rotateMode", "tangent"), true);
-                    pathConstraintData.OffsetRotation = SkeletonJSON_new.GetFloat(dictionary7, "rotation", 0f);
-                    pathConstraintData.Position = SkeletonJSON_new.GetFloat(dictionary7, "position", 0f);
-                    if (pathConstraintData.PositionMode == PositionMode.Fixed)
-                    {
-                        pathConstraintData.Position *= scale;
-                    }
-                    pathConstraintData.Spacing = SkeletonJSON_new.GetFloat(dictionary7, "spacing", 0f);
-                    if (pathConstraintData.SpacingMode == SpacingMode.Length || pathConstraintData.SpacingMode == SpacingMode.Fixed)
-                    {
-                        pathConstraintData.Spacing *= scale;
-                    }
-                    pathConstraintData.RotateMix = SkeletonJSON_new.GetFloat(dictionary7, "rotateMix", 1f);
-                    pathConstraintData.TranslateMix = SkeletonJSON_new.GetFloat(dictionary7, "translateMix", 1f);
-                    skeletonData.PathConstraints.Add(pathConstraintData);
-                }
-            }
-            if (dictionary.ContainsKey("skins"))
-            {
-                try
-                {
-                    foreach (KeyValuePair<string, object> keyValuePair in ((Dictionary<string, object>)dictionary["skins"]))
-                    {
-                        Skin skin = new Skin(keyValuePair.Key);
-                        foreach (KeyValuePair<string, object> keyValuePair2 in ((Dictionary<string, object>)keyValuePair.Value))
-                        {
-                            int slotIndex = skeletonData.FindSlotIndex(keyValuePair2.Key);
-                            foreach (KeyValuePair<string, object> keyValuePair3 in ((Dictionary<string, object>)keyValuePair2.Value))
-                            {
-                                Attachment attachment = SkeletonJSON_new.ReadAttachment(__instance, (Dictionary<string, object>)keyValuePair3.Value, skin, slotIndex, keyValuePair3.Key, skeletonData);
-                                if (attachment != null)
-                                {
-                                    skin.SetAttachment(slotIndex, keyValuePair3.Key, attachment);
-                                }
-                            }
-                        }
-                        skeletonData.Skins.Add(skin);
-                        if (skin.Name == "default")
-                        {
-                            skeletonData.DefaultSkin = skin;
-                        }
-                    }
-                }
-                catch (Exception)
-                {
-                    foreach (object obj10 in ((List<object>)dictionary["skins"]))
-                    {
-                        Dictionary<string, object> dictionary8 = (Dictionary<string, object>)obj10;
-                        Skin skin2 = new Skin((string)dictionary8["name"]);
-                        if (dictionary8.ContainsKey("attachments"))
-                        {
-                            foreach (KeyValuePair<string, object> keyValuePair4 in ((Dictionary<string, object>)dictionary8["attachments"]))
-                            {
-                                int slotIndex2 = skeletonData.FindSlotIndex(keyValuePair4.Key);
-                                foreach (KeyValuePair<string, object> keyValuePair5 in ((Dictionary<string, object>)keyValuePair4.Value))
-                                {
-                                    try
-                                    {
-                                        Attachment attachment2 = SkeletonJSON_new.ReadAttachment_new(__instance, (Dictionary<string, object>)keyValuePair5.Value, skin2, slotIndex2, keyValuePair5.Key, skeletonData);
-                                        if (attachment2 != null)
-                                        {
-                                            skin2.SetAttachment(slotIndex2, keyValuePair5.Key, attachment2);
-                                        }
-                                    }
-                                    catch (Exception innerException)
-                                    {
-                                        throw new Exception(string.Concat(new object[]
-                                        {
-                                    "Error reading attachment: ",
-                                    keyValuePair5.Key,
-                                    ", skin: ",
-                                    skin2
-                                        }), innerException);
-                                    }
-                                }
-                            }
-                        }
-                        skeletonData.Skins.Add(skin2);
-                        if (skin2.Name == "default")
-                        {
-                            skeletonData.DefaultSkin = skin2;
-                        }
-                    }
-                }
-            }
-            int i = 0;
-            int count = SkeletonJSON_new.linkedMeshes.Count;
-            while (i < count)
-            {
-                SkeletonJSON_new.LinkedMesh linkedMesh = SkeletonJSON_new.linkedMeshes[i];
-                Skin skin3 = (linkedMesh.skin == null) ? skeletonData.DefaultSkin : skeletonData.FindSkin(linkedMesh.skin);
-                if (skin3 == null)
-                {
-                    throw new Exception("Slot not found: " + linkedMesh.skin);
-                }
-                Attachment attachment3 = skin3.GetAttachment(linkedMesh.slotIndex, linkedMesh.parent);
-                if (attachment3 == null)
-                {
-                    throw new Exception("Parent mesh not found: " + linkedMesh.parent);
-                }
-                linkedMesh.mesh.ParentMesh = (MeshAttachment)attachment3;
-                linkedMesh.mesh.UpdateUVs();
-                i++;
-            }
-            SkeletonJSON_new.linkedMeshes.Clear();
-            if (dictionary.ContainsKey("events"))
-            {
-                foreach (KeyValuePair<string, object> keyValuePair6 in ((Dictionary<string, object>)dictionary["events"]))
-                {
-                    Dictionary<string, object> map = (Dictionary<string, object>)keyValuePair6.Value;
-                    EventData eventData = new EventData(keyValuePair6.Key)
-                    {
-                        Int = SkeletonJSON_new.GetInt(map, "int", 0),
-                        Float = SkeletonJSON_new.GetFloat(map, "float", 0f),
-                        String = SkeletonJSON_new.GetString(map, "string", string.Empty)
-                    };
-                    skeletonData.Events.Add(eventData);
-                }
-            }
-            if (dictionary.ContainsKey("animations"))
-            {
-                foreach (KeyValuePair<string, object> keyValuePair7 in ((Dictionary<string, object>)dictionary["animations"]))
-                {
-                    try
-                    {
-                        SkeletonJSON_new.ReadAnimation_new(__instance, (Dictionary<string, object>)keyValuePair7.Value, keyValuePair7.Key, skeletonData);
-                    }
-                    catch (Exception)
-                    {
-                        try
-                        {
-                            SkeletonJSON_new.ReadAnimation(__instance, (Dictionary<string, object>)keyValuePair7.Value, keyValuePair7.Key, skeletonData);
-                        }
-                        catch (Exception innerException2)
-                        {
-                            throw new Exception("Error reading animation: " + keyValuePair7.Key, innerException2);
-                        }
-                    }
-                }
-            }
-            skeletonData.Bones.TrimExcess();
-            skeletonData.Slots.TrimExcess();
-            skeletonData.Skins.TrimExcess();
-            skeletonData.Events.TrimExcess();
-            skeletonData.Animations.TrimExcess();
-            skeletonData.IkConstraints.TrimExcess();
-            return skeletonData;
-        }
-        //?
-        private static void RegionlessAttachmentLoader_get_EmptyRegion()
-        {
-            if (Spine.Unity.RegionlessAttachmentLoader.emptyRegion == null)
-            {
-                AtlasRegion region = new AtlasRegion
-                {
-                    name = "Empty AtlasRegion",
-                    page = new AtlasPage
-                    {
-                        name = "Empty AtlasPage",
-                        rendererObject = new Material(Shader.Find("UI/Default"))
-                        {
-                            name = "NoRender Material"
-                        }
-                    }
-                };
-                Spine.Unity.RegionlessAttachmentLoader.emptyRegion = region;
-            }
-        }
+			Type result = null;
+			if (!CoreEmotionCardsLoaded)
+			{
+				var baseType = typeof(EmotionCardAbilityBase);
+				foreach (Type type2 in Assembly.Load("Assembly-CSharp").GetTypes())
+				{
+					if (baseType.IsAssignableFrom(type2) && type2.Name.StartsWith("EmotionCardAbility_"))
+					{
+						var typeName = type2.Name.Substring("EmotionCardAbility_".Length);
+						if (!CustomEmotionCardAbility.ContainsKey(typeName))
+						{
+							CustomEmotionCardAbility[typeName] = type2;
+							if (typeName == name)
+							{
+								result = type2;
+							}
+						}
+					}
+				}
+				CoreEmotionCardsLoaded = true;
+			}
+			return result;
+		}
+		//EmotionCard Preview Artwork
+		[HarmonyPatch(typeof(UIAbnormalityCardPreviewSlot), nameof(UIAbnormalityCardPreviewSlot.Init))]
+		[HarmonyPostfix]
+		static void UIAbnormalityCardPreviewSlot_Init_Post(UIAbnormalityCardPreviewSlot __instance, EmotionCardXmlInfo card)
+		{
+			try
+			{
+				if (ArtWorks == null)
+				{
+					GetArtWorks();
+				}
+				if (ArtWorks.TryGetValue(card.Artwork, out var sprite))
+				{
+					__instance.artwork.sprite = sprite;
+				}
+			}
+			catch (Exception ex)
+			{
+				File.WriteAllText(Application.dataPath + "/Mods/EmotionCardPreviewArtworkerror.log", ex.Message + Environment.NewLine + ex.StackTrace);
+			}
+		}
+		//EmotionCard DiceAction Artwork
+		[HarmonyPatch(typeof(BattleUnitDiceActionUI_EmotionCard), nameof(BattleUnitDiceActionUI_EmotionCard.Init))]
+		[HarmonyPostfix]
+		static void BattleUnitDiceActionUI_EmotionCard_Init_Post(BattleUnitDiceActionUI_EmotionCard __instance, BattleEmotionCardModel card)
+		{
+			try
+			{
+				if (ArtWorks == null)
+				{
+					GetArtWorks();
+				}
+				string artwork = card.XmlInfo.Artwork;
+				if (ArtWorks.TryGetValue(artwork, out var sprite))
+				{
+					__instance.artwork.sprite = sprite;
+				}
+			}
+			catch (Exception ex)
+			{
+				File.WriteAllText(Application.dataPath + "/Mods/EmotionCardDiceActionArtworkerror.log", ex.Message + Environment.NewLine + ex.StackTrace);
+			}
+		}
+		//EmotionCardInven Passive Artwork
+		[HarmonyPatch(typeof(UIEmotionPassiveCardInven), nameof(UIEmotionPassiveCardInven.SetSprites))]
+		[HarmonyPostfix]
+		static void UIEmotionPassiveCardInven_SetSprites_Post(UIEmotionPassiveCardInven __instance)
+		{
+			try
+			{
+				if (ArtWorks == null)
+				{
+					GetArtWorks();
+				}
+				string artwork = __instance._card.Artwork;
+				if (ArtWorks.TryGetValue(artwork, out var sprite))
+				{
+					__instance._artwork.sprite = sprite;
+				}
+			}
+			catch (Exception ex)
+			{
+				File.WriteAllText(Application.dataPath + "/Mods/EmotionCardInvenPassiveArtworkerror.log", ex.Message + Environment.NewLine + ex.StackTrace);
+			}
+		}
+		//EmotionCard Passive Artwork
+		[HarmonyPatch(typeof(EmotionPassiveCardUI), nameof(EmotionPassiveCardUI.SetSprites))]
+		[HarmonyPostfix]
+		static void EmotionPassiveCardUI_SetSprites_Post(EmotionPassiveCardUI __instance)
+		{
+			try
+			{
+				if (ArtWorks == null)
+				{
+					GetArtWorks();
+				}
+				string artwork = __instance._card.Artwork;
+				if (ArtWorks.TryGetValue(artwork, out var sprite))
+				{
+					__instance._artwork.sprite = sprite;
+				}
+			}
+			catch (Exception ex)
+			{
+				File.WriteAllText(Application.dataPath + "/Mods/EmotionCardPassiveArtworkerror.log", ex.Message + Environment.NewLine + ex.StackTrace);
+			}
+		}
 
-        private static string GetCardName(LorId cardID)
-        {
-            string result = "Not Found";
-            if (cardID == 705010)
-            {
-                cardID = new LorId(707001);
-            }
-            if (Singleton<BattleCardDescXmlList>.Instance._dictionary.ContainsKey(cardID))
-            {
-                result = Singleton<BattleCardDescXmlList>.Instance._dictionary[cardID].cardName;
-            }
-            return result;
-        }
-        private static void GetArtWorks()
-        {
-            ArtWorks = new Dictionary<string, Sprite>();
-            foreach (ModContent modContent in LoadedModContents)
-            {
-                DirectoryInfo directoryInfo = modContent._dirInfo;
-                if (Directory.Exists(directoryInfo.FullName + "/ArtWork"))
-                {
-                    DirectoryInfo directoryInfo2 = new DirectoryInfo(directoryInfo.FullName + "/ArtWork");
-                    if (directoryInfo2.GetDirectories().Length != 0)
-                    {
-                        DirectoryInfo[] directories = directoryInfo2.GetDirectories();
-                        for (int i = 0; i < directories.Length; i++)
-                        {
-                            GetArtWorks(directories[i]);
-                        }
-                    }
-                    foreach (FileInfo fileInfo in directoryInfo2.GetFiles())
-                    {
-                        Texture2D texture2D = new Texture2D(2, 2);
-                        texture2D.LoadImage(File.ReadAllBytes(fileInfo.FullName));
-                        Sprite value = Sprite.Create(texture2D, new Rect(0f, 0f, texture2D.width, texture2D.height), new Vector2(0.5f, 0.5f));
-                        string fileNameWithoutExtension = Path.GetFileNameWithoutExtension(fileInfo.FullName);
-                        ArtWorks[fileNameWithoutExtension] = value;
-                    }
-                }
-            }
-        }
-        private static void GetArtWorks(DirectoryInfo dir)
-        {
-            if (dir.GetDirectories().Length != 0)
-            {
-                DirectoryInfo[] directories = dir.GetDirectories();
-                for (int i = 0; i < directories.Length; i++)
-                {
-                    GetArtWorks(directories[i]);
-                }
-            }
-            foreach (FileInfo fileInfo in dir.GetFiles())
-            {
-                Texture2D texture2D = new Texture2D(2, 2);
-                texture2D.LoadImage(File.ReadAllBytes(fileInfo.FullName));
-                Sprite value = Sprite.Create(texture2D, new Rect(0f, 0f, texture2D.width, texture2D.height), new Vector2(0.5f, 0.5f));
-                string fileNameWithoutExtension = Path.GetFileNameWithoutExtension(fileInfo.FullName);
-                ArtWorks[fileNameWithoutExtension] = value;
-            }
-        }
-        public static string BuildPath(params string[] paths)
-        {
-            StringBuilder stringBuilder = new StringBuilder();
-            stringBuilder.Append("Xml/");
-            foreach (string value in paths)
-            {
-                stringBuilder.Append(value);
-            }
-            return stringBuilder.ToString();
-        }
-        public class ModStroyCG
-        {
-            public string path;
-            public Sprite sprite;
-        }
+		//EGO
+		//EGOCardName
+		[HarmonyPatch(typeof(BattleDiceCardUI), nameof(BattleDiceCardUI.SetEgoCardForPopup))]
+		[HarmonyPostfix]
+		static void BattleDiceCardUI_SetEgoCardForPopup_Post(BattleDiceCardUI __instance, EmotionEgoXmlInfo egoxmlinfo)
+		{
+			try
+			{
+				DiceCardXmlInfo cardXmlInfo = ItemXmlDataList.instance.GetCardItem(egoxmlinfo.CardId);
+				string cardName;
+				if (cardXmlInfo._textId <= 0)
+				{
+					cardName = GetCardName(cardXmlInfo.id);
+				}
+				else
+				{
+					cardName = GetCardName(new LorId(cardXmlInfo.workshopID, cardXmlInfo._textId));
+				}
+				if (cardName != "Not Found")
+				{
+					__instance.txt_cardName.text = cardName;
+				}
+			}
+			catch { }
+		}
+		//EGOId
+		[HarmonyPatch(typeof(EmotionEgoXmlInfo), nameof(EmotionEgoXmlInfo.CardId), MethodType.Getter)]
+		[HarmonyPrefix]
+		static bool EmotionEgoXmlInfo_get_CardId_Pre(EmotionEgoXmlInfo __instance, ref LorId __result)
+		{
+			try
+			{
+				if (OrcTools.EgoDic.TryGetValue(__instance, out var id))
+				{
+					__result = id;
+					return false;
+				}
+			}
+			catch (Exception ex)
+			{
+				File.WriteAllText(Application.dataPath + "/Mods/EgoCardIderror.log", ex.Message + Environment.NewLine + ex.StackTrace);
+			}
+			return true;
+		}
+		//EGOData
+		[HarmonyPatch(typeof(EmotionEgoXmlList), nameof(EmotionEgoXmlList.GetData), new Type[] { typeof(LorId) })]
+		[HarmonyPrefix]
+		static bool EmotionEgoXmlList_GetData_Pre(LorId id, ref EmotionEgoXmlInfo __result)
+		{
+			try
+			{
+				OrcTools.CheckReverseEgoDic();
+				if (OrcTools.ReverseEgoDic.TryGetValue(id, out var xml))
+				{
+					__result = xml;
+					return false;
+				}
+			}
+			catch (Exception ex)
+			{
+				ModContentManager.Instance.AddErrorLog(ex.Message + Environment.NewLine + ex.StackTrace);
+				File.WriteAllText(Application.dataPath + "/Mods/EgoCardIderror.log", ex.Message + Environment.NewLine + ex.StackTrace);
+			}
+			return true;
+		}
+		//EGODataById
+		[HarmonyPatch(typeof(EmotionEgoXmlList), nameof(EmotionEgoXmlList.GetData), new Type[] { typeof(LorId), typeof(SephirahType) })]
+		[HarmonyPrefix]
+		static bool EmotionEgoXmlList_GetData_2_Pre(LorId id, SephirahType sephirah, ref EmotionEgoXmlInfo __result)
+		{
+			try
+			{
+				if (OrcTools.CustomEmotionEgo.TryGetValue(sephirah, out var subdict) && subdict.TryGetValue(id, out var xml))
+				{
+					__result = xml;
+					return false;
+				}
+			}
+			catch (Exception ex)
+			{
+				ModContentManager.Instance.AddErrorLog(ex.Message + Environment.NewLine + ex.StackTrace);
+				File.WriteAllText(Application.dataPath + "/Mods/EgoCardIderror.log", ex.Message + Environment.NewLine + ex.StackTrace);
+			}
+			return true;
+		}
+		//EGOName
+		[HarmonyPatch(typeof(EmotionEgoCardUI), nameof(EmotionEgoCardUI.Init))]
+		[HarmonyPrefix]
+		static bool EmotionEgoCardUI_Init_Pre(EmotionEgoCardUI __instance, EmotionEgoXmlInfo card)
+		{
+			try
+			{
+				if (OrcTools.EgoDic.TryGetValue(card, out var id))
+				{
+					__instance._card = card;
+					DiceCardXmlInfo cardItem = ItemXmlDataList.instance.GetCardItem(id, false);
+					__instance._cardName.text = cardItem.Name;
+					__instance.gameObject.SetActive(true);
+					return false;
+				}
+			}
+			catch (Exception ex)
+			{
+				ModContentManager.Instance.AddErrorLog(ex.Message + Environment.NewLine + ex.StackTrace);
+				File.WriteAllText(Application.dataPath + "/Mods/EgoCardUIIniterror.log", ex.Message + Environment.NewLine + ex.StackTrace);
+			}
+			return true;
+		}
 
+		//custom quest script
+		[HarmonyPatch(typeof(QuestMissionModel), MethodType.Constructor, new Type[] { typeof(QuestModel), typeof(QuestMissionXmlInfo) })]
+		[HarmonyTranspiler]
+		static IEnumerable<CodeInstruction> QuestMissionModel_ctor_In(IEnumerable<CodeInstruction> instructions, ILGenerator ilgen)
+		{
+			var codes = instructions.ToList();
+			var concatMethod = Method(typeof(string), nameof(string.Concat), new Type[] { typeof(object[]) });
+			var getTypeMethod = Method(typeof(Type), nameof(Type.GetType), new Type[] { typeof(string) });
+			var customQuestTextMethod = Method(typeof(Harmony_Patch), nameof(QuestMissionModel_ctor_CheckCustomName));
+			var customQuestTypeMethod = Method(typeof(Harmony_Patch), nameof(QuestMissionModel_ctor_CheckCustomType));
+			foreach (var instruction in instructions)
+			{
+				yield return instruction;
+				if (instruction.Calls(concatMethod))
+				{
+					yield return new CodeInstruction(Ldarg_2);
+					yield return new CodeInstruction(Call, customQuestTextMethod);
+				}
+				else if (instruction.Calls(getTypeMethod))
+				{
+					yield return new CodeInstruction(Ldarg_2);
+					yield return new CodeInstruction(Call, customQuestTypeMethod);
+				}
+			}
+		}
+		static string QuestMissionModel_ctor_CheckCustomName(string oldName, QuestMissionXmlInfo questInfo)
+		{
+			if (questInfo is QuestMissionXmlInfo_V2 questNew && !string.IsNullOrWhiteSpace(questNew.scriptName))
+			{
+				return "QuestMissionScript_" + questNew.scriptName.Trim();
+			}
+			return oldName;
+		}
+		static Type QuestMissionModel_ctor_CheckCustomType(Type oldType, QuestMissionXmlInfo questInfo)
+		{
+			if (questInfo is QuestMissionXmlInfo_V2 questNew && !string.IsNullOrWhiteSpace(questNew.scriptName))
+			{
+				var type = FindCustomQuestScriptType(questNew.scriptName);
+				if (type != null)
+				{
+					return type;
+				}
+			}
+			return oldType;
+		}
+		public static QuestMissionScriptBase FindCustomQuestScript(string name)
+		{
+			try
+			{
+				return Activator.CreateInstance(FindCustomQuestScriptType(name)) as QuestMissionScriptBase;
+			}
+			catch
+			{
+				return null;
+			}
+		}
+		public static Type FindCustomQuestScriptType(string name)
+		{
+			if (string.IsNullOrWhiteSpace(name))
+			{
+				name = null;
+			}
+			else
+			{
+				name = name.Trim();
+				if (CustomQuest.TryGetValue(name, out Type type))
+				{
+					return type;
+				}
+			}
 
+			Type result = null;
+			if (!CoreQuestsLoaded)
+			{
+				var baseType = typeof(QuestMissionScriptBase);
+				foreach (Type type2 in Assembly.Load("Assembly-CSharp").GetTypes())
+				{
+					if (baseType.IsAssignableFrom(type2) && type2.Name.StartsWith("QuestMissionScript_"))
+					{
+						var typeName = type2.Name.Substring("QuestMissionScript_".Length);
+						if (!CustomQuest.ContainsKey(typeName))
+						{
+							CustomQuest[typeName] = type2;
+							if (typeName == name)
+							{
+								result = type2;
+							}
+						}
+					}
+				}
+				CoreQuestsLoaded = true;
+			}
+			return result;
+		}
 
-        private static int originalEyeIndex = -1;
-        private static int originalBrowIndex = -1;
-        private static int originalMouthIndex = -1;
-        private static int originalFrontHairIndex = -1;
-        private static int originalRearHairIndex = -1;
+		//Story
+		//StoryIcon
+		[HarmonyPatch(typeof(UISpriteDataManager), nameof(UISpriteDataManager.GetStoryIcon))]
+		[HarmonyPrefix]
+		static bool UISpriteDataManager_GetStoryIcon_Pre(string story, ref UIIconManager.IconSet __result)
+		{
+			try
+			{
+				if (story == null)
+				{
+					return true;
+				}
+				else
+				{
+					if (ArtWorks == null)
+					{
+						GetArtWorks();
+					}
+					if (ArtWorks.TryGetValue(story, out Sprite sprite))
+					{
+						__result = new UIIconManager.IconSet
+						{
+							type = story,
+							icon = sprite,
+							iconGlow = sprite
+						};
+						if (ArtWorks.TryGetValue(story + "_Glow", out var spriteGlow))
+						{
+							__result.iconGlow = spriteGlow;
+						}
+						return false;
+					}
+				}
+			}
+			catch (Exception ex)
+			{
+				File.WriteAllText(Application.dataPath + "/Mods/StroyIconerror.log", ex.Message + Environment.NewLine + ex.StackTrace);
+			}
+			return true;
+		}
+		//书库
+		[HarmonyPatch(typeof(UIStoryArchivesPanel), nameof(UIStoryArchivesPanel.InitData))]
+		[HarmonyPostfix]
+		static void UIStoryArchivesPanel_InitData_Post(UIStoryArchivesPanel __instance)
+		{
+			try
+			{
+				if (__instance.episodeBooksData.Count == 0 && __instance.chapterBooksData.Count > 0)
+				{
+					__instance.bookStoryPanel.SetData();
+				}
+			}
+			catch (Exception ex)
+			{
+				File.WriteAllText(Application.dataPath + "/Mods/StoryArchivesIniterror.log", ex.Message + Environment.NewLine + ex.StackTrace);
+			}
+		}
 
-        private static string path = string.Empty;
+		[HarmonyPatch(typeof(UIBookStoryPanel), nameof(UIBookStoryPanel.SetData))]
+		[HarmonyPrefix]
+		[HarmonyPriority(Priority.High)]
+		static void UIBookStoryPanel_SetData_Pre(UIBookStoryPanel __instance)
+		{
+			try
+			{
+				var mainPanel = __instance.panel;
+				int i;
+				int j;
+				BookXmlInfo bookXmlInfo;
+				for (i = j = 0; i < mainPanel.chapterBooksData.Count; i++)
+				{
+					bookXmlInfo = mainPanel.chapterBooksData[i];
+					if (bookXmlInfo.id.IsWorkshop() && OrcTools.EpisodeDic.ContainsKey(bookXmlInfo.id))
+					{
+						mainPanel.episodeBooksData.Add(bookXmlInfo);
+					}
+					else
+					{
+						mainPanel.chapterBooksData[j] = mainPanel.chapterBooksData[i];
+						j++;
+					}
+				}
+				mainPanel.chapterBooksData.RemoveRange(j, i - j);
+			}
+			catch (Exception ex)
+			{
+				File.WriteAllText(Application.dataPath + "/Mods/BookStorySetDataerror.log", ex.Message + Environment.NewLine + ex.StackTrace);
+			}
+		}
 
-        private static string Staticpath;
+		[HarmonyPatch(typeof(UIBookStoryPanel), nameof(UIBookStoryPanel.SetData))]
+		[HarmonyTranspiler]
+		static IEnumerable<CodeInstruction> UIBookStoryPanel_SetData_In(IEnumerable<CodeInstruction> instructions)
+		{
+			var method1 = Method(typeof(Type), nameof(Type.GetTypeFromHandle));
+			var method2 = Method(typeof(Enum), nameof(Enum.GetValues));
+			var method3 = PropertyGetter(typeof(Array), nameof(Array.Length));
+			var codes = instructions.ToList();
+			for (int i = 0; i < codes.Count - 3; i++)
+			{
+				if (codes[i].Is(Ldtoken, typeof(UIStoryLine)) && codes[i + 1].Is(Call, method1) && codes[i + 2].Is(Call, method2)
+					&& codes[i + 3].Is(Callvirt, method3))
+				{
+					codes.RemoveRange(i + 1, 3);
+					UIStoryLine[] originalValues = EnumExtender.GetOriginalValues<UIStoryLine>();
+					int index = Array.BinarySearch(originalValues, UIStoryLine.Chapter1) - 1;
+					codes[i] = new CodeInstruction(Ldc_I4, (int)originalValues[index]);
+					break;
+				}
+			}
+			return codes;
+		}
 
-        private static string StoryStaticpath;
+		//书库剧情槽位
+		[HarmonyPatch(typeof(UIBookStoryChapterSlot), nameof(UIBookStoryChapterSlot.SetEpisodeSlots))]
+		[HarmonyPostfix]
+		static void UIBookStoryChapterSlot_SetEpisodeSlots_Post(UIBookStoryChapterSlot __instance)
+		{
+			try
+			{
+				bool hasEtc = false;
+				List<BookXmlInfo> etcList = null;
+				int j;
+				for (j = __instance.EpisodeSlots.Count - 1; j >= 0; j--)
+				{
+					if (!__instance.EpisodeSlots[j].gameObject.activeSelf)
+					{
+						continue;
+					}
+					if (__instance.EpisodeSlots[j].isEtc)
+					{
+						hasEtc = true;
+						etcList = __instance.EpisodeSlots[j].books;
+					}
+					break;
+				}
+				Dictionary<LorId, List<BookXmlInfo>> dictionary = new Dictionary<LorId, List<BookXmlInfo>>();
+				StageClassInfoList stageClassInfoList = StageClassInfoList.Instance;
+				foreach (BookXmlInfo bookXmlInfo in __instance.panel.panel.GetEpisodeBooksDataAll())
+				{
+					if (OrcTools.EpisodeDic.TryGetValue(bookXmlInfo.id, out var epId) && stageClassInfoList.GetData(epId).chapter == __instance.chapter && (!EnumExtender.IsValidEnumName(bookXmlInfo.BookIcon) || !EnumExtender.IsOriginalName<UIStoryLine>(bookXmlInfo.BookIcon)))
+					{
+						if (!dictionary.TryGetValue(epId, out var episodeBookList))
+						{
+							dictionary[epId] = episodeBookList = new List<BookXmlInfo>();
+						}
+						episodeBookList.Add(bookXmlInfo);
+					}
+				}
+				foreach (KeyValuePair<LorId, List<BookXmlInfo>> keyValuePair in dictionary)
+				{
+					j++;
+					if (__instance.EpisodeSlots.Count <= j)
+					{
+						__instance.InstatiateAdditionalSlot();
+					}
+					__instance.EpisodeSlots[j].Init(keyValuePair.Value, __instance);
+					if (OrcTools.StageNameDic.TryGetValue(keyValuePair.Key, out string stagename))
+					{
+						__instance.EpisodeSlots[j].episodeText.text = stagename;
+					}
+				}
+				if (hasEtc && etcList.Count > 0 && !__instance.EpisodeSlots[j].isEtc)
+				{
+					j++;
+					if (__instance.EpisodeSlots.Count <= j)
+					{
+						__instance.InstatiateAdditionalSlot();
+					}
+					__instance.EpisodeSlots[j].Init(__instance.chapter, etcList, __instance);
+				}
+			}
+			catch (Exception ex)
+			{
+				File.WriteAllText(Application.dataPath + "/Mods/UBSCSSESerror.log", ex.Message + Environment.NewLine + ex.StackTrace);
+			}
+		}
+		//EpisodeSlotName
+		[HarmonyPatch(typeof(UIBookStoryPanel), nameof(UIBookStoryPanel.OnSelectEpisodeSlot))]
+		[HarmonyPostfix]
+		static void UIBookStoryPanel_OnSelectEpisodeSlot_Post(UIBookStoryPanel __instance, UIBookStoryEpisodeSlot slot)
+		{
+			try
+			{
+				if (slot?.books != null && slot.books.Count > 0 && OrcTools.EpisodeDic.TryGetValue(slot.books[0].id, out var epId) && OrcTools.StageNameDic.TryGetValue(epId, out string stagename))
+				{
+					__instance.selectedEpisodeText.text = stagename;
+				}
+			}
+			catch (Exception ex)
+			{
+				File.WriteAllText(Application.dataPath + "/Mods/OnSelectEpisodeSloterror.log", ex.Message + Environment.NewLine + ex.StackTrace);
+			}
+		}
+		//MoreLanguageStoryIdentify
+		[HarmonyPatch(typeof(StorySerializer), nameof(StorySerializer.HasEffectFile))]
+		[HarmonyPrefix]
+		static bool StorySerializer_HasEffectFile_Pre(StageStoryInfo stageStoryInfo, ref bool __result)
+		{
+			try
+			{
+				if (stageStoryInfo == null)
+				{
+					return true;
+				}
+				if (stageStoryInfo.IsMod)
+				{
+					var config = BasemodConfig.FindBasemodConfig(stageStoryInfo.packageId);
+					if (config.IgnoreStory)
+					{
+						return true;
+					}
+					string modPath = ModContentManager.Instance.GetModPath(stageStoryInfo.packageId);
+					string storyFolderPath = Path.Combine(modPath, "Data", "StoryText");
+					string[] array = stageStoryInfo.story.Split(new char[]
+					{
+						 '.'
+					});
+					if (Directory.Exists(storyFolderPath))
+					{
+						foreach (FileInfo fileInfo in new DirectoryInfo(storyFolderPath).GetFiles())
+						{
+							if (Path.GetFileNameWithoutExtension(fileInfo.FullName) == array[0])
+							{
+								__result = true;
+								return false;
+							}
+						}
+						var storyFolderPathLocalized = Path.Combine(storyFolderPath, TextDataModel.CurrentLanguage);
+						if (!Directory.Exists(storyFolderPathLocalized))
+						{
+							storyFolderPathLocalized = Path.Combine(storyFolderPath, config.DefaultLocale);
+						}
+						if (Directory.Exists(storyFolderPathLocalized))
+						{
+							foreach (FileInfo fileInfo in new DirectoryInfo(storyFolderPathLocalized).GetFiles())
+							{
+								if (Path.GetFileNameWithoutExtension(fileInfo.FullName) == array[0])
+								{
+									__result = true;
+									return false;
+								}
+							}
+						}
+					}
+				}
+			}
+			catch (Exception ex)
+			{
+				File.WriteAllText(Application.dataPath + "/Mods/HasEffectFileerror.log", ex.Message + Environment.NewLine + ex.StackTrace);
+			}
+			return true;
+		}
+		//GetModPath - prioritize activated mods
+		[HarmonyPatch(typeof(ModContentManager), nameof(ModContentManager.GetModPath))]
+		[HarmonyPrefix]
+		static bool ModContentManager_GetModPath_Pre(ModContentManager __instance, string packageId, ref string __result)
+		{
+			try
+			{
+				if (__instance._loadedContents != null && __instance._loadedContents.Find(mod => mod._modInfo.invInfo.workshopInfo.uniqueId == packageId) is ModContent mod1 && mod1._dirInfo.FullName is string path && !string.IsNullOrWhiteSpace(path))
+				{
+					__result = path;
+					return false;
+				}
+			}
+			catch { }
+			return true;
+		}
+		//LoadStageStory
+		[HarmonyPatch(typeof(StorySerializer), nameof(StorySerializer.LoadStageStory))]
+		[HarmonyPrefix]
+		[HarmonyPriority(Priority.High)]
+		static bool StorySerializer_LoadStageStory_Pre(StageStoryInfo stageStoryInfo, ref bool __result)
+		{
+			try
+			{
+				if (stageStoryInfo == null)
+				{
+					__result = false;
+					return false;
+				}
+				if (stageStoryInfo.IsMod)
+				{
+					var config = BasemodConfig.FindBasemodConfig(stageStoryInfo.packageId);
+					if (config.IgnoreStory)
+					{
+						return true;
+					}
+					string modPath = ModContentManager.Instance.GetModPath(stageStoryInfo.packageId);
+					string storyFolderPath = Path.Combine(modPath, "Data", "StoryText");
+					string effectFolderPath = Path.Combine(modPath, "Data", "StoryEffect");
+					string storyPath = Path.Combine(storyFolderPath, stageStoryInfo.story);
+					string effectPath = Path.Combine(effectFolderPath, stageStoryInfo.story);
+					string[] array = stageStoryInfo.story.Split(new char[]
+					{
+						 '.'
+					});
+					if (Directory.Exists(effectFolderPath))
+					{
+						foreach (FileInfo fileInfo in new DirectoryInfo(effectFolderPath).GetFiles())
+						{
+							if (Path.GetFileNameWithoutExtension(fileInfo.FullName) == array[0])
+							{
+								effectPath = fileInfo.FullName;
+							}
+						}
+					}
+					if (Directory.Exists(storyFolderPath))
+					{
+						var storyFolderPathLocalized = Path.Combine(storyFolderPath, TextDataModel.CurrentLanguage);
+						if (!Directory.Exists(storyFolderPathLocalized))
+						{
+							storyFolderPathLocalized = Path.Combine(storyFolderPath, config.DefaultLocale);
+						}
+						if (Directory.Exists(storyFolderPathLocalized))
+						{
+							foreach (FileInfo fileInfo in new DirectoryInfo(storyFolderPathLocalized).GetFiles())
+							{
+								if (Path.GetFileNameWithoutExtension(fileInfo.FullName) == array[0])
+								{
+									storyPath = fileInfo.FullName;
+								}
+							}
+						}
+						else
+						{
+							foreach (FileInfo fileInfo in new DirectoryInfo(storyFolderPath).GetFiles())
+							{
+								if (Path.GetFileNameWithoutExtension(fileInfo.FullName) == array[0])
+								{
+									storyPath = fileInfo.FullName;
+								}
+							}
+						}
+					}
+					if (StorySerializer.LoadStoryFile(storyPath, effectPath, modPath))
+					{
+						__result = true;
+						return false;
+					}
+				}
+			}
+			catch (Exception ex)
+			{
+				File.WriteAllText(Application.dataPath + "/Mods/LoadStageStoryerror.log", ex.Message + Environment.NewLine + ex.StackTrace);
+			}
+			return true;
+		}
+		//BattleStoryCG
+		[HarmonyPatch(typeof(UIBattleStoryInfoPanel), nameof(UIBattleStoryInfoPanel.SetData))]
+		[HarmonyPrefix]
+		static void UIBattleStoryInfoPanel_SetData_Pre(UIBattleStoryInfoPanel __instance, StageClassInfo stage)
+		{
+			try
+			{
+				if (stage != null && stage.id.IsWorkshop())
+				{
+					if (BasemodConfig.FindBasemodConfig(stage.workshopID).IgnoreStory)
+					{
+						return;
+					}
+					string path = Path.Combine(ModContentManager.Instance.GetModPath(stage.workshopID), "Resource", "StoryBgSprite", StorySerializer.effectDefinition.cg.src);
+					Sprite result = GetModStoryCG(stage.id, path);
+					if (result != null)
+					{
+						__instance.CG.sprite = result;
+					}
+				}
+			}
+			catch (Exception ex)
+			{
+				File.WriteAllText(Application.dataPath + "/Mods/UIStoryInfo_SDerror.log", ex.Message + Environment.NewLine + ex.StackTrace);
+			}
+		}
+		//StorySceneCG
+		[HarmonyPatch(typeof(StoryScene.StoryManager), nameof(StoryScene.StoryManager.LoadBackgroundSprite))]
+		[HarmonyPrefix]
+		static bool StoryManager_LoadBackgroundSprite_Pre(StoryScene.StoryManager __instance, string src, ref Sprite __result)
+		{
+			if (string.IsNullOrWhiteSpace(src))
+			{
+				return true;
+			}
+			try
+			{
+				var src1 = src;
+				if (!__instance._loadedCustomSprites.TryGetValue("bgsprite:" + src, out var sprite) && !CheckedCustomSprites.Contains(src))
+				{
+					if (!File.Exists(Path.Combine(ModUtil.GetModBgSpritePath(StorySerializer.curModPath), src)))
+					{
+						src1 += ".png";
+					}
+					sprite = SpriteUtil.LoadSprite(Path.Combine(ModUtil.GetModBgSpritePath(StorySerializer.curModPath), src1), new Vector2(0.5f, 0.5f));
+					if (sprite != null)
+					{
+						__instance._loadedCustomSprites.Add("bgsprite:" + src, sprite);
+					}
+					else
+					{
+						CheckedCustomSprites.Add(src);
+					}
+				}
+				if (sprite != null)
+				{
+					__result = sprite;
+					return false;
+				}
+			}
+			catch (Exception ex)
+			{
+				File.WriteAllText(Application.dataPath + "/Mods/LoadBackgroundSpriteerror.log", ex.Message + Environment.NewLine + ex.StackTrace);
+			}
+			return true;
+		}
+		public static Sprite GetModStoryCG(LorId StageId, string Path)
+		{
+			if (StageId is null)
+			{
+				return null;
+			}
+			if (ModStoryCG.TryGetValue(StageId, out ModStroyCG result))
+			{
+				return result.sprite;
+			}
+			else if (CheckedModStoryCG.Contains(StageId))
+			{
+				return null;
+			}
+			try
+			{
+				if (File.Exists(Path))
+				{
+					Texture2D texture2D = new Texture2D(2, 2);
+					texture2D.LoadImage(File.ReadAllBytes(Path));
+					Sprite value = Sprite.Create(texture2D, new Rect(0f, 0f, texture2D.width, texture2D.height), new Vector2(0.5f, 0.5f));
+					ModStoryCG[StageId] = new ModStroyCG
+					{
+						path = Path,
+						sprite = value,
+					};
+					return value;
+				}
+				else if (File.Exists(Path + ".png"))
+				{
+					Texture2D texture2D = new Texture2D(2, 2);
+					texture2D.LoadImage(File.ReadAllBytes(Path + ".png"));
+					Sprite value = Sprite.Create(texture2D, new Rect(0f, 0f, texture2D.width, texture2D.height), new Vector2(0.5f, 0.5f));
+					ModStoryCG[StageId] = new ModStroyCG
+					{
+						path = Path,
+						sprite = value,
+					};
+					return value;
+				}
+			}
+			catch { }
+			CheckedModStoryCG.Add(StageId);
+			return null;
+		}
+		//EntryCG
+		[HarmonyPatch(typeof(StageController), nameof(StageController.GameOver))]
+		[HarmonyPostfix]
+		static void StageController_GameOver_Post(StageController __instance)
+		{
+			try
+			{
+				if (ModStoryCG.TryGetValue(__instance._stageModel.ClassInfo.id, out var modStory))
+				{
+					ModSaveTool.SaveString("ModLastStroyCG", modStory.path, "BaseMod");
+				}
+				else if (TryAddModStoryCG(__instance._stageModel.ClassInfo))
+				{
+					ModSaveTool.SaveString("ModLastStroyCG", ModStoryCG[__instance._stageModel.ClassInfo.id].path, "BaseMod");
+				}
+				else
+				{
+					ModSaveTool.SaveString("ModLastStroyCG", "", "BaseMod");
+				}
+			}
+			catch (Exception ex)
+			{
+				File.WriteAllText(Application.dataPath + "/Mods/SaveModCGerror.log", ex.Message + Environment.NewLine + ex.StackTrace);
+			}
+		}
+		static bool TryAddModStoryCG(StageClassInfo stageClassInfo)
+		{
+			var startStory = stageClassInfo?.GetStartStory();
+			if (startStory == null || string.IsNullOrWhiteSpace(startStory.story))
+			{
+				return false;
+			}
+			if (!stageClassInfo.id.IsWorkshop())
+			{
+				return false;
+			}
+			if (BasemodConfig.FindBasemodConfig(stageClassInfo.id.packageId).IgnoreStory)
+			{
+				return false;
+			}
+			string modPath = ModContentManager.Instance.GetModPath(startStory.packageId);
+			if (string.IsNullOrWhiteSpace(modPath))
+			{
+				return false;
+			}
+			string effectPath = Path.Combine(modPath, "Data", "StoryEffect", startStory.story);
+			string[] array = stageClassInfo.GetStartStory().story.Split(new char[]
+			{
+				'.'
+			});
+			string cg = string.Empty;
+			if (File.Exists(Path.Combine(modPath, "Data", "StoryEffect", array[0] + ".xml")))
+			{
+				effectPath = Path.Combine(modPath, "Data", "StoryEffect", array[0] + ".xml");
+			}
+			if (File.Exists(Path.Combine(modPath, "Data", "StoryEffect", array[0] + ".txt")))
+			{
+				effectPath = Path.Combine(modPath, "Data", "StoryEffect", array[0] + ".txt");
+			}
+			if (File.Exists(effectPath))
+			{
+				using (StreamReader streamReader2 = new StreamReader(effectPath))
+				{
+					cg = ((SceneEffect)new XmlSerializer(typeof(SceneEffect)).Deserialize(streamReader2)).cg.src;
+				}
+			}
+			if (string.IsNullOrWhiteSpace(cg))
+			{
+				return false;
+			}
+			string path = Path.Combine(modPath, "Resource", "StoryBgSprite", cg);
+			return GetModStoryCG(stageClassInfo.id, path) != null;
+		}
+		//EntryCG
+		[HarmonyPatch(typeof(EntryScene), nameof(EntryScene.SetCG))]
+		[HarmonyPostfix]
+		[HarmonyPriority(Priority.High)]
+		static void EntryScene_SetCG_Post(EntryScene __instance)
+		{
+			try
+			{
+				string stroycg = ModSaveTool.GetModSaveData("BaseMod").GetString("ModLastStroyCG");
+				if (!string.IsNullOrWhiteSpace(stroycg) && File.Exists(stroycg))
+				{
+					Texture2D texture2D = new Texture2D(1, 1);
+					texture2D.LoadImage(File.ReadAllBytes(stroycg));
+					Sprite value = Sprite.Create(texture2D, new Rect(0f, 0f, texture2D.width, texture2D.height), new Vector2(0.5f, 0.5f));
+					__instance.CGImage.sprite = value;
+				}
+			}
+			catch (Exception ex)
+			{
+				ModContentManager.Instance.AddErrorLog(ex.Message + Environment.NewLine + ex.StackTrace);
+				File.WriteAllText(Application.dataPath + "/Mods/SetEntrySceneCGerror.log", ex.Message + Environment.NewLine + ex.StackTrace);
+			}
+		}
+		//Condition
+		[HarmonyPatch(typeof(StageExtraCondition), nameof(StageExtraCondition.IsUnlocked))]
+		[HarmonyPrefix]
+		static bool StageExtraCondition_IsUnlocked_Pre(StageExtraCondition __instance, ref bool __result)
+		{
+			try
+			{
+				if (OrcTools.StageConditionDic.TryGetValue(__instance, out var conditions))
+				{
+					__result = true;
+					foreach (LorId stageId in conditions)
+					{
+						if (LibraryModel.Instance.ClearInfo.GetClearCount(stageId) <= 0)
+						{
+							__result = false;
+							break;
+						}
+					}
+					return false;
+				}
+			}
+			catch (Exception ex)
+			{
+				ModContentManager.Instance.AddErrorLog(ex.Message + Environment.NewLine + ex.StackTrace);
+				File.WriteAllText(Application.dataPath + "/Mods/StageConditionerror.log", ex.Message + Environment.NewLine + ex.StackTrace);
+			}
+			return true;
+		}
+		//Condition
+		[HarmonyPatch(typeof(UIInvitationRightMainPanel), nameof(UIInvitationRightMainPanel.SendInvitation))]
+		[HarmonyTranspiler]
+		[HarmonyPriority(Priority.Low)]
+		static IEnumerable<CodeInstruction> UIInvitationRightMainPanel_SendInvitation_In(IEnumerable<CodeInstruction> instructions)
+		{
+			bool waiting = true;
+			foreach (var instruction in instructions)
+			{
+				if (instruction.opcode == Stloc_1 && waiting)
+				{
+					waiting = false;
+					yield return new CodeInstruction(Ldloc_0);
+					yield return new CodeInstruction(Call, Method(typeof(Harmony_Patch), nameof(UIInvitationRightMainPanel_SendInvitation_CheckCustomCondition)));
+					yield return new CodeInstruction(And);
+				}
+				yield return instruction;
+			}
+		}
+		static bool UIInvitationRightMainPanel_SendInvitation_CheckCustomCondition(StageClassInfo bookRecipe)
+		{
+			return bookRecipe.extraCondition == null || bookRecipe.extraCondition.IsUnlocked();
+		}
+		//custom floor level stage
+		[HarmonyPatch(typeof(DebugConsoleScript), nameof(DebugConsoleScript.EnterCreatureBattle))]
+		[HarmonyPatch(typeof(UI.UIController), nameof(UI.UIController.OnClickStartCreatureStage))]
+		[HarmonyPatch(typeof(UICreatureRebattleNumberSlot), nameof(UICreatureRebattleNumberSlot.OnPointerClick))]
+		[HarmonyPatch(typeof(UICreatureRebattleNumberSlot), nameof(UICreatureRebattleNumberSlot.SetData))]
+		[HarmonyPatch(typeof(UIMainPanel), nameof(UIMainPanel.OnClickLevelUp))]
+		[HarmonyTranspiler]
+		static IEnumerable<CodeInstruction> FloorLevelXmlInfo_CustomStageId_In(IEnumerable<CodeInstruction> instructions, ILGenerator ilgen)
+		{
+			var stageField = Field(typeof(FloorLevelXmlInfo), nameof(FloorLevelXmlInfo.stageId));
+			var getDataInt = Method(typeof(StageClassInfoList), nameof(StageClassInfoList.GetData), new Type[] { typeof(int) });
+			var stageFixer = Method(typeof(Harmony_Patch), nameof(FloorLevelXmlInfo_TryFixStageInfo));
+			var getNameInt = Method(typeof(StageNameXmlList), nameof(StageNameXmlList.GetName), new Type[] { typeof(int) });
+			var nameFixer = Method(typeof(Harmony_Patch), nameof(FloorLevelXmlInfo_TryFixStageName));
+			LocalBuilder local = null;
+			var codes = instructions.ToList();
+			for (int i = 0; i < codes.Count - 1; i++)
+			{
+				if (codes[i].LoadsField(stageField))
+				{
+					if (codes[i + 1].Calls(getDataInt))
+					{
+						if (local == null)
+						{
+							local = ilgen.DeclareLocal(typeof(FloorLevelXmlInfo));
+						}
+						codes.InsertRange(i, new CodeInstruction[]
+						{
+							new CodeInstruction(Dup),
+							new CodeInstruction(Stloc, local)
+						});
+						codes.InsertRange(i + 4, new CodeInstruction[]
+						{
+							new CodeInstruction(Ldloc, local),
+							new CodeInstruction(Call, stageFixer)
+						});
+						i += 4;
+					}
+					else if (codes[i + 1].Calls(getNameInt))
+					{
+						if (local == null)
+						{
+							local = ilgen.DeclareLocal(typeof(FloorLevelXmlInfo));
+						}
+						codes.InsertRange(i, new CodeInstruction[]
+						{
+							new CodeInstruction(Dup),
+							new CodeInstruction(Stloc, local)
+						});
+						codes.InsertRange(i + 4, new CodeInstruction[]
+						{
+							new CodeInstruction(Ldloc, local),
+							new CodeInstruction(Call, nameFixer)
+						});
+						i += 4;
+					}
+				}
+			}
+			return codes;
+		}
+		static string FloorLevelXmlInfo_TryFixStageName(string name, FloorLevelXmlInfo info)
+		{
+			if (OrcTools.FloorLevelStageDic.TryGetValue(info, out var stageId) && StageClassInfoList.Instance.GetData(stageId) is StageClassInfo stage && StageNameXmlList.Instance.GetName(stage) is string fixedName && !string.IsNullOrWhiteSpace(fixedName) && fixedName != "Not Found")
+			{
+				return fixedName;
+			}
+			return name;
+		}
+		static StageClassInfo FloorLevelXmlInfo_TryFixStageInfo(StageClassInfo stage, FloorLevelXmlInfo info)
+		{
+			if (OrcTools.FloorLevelStageDic.TryGetValue(info, out var stageId) && StageClassInfoList.Instance.GetData(stageId) is StageClassInfo fixedStage)
+			{
+				return fixedStage;
+			}
+			return stage;
+		}
 
-        private static string Storylocalizepath;
+		//EquipPageInvenPanel
+		//MoreEuipPageUI
+		[HarmonyPatch(typeof(UIOriginEquipPageList), nameof(UIOriginEquipPageList.UpdateEquipPageList))]
+		[HarmonyTranspiler]
+		static IEnumerable<CodeInstruction> UIOriginEquipPageList_UpdateEquipPageList_In(IEnumerable<CodeInstruction> instructions)
+		{
+			foreach (var instruction in instructions)
+			{
+				if (instruction.opcode == Ldc_I4_5)
+				{
+					yield return new CodeInstruction(Ldarg_0);
+					yield return new CodeInstruction(Ldfld, Field(typeof(UIOriginEquipPageList), nameof(UIOriginEquipPageList.currentScreenBookModelList)));
+					yield return new CodeInstruction(Callvirt, PropertyGetter(typeof(List<BookModel>), nameof(List<BookModel>.Count)));
+					yield return new CodeInstruction(Ldarg_0);
+					yield return new CodeInstruction(Ldfld, Field(typeof(UIOriginEquipPageList), nameof(UIOriginEquipPageList.equipPageSlotList)));
+					yield return new CodeInstruction(Callvirt, PropertyGetter(typeof(List<UIOriginEquipPageSlot>), nameof(List<UIOriginEquipPageSlot>.Count)));
+					yield return new CodeInstruction(Sub);
+				}
+				else
+				{
+					yield return instruction;
+				}
+			}
+		}
+		//UIEquipPageScrollList
+		/*
+		[HarmonyPatch(typeof(UIEquipPageScrollList), nameof(UIEquipPageScrollList.SetData))]
+		[HarmonyPrefix]
+		static bool UIEquipPageScrollList_SetData_Pre(UIEquipPageScrollList __instance, List<BookModel> books, UnitDataModel unit, bool init = false)
+		{
+			try
+			{
+				if (init)
+				{
+					__instance.CurrentSelectedBook = null;
+					__instance.currentslotcount = 0;
+				}
+				__instance._selectedUnit = unit;
+				__instance._originBookModelList.Clear();
+				__instance.currentBookModelList.Clear();
+				__instance.isActiveScrollBar = false;
+				__instance._originBookModelList.AddRange(books);
+				__instance.currentBookModelList.AddRange(books);
+				__instance.currentBookModelList = __instance.FilterBookModels(__instance.currentBookModelList);
+				__instance.totalkeysdata.Clear();
+				__instance.CurrentSelectedBook = null;
+				__instance.heightdatalist.Clear();
+				__instance.currentStoryBooksDic.Clear();
+				foreach (BookModel bookModel in __instance.currentBookModelList)
+				{
+					string bookIcon = bookModel.ClassInfo.BookIcon;
+					UIStoryKeyData uistoryKeyData;
+					if (bookModel.IsWorkshop || !Enum.IsDefined(typeof(UIStoryLine), bookIcon))
+					{
+						if (bookModel.ClassInfo is BookXmlInfo_New bookNew)
+						{
+							var storyline = GetModEpMatch(bookNew.LorEpisode);
+							uistoryKeyData = __instance.totalkeysdata.Find((UIStoryKeyData x) => x.workshopId == bookModel.ClassInfo.id.packageId && x.chapter == bookModel.ClassInfo.Chapter && x.StoryLine == ModEpMatch[bookNew.LorEpisode]);
+							if (uistoryKeyData == null)
+							{
+								uistoryKeyData = new UIStoryKeyData(bookModel.ClassInfo.Chapter, bookModel.ClassInfo.id.packageId)
+								{
+									StoryLine = storyline
+								};
+								__instance.totalkeysdata.Add(uistoryKeyData);
+							}
+						}
+						else
+						{
+							uistoryKeyData = __instance.totalkeysdata.Find((UIStoryKeyData x) => x.chapter == bookModel.ClassInfo.Chapter && x.workshopId == bookModel.ClassInfo.workshopID);
+							if (uistoryKeyData == null)
+							{
+								uistoryKeyData = new UIStoryKeyData(bookModel.ClassInfo.Chapter, bookModel.ClassInfo.id.packageId);
+								__instance.totalkeysdata.Add(uistoryKeyData);
+							}
+						}
+					}
+					else
+					{
+						if (!Enum.IsDefined(typeof(UIStoryLine), bookIcon))
+						{
+							Debug.LogError(bookIcon + "스토리 string enum 변환 오류");
+							continue;
+						}
+						UIStoryLine storyLine = (UIStoryLine)Enum.Parse(typeof(UIStoryLine), bookIcon);
+						uistoryKeyData = __instance.totalkeysdata.Find((UIStoryKeyData x) => x.chapter == bookModel.ClassInfo.Chapter && x.StoryLine == storyLine);
+						if (uistoryKeyData == null)
+						{
+							uistoryKeyData = new UIStoryKeyData(bookModel.ClassInfo.Chapter, storyLine);
+							__instance.totalkeysdata.Add(uistoryKeyData);
+						}
+					}
+					if (!__instance.currentStoryBooksDic.ContainsKey(uistoryKeyData))
+					{
+						List<BookModel> list = new List<BookModel>
+							{
+								bookModel
+							};
+						__instance.currentStoryBooksDic.Add(uistoryKeyData, list);
+					}
+					else
+					{
+						__instance.currentStoryBooksDic[uistoryKeyData].Add(bookModel);
+					}
+				}
+				__instance.totalkeysdata.Sort(delegate (UIStoryKeyData x, UIStoryKeyData y)
+				{
+					if (x.chapter == -1 && y.chapter == -1)
+					{
+						return 0;
+					}
+					if (x.chapter < y.chapter)
+					{
+						return -1;
+					}
+					if (x.chapter > y.chapter)
+					{
+						return 1;
+					}
+					int comparenum = x.workshopId.CompareTo(y.workshopId);
+					if (comparenum > 0)
+					{
+						return -1;
+					}
+					if (comparenum < 0)
+					{
+						return 1;
+					}
+					if (x.StoryLine < y.StoryLine)
+					{
+						return -1;
+					}
+					if (x.StoryLine > y.StoryLine)
+					{
+						return 1;
+					}
+					return 0;
+				});
+				__instance.totalkeysdata.Reverse();
+				__instance.CalculateSlotsHeight();
+				__instance.UpdateSlotList();
+				__instance.SetScrollBar();
+				__instance.isClickedUpArrow = false;
+				__instance.isClickedDownArrow = false;
+				LayoutRebuilder.ForceRebuildLayoutImmediate(__instance.rect_slotListRoot);
+				UIOriginEquipPageSlot saveFirstChild = __instance._equipPagesPanelSlotList[0].EquipPageSlotList[0];
+				__instance.SetSaveFirstChild(saveFirstChild);
+				return false;
+			}
+			catch (Exception ex)
+			{
+				File.WriteAllText(Application.dataPath + "/Mods/EPSLSDerror.log", ex.Message + Environment.NewLine + ex.StackTrace);
+			}
+			return true;
+		}
+		*/
+		[HarmonyPatch(typeof(UISettingEquipPageScrollList), nameof(UISettingEquipPageScrollList.SetData))]
+		[HarmonyPatch(typeof(UIEquipPageScrollList), nameof(UIEquipPageScrollList.SetData))]
+		[HarmonyTranspiler]
+		static IEnumerable<CodeInstruction> UIEquipPageScrollList_SetData_In(IEnumerable<CodeInstruction> instructions, ILGenerator ilgen, MethodBase original)
+		{
+			bool firstFind = true;
+			var findingMethod = Method(typeof(List<UIStoryKeyData>), nameof(List<UIStoryKeyData>.Find));
+			var isWorkshopProperty = PropertyGetter(typeof(BookModel), nameof(BookModel.IsWorkshop));
+			var currentBookProperty = PropertyGetter(typeof(List<BookModel>.Enumerator), nameof(List<BookModel>.Enumerator.Current));
+			var currentBookLocal = ilgen.DeclareLocal(typeof(BookModel));
+			foreach (var instruction in instructions)
+			{
+				yield return instruction;
+				if (firstFind && instruction.Is(Callvirt, findingMethod))
+				{
+					firstFind = false;
+					yield return new CodeInstruction(Ldloc, currentBookLocal);
+					yield return new CodeInstruction(Ldarg_0);
+					yield return new CodeInstruction(Ldfld, Field(original.DeclaringType, "totalkeysdata"));
+					yield return new CodeInstruction(Call, Method(typeof(Harmony_Patch), nameof(UIEquipPageScrollList_SetData_FixCustomStory)));
+				}
+				else if (instruction.Is(Call, currentBookProperty))
+				{
+					yield return new CodeInstruction(Dup);
+					yield return new CodeInstruction(Stloc, currentBookLocal);
+				}
+				else if (instruction.Is(Callvirt, isWorkshopProperty))
+				{
+					yield return new CodeInstruction(Ldloc, currentBookLocal);
+					yield return new CodeInstruction(Call, Method(typeof(Harmony_Patch), nameof(UIEquipPageScrollList_SetData_IsCustomStory)));
+				}
+			}
+		}
+		static UIStoryKeyData UIEquipPageScrollList_SetData_FixCustomStory(UIStoryKeyData oldKey, BookModel bookModel, List<UIStoryKeyData> allKeys)
+		{
+			if (!OrcTools.EpisodeDic.TryGetValue(bookModel.BookId, out var epId))
+			{
+				return oldKey;
+			}
 
-        private static string Localizepath;
+			var storyline = GetModEpMatch(epId);
+			var newKey = allKeys.Find((UIStoryKeyData x) => x.workshopId == bookModel.ClassInfo.id.packageId && x.chapter == bookModel.ClassInfo.Chapter && x.StoryLine == storyline);
+			if (newKey == null)
+			{
+				newKey = new UIStoryKeyData(bookModel.ClassInfo.Chapter, bookModel.ClassInfo.id.packageId)
+				{
+					StoryLine = storyline
+				};
+				allKeys.Add(newKey);
+			}
+			return newKey;
+		}
+		static bool UIEquipPageScrollList_SetData_IsCustomStory(bool isWorkshop, BookModel book)
+		{
+			return isWorkshop || !EnumExtender.IsValidEnumName(book.ClassInfo.BookIcon) || !EnumExtender.IsOriginalName<UIStoryLine>(book.ClassInfo.BookIcon);
+		}
+		public static UIStoryLine GetModEpMatch(LorId episodeId)
+		{
+			if (!ModEpMatch.ContainsKey(episodeId))
+			{
+				EnumExtender.TryFindUnnamedValue<UIStoryLine>((UIStoryLine)ModEpMin, null, false, out var newStoryLine);
+				EnumExtender.TryAddName($"BaseMod{(int)newStoryLine}", newStoryLine);
+				ModEpMatch.Add(episodeId, newStoryLine);
+			}
+			return ModEpMatch[episodeId];
+		}
+		//UISettingEquipPageScrollList
+		/*
+		[HarmonyPatch(typeof(UISettingEquipPageScrollList), nameof(UISettingEquipPageScrollList.SetData))]
+		[HarmonyPrefix]
+		static bool UISettingEquipPageScrollList_SetData_Pre(UISettingEquipPageScrollList __instance, List<BookModel> books, UnitDataModel unit, bool init = false)
+		{
+			try
+			{
+				ModEpMatch = new Dictionary<LorId, UIStoryLine>();
+				if (init)
+				{
+					__instance.CurrentSelectedBook = null;
+					__instance.currentslotcount = 0;
+				}
+				__instance._selectedUnit = unit;
+				__instance._originBookModelList.Clear();
+				__instance.currentBookModelList.Clear();
+				__instance.isActiveScrollBar = false;
+				__instance._originBookModelList.AddRange(books);
+				__instance.currentBookModelList.AddRange(books);
+				__instance.currentBookModelList = __instance.FilterBookModels(__instance.currentBookModelList);
+				__instance.totalkeysdata.Clear();
+				__instance.CurrentSelectedBook = null;
+				__instance.heightdatalist.Clear();
+				__instance.currentStoryBooksDic.Clear();
+				int num = 200;
+				foreach (BookModel bookModel in __instance.currentBookModelList)
+				{
+					string bookIcon = bookModel.ClassInfo.BookIcon;
+					UIStoryKeyData uistoryKeyData;
+					if (bookModel.IsWorkshop || !Enum.IsDefined(typeof(UIStoryLine), bookIcon))
+					{
+						if (bookModel.ClassInfo is BookXmlInfo_New)
+						{
+							if (!ModEpMatch.ContainsKey((bookModel.ClassInfo as BookXmlInfo_New).LorEpisode))
+							{
+								num++;
+								ModEpMatch.Add((bookModel.ClassInfo as BookXmlInfo_New).LorEpisode, (UIStoryLine)num);
+								uistoryKeyData = new UIStoryKeyData(bookModel.ClassInfo.Chapter, bookModel.ClassInfo.id.packageId)
+								{
+									StoryLine = (UIStoryLine)num
+								};
+								__instance.totalkeysdata.Add(uistoryKeyData);
+							}
+							else
+							{
+								uistoryKeyData = __instance.totalkeysdata.Find((UIStoryKeyData x) => x.workshopId == bookModel.ClassInfo.id.packageId && x.chapter == bookModel.ClassInfo.Chapter && x.StoryLine == ModEpMatch[(bookModel.ClassInfo as BookXmlInfo_New).LorEpisode]);
+							}
+						}
+						else
+						{
+							uistoryKeyData = __instance.totalkeysdata.Find((UIStoryKeyData x) => x.chapter == bookModel.ClassInfo.Chapter && x.workshopId == bookModel.ClassInfo.workshopID);
+							if (uistoryKeyData == null)
+							{
+								uistoryKeyData = new UIStoryKeyData(bookModel.ClassInfo.Chapter, bookModel.ClassInfo.id.packageId);
+								__instance.totalkeysdata.Add(uistoryKeyData);
+							}
+						}
+					}
+					else
+					{
+						if (!Enum.IsDefined(typeof(UIStoryLine), bookIcon))
+						{
+							Debug.LogError(bookIcon + "스토리 string enum 변환 오류");
+							continue;
+						}
+						UIStoryLine storyLine = (UIStoryLine)Enum.Parse(typeof(UIStoryLine), bookIcon);
+						uistoryKeyData = __instance.totalkeysdata.Find((UIStoryKeyData x) => x.chapter == bookModel.ClassInfo.Chapter && x.StoryLine == storyLine);
+						if (uistoryKeyData == null)
+						{
+							uistoryKeyData = new UIStoryKeyData(bookModel.ClassInfo.Chapter, storyLine);
+							__instance.totalkeysdata.Add(uistoryKeyData);
+						}
+					}
+					if (!__instance.currentStoryBooksDic.ContainsKey(uistoryKeyData))
+					{
+						List<BookModel> list = new List<BookModel>
+							{
+								bookModel
+							};
+						__instance.currentStoryBooksDic.Add(uistoryKeyData, list);
+					}
+					else
+					{
+						__instance.currentStoryBooksDic[uistoryKeyData].Add(bookModel);
+					}
+				}
+				__instance.totalkeysdata.Sort(delegate (UIStoryKeyData x, UIStoryKeyData y)
+				{
+					if (x.chapter == -1 && y.chapter == -1)
+					{
+						return 0;
+					}
+					if (x.chapter < y.chapter)
+					{
+						return -1;
+					}
+					if (x.chapter > y.chapter)
+					{
+						return 1;
+					}
+					int comparenum = x.workshopId.CompareTo(y.workshopId);
+					if (comparenum > 0)
+					{
+						return -1;
+					}
+					if (comparenum < 0)
+					{
+						return 1;
+					}
+					if (x.StoryLine < y.StoryLine)
+					{
+						return -1;
+					}
+					if (x.StoryLine > y.StoryLine)
+					{
+						return 1;
+					}
+					return 0;
+				});
+				__instance.totalkeysdata.Reverse();
+				__instance.CalculateSlotsHeight();
+				__instance.UpdateSlotList();
+				__instance.SetScrollBar();
+				__instance.isClickedUpArrow = false;
+				__instance.isClickedDownArrow = false;
+				LayoutRebuilder.ForceRebuildLayoutImmediate(__instance.rect_slotListRoot);
+				UIOriginEquipPageSlot saveFirstChild = __instance._equipPagesPanelSlotList[0].EquipPageSlotList[0];
+				__instance.SetSaveFirstChild(saveFirstChild);
+				return false;
+			}
+			catch (Exception ex)
+			{
+				File.WriteAllText(Application.dataPath + "/Mods/SEPSLSDerror.log", ex.Message + Environment.NewLine + ex.StackTrace);
+			}
+			return true;
+		}
+		*/
+		//UISettingInvenEquipPageListSlot
+		[HarmonyPatch(typeof(UISettingInvenEquipPageListSlot), nameof(UISettingInvenEquipPageListSlot.SetBooksData))]
+		[HarmonyPostfix]
+		[HarmonyPriority(Priority.High)]
+		static void UISettingInvenEquipPageListSlot_SetBooksData_Pre(UISettingInvenEquipPageListSlot __instance, List<BookModel> books, UIStoryKeyData storyKey)
+		{
+			try
+			{
+				if (books.Count <= 0)
+				{
+					return;
+				}
+				if (EnumExtender.IsOriginalValue(storyKey.StoryLine))
+				{
+					return;
+				}
+				if (!OrcTools.EpisodeDic.TryGetValue(books[0].BookId, out var epId))
+				{
+					return;
+				}
+				StageClassInfo data = StageClassInfoList.Instance.GetData(epId);
+				if (data == null)
+				{
+					return;
+				}
+				UIIconManager.IconSet storyIcon = UISpriteDataManager.instance.GetStoryIcon(data.storyType);
+				if (storyIcon != null)
+				{
+					__instance.img_IconGlow.enabled = true;
+					__instance.img_Icon.enabled = true;
+					__instance.img_Icon.sprite = storyIcon.icon;
+					__instance.img_IconGlow.sprite = storyIcon.iconGlow;
+				}
+				if (OrcTools.StageNameDic.TryGetValue(data.id, out string stageName))
+				{
+					__instance.txt_StoryName.text = "workshop " + stageName;
+				}
+			}
+			catch (Exception ex)
+			{
+				File.WriteAllText(Application.dataPath + "/Mods/SIEPLSSBDerror.log", ex.Message + Environment.NewLine + ex.StackTrace);
+			}
+		}
+		//UIInvenEquipPageListSlot
+		[HarmonyPatch(typeof(UIInvenEquipPageListSlot), nameof(UIInvenEquipPageListSlot.SetBooksData))]
+		[HarmonyPostfix]
+		[HarmonyPriority(Priority.High)]
+		static void UIInvenEquipPageListSlot_SetBooksData_Post(UIInvenEquipPageListSlot __instance, List<BookModel> books, UIStoryKeyData storyKey)
+		{
+			try
+			{
+				if (books.Count < 0)
+				{
+					return;
+				}
+				if (EnumExtender.IsOriginalValue(storyKey.StoryLine))
+				{
+					return;
+				}
+				if (!OrcTools.EpisodeDic.TryGetValue(books[0].BookId, out var epId))
+				{
+					return;
+				}
+				StageClassInfo data = StageClassInfoList.Instance.GetData(epId);
+				if (data == null)
+				{
+					return;
+				}
+				UIIconManager.IconSet storyIcon = UISpriteDataManager.instance.GetStoryIcon(data.storyType);
+				if (storyIcon != null)
+				{
+					__instance.img_IconGlow.enabled = true;
+					__instance.img_Icon.enabled = true;
+					__instance.img_Icon.sprite = storyIcon.icon;
+					__instance.img_IconGlow.sprite = storyIcon.iconGlow;
+				}
+				if (OrcTools.StageNameDic.TryGetValue(data.id, out string stageName))
+				{
+					__instance.txt_StoryName.text = "workshop " + stageName;
+				}
+			}
+			catch (Exception ex)
+			{
+				File.WriteAllText(Application.dataPath + "/Mods/IEPLSSBDerror.log", ex.Message + Environment.NewLine + ex.StackTrace);
+			}
+		}
 
-        private static List<Assembly> AssemList;
+		//CustomMapManager
+		//InitCustomMap
+		/*
+		[HarmonyPatch(typeof(StageController), nameof(StageController.InitializeMap))]
+		[HarmonyPrefix]
+		static bool StageController_InitializeMap_Pre(StageController __instance)
+		{
+			try
+			{
+				if (__instance.stageType != StageType.Invitation)
+				{
+					return true;
+				}
+				else
+				{
+					BattleSceneRoot.Instance.HideAllFloorMap();
+					List<string> mapInfo = __instance.GetStageModel().ClassInfo.mapInfo;
+					if (mapInfo != null && mapInfo.Count > 0)
+					{
+						try
+						{
+							foreach (string text in mapInfo)
+							{
+								if (string.IsNullOrWhiteSpace(text))
+								{
+									continue;
+								}
+								string[] array = text.Split(new char[]
+								{
+									'_'
+								});
+								if (array[0].ToLower() == "custom")
+								{
+									string mapName = text.Substring("custom_".Length).Trim();
+									string resourcePath = ModContentManager.Instance.GetModPath(__instance.GetStageModel().ClassInfo.workshopID) + "/CustomMap_" + mapName;
+									if (CustomMapManager.TryGetValue(mapName + "MapManager", out Type mapmanager))
+									{
+										Debug.Log("Find MapManager:" + mapName);
+										if (mapmanager == null)
+										{
+											return true;
+										}
+										GameObject gameObject = Util.LoadPrefab("LibraryMaps/KETHER_Map", BattleSceneRoot.Instance.transform);
+										GameObject borderFrame = gameObject.GetComponent<MapManager>().borderFrame;
+										GameObject backgroundRoot = gameObject.GetComponent<MapManager>().backgroundRoot;
+										UnityEngine.Object.Destroy(gameObject.GetComponent<MapManager>());
+										gameObject.name = "InvitationMap_" + text;
+										MapManager mapManager = (MapManager)gameObject.AddComponent(mapmanager);
+										mapManager.borderFrame = borderFrame;
+										mapManager.backgroundRoot = backgroundRoot;
+										if (mapManager is CustomMapManager)
+										{
+											(mapManager as CustomMapManager).CustomInit();
+										}
+										BattleSceneRoot.Instance.InitInvitationMap(mapManager);
+									}
+									else if (Directory.Exists(resourcePath))
+									{
+										Debug.Log("Find SimpleMap:" + resourcePath);
+										GameObject gameObject = Util.LoadPrefab("LibraryMaps/KETHER_Map", BattleSceneRoot.Instance.transform);
+										GameObject borderFrame = gameObject.GetComponent<MapManager>().borderFrame;
+										GameObject backgroundRoot = gameObject.GetComponent<MapManager>().backgroundRoot;
+										UnityEngine.Object.Destroy(gameObject.GetComponent<MapManager>());
+										gameObject.name = "InvitationMap_" + text;
+										SimpleMapManager simpleMapManager = (SimpleMapManager)gameObject.AddComponent(typeof(SimpleMapManager));
+										simpleMapManager.borderFrame = borderFrame;
+										simpleMapManager.backgroundRoot = backgroundRoot;
+										simpleMapManager.SimpleInit(resourcePath, mapName);
+										simpleMapManager.CustomInit();
+										BattleSceneRoot.Instance.InitInvitationMap(simpleMapManager);
+									}
+								}
+								else
+								{
+									GameObject gameObject2 = Util.LoadPrefab("InvitationMaps/InvitationMap_" + text, BattleSceneRoot.Instance.transform);
+									gameObject2.name = "InvitationMap_" + text;
+									BattleSceneRoot.Instance.InitInvitationMap(gameObject2.GetComponent<MapManager>());
+								}
+							}
+						}
+						catch (Exception ex)
+						{
+							File.WriteAllText(Application.dataPath + "/Mods/stageerror.log", ex.Message + Environment.NewLine + ex.StackTrace);
+							BattleSceneRoot.Instance.InitFloorMap(__instance.CurrentFloor);
+						}
+					}
+				}
+				BattleSceneRoot.Instance.InitFloorMap(__instance.CurrentFloor);
+				return false;
+			}
+			catch (Exception ex)
+			{
+				File.WriteAllText(Application.dataPath + "/Mods/InitializeMaperror.log", ex.Message + Environment.NewLine + ex.StackTrace);
+			}
+			return true;
+		}
+		*/
+		[HarmonyPatch(typeof(StageController), nameof(StageController.InitializeMap))]
+		[HarmonyTranspiler]
+		static IEnumerable<CodeInstruction> StageController_InitializeMap_In(IEnumerable<CodeInstruction> instructions)
+		{
+			var loadPrefabMethod = Method(typeof(Util), nameof(Util.LoadPrefab), new Type[] { typeof(string), typeof(Transform) });
+			var getComponentMethod = Method(typeof(GameObject), nameof(GameObject.GetComponent), Array.Empty<Type>(), new Type[] { typeof(MapManager) });
+			var getHelperMethod = Method(typeof(Harmony_Patch), nameof(GetMapComponentFixed));
+			var currentMapNameProperty = PropertyGetter(typeof(List<string>.Enumerator), nameof(List<string>.Enumerator.Current));
+			var helperMethod = Method(typeof(Harmony_Patch), nameof(StageController_InitializeMap_CheckCustomMap));
+			foreach (var instruction in instructions)
+			{
+				if (instruction.Is(Callvirt, getComponentMethod))
+				{
+					yield return new CodeInstruction(Callvirt, getHelperMethod);
+				}
+				else
+				{
+					yield return instruction;
+				}
+				if (instruction.Is(Call, loadPrefabMethod))
+				{
+					yield return new CodeInstruction(Ldloca, 1);
+					yield return new CodeInstruction(Call, currentMapNameProperty);
+					yield return new CodeInstruction(Call, helperMethod);
+				}
+			}
+		}
+		static GameObject StageController_InitializeMap_CheckCustomMap(GameObject originalMapObject, string mapName)
+		{
+			try
+			{
+				if (!mapName.ToLower().StartsWith("custom_"))
+				{
+					return originalMapObject;
+				}
 
-        private static List<string> LoadedAssembly;
+				var customMapName = mapName.Substring("custom_".Length).Trim();
+				if (CustomMapManager.TryGetValue(customMapName + "MapManager", out Type mapmanager))
+				{
+					Debug.Log("Find MapManager:" + customMapName);
+					if (mapmanager == null)
+					{
+						return originalMapObject;
+					}
+					GameObject customMapObject = Util.LoadPrefab("LibraryMaps/KETHER_Map", BattleSceneRoot.Instance.transform);
+					MapManager oldManager = customMapObject.GetComponent<MapManager>();
+					MapManager newManager = (MapManager)customMapObject.AddComponent(mapmanager);
+					newManager.borderFrame = oldManager.borderFrame;
+					newManager.backgroundRoot = oldManager.backgroundRoot;
+					newManager._obstacleRoot = oldManager._obstacleRoot;
+					newManager._obstacles = oldManager._obstacles;
+					newManager._roots = oldManager._roots;
+					oldManager.enabled = false;
+					UnityEngine.Object.Destroy(oldManager);
+					customMapObject.name = "InvitationMap_" + mapName;
+					if (newManager is CustomMapManager)
+					{
+						(newManager as CustomMapManager).CustomInit();
+					}
+					return customMapObject;
+				}
+				else
+				{
+					var workshopId = StageController.Instance.GetStageModel()?.ClassInfo.workshopID;
+					if (!string.IsNullOrEmpty(workshopId))
+					{
+						string resourcePath = Path.Combine(ModContentManager.Instance.GetModPath(workshopId), "CustomMap_" + customMapName);
+						if (Directory.Exists(resourcePath))
+						{
+							Debug.Log("Find SimpleMap:" + resourcePath);
+							GameObject customMapObject = Util.LoadPrefab("LibraryMaps/KETHER_Map", BattleSceneRoot.Instance.transform);
+							MapManager oldManager = customMapObject.GetComponent<MapManager>();
+							SimpleMapManager simpleMapManager = customMapObject.AddComponent<SimpleMapManager>();
+							simpleMapManager.borderFrame = oldManager.borderFrame;
+							simpleMapManager.backgroundRoot = oldManager.backgroundRoot;
+							simpleMapManager._obstacleRoot = oldManager._obstacleRoot;
+							simpleMapManager._obstacles = oldManager._obstacles;
+							simpleMapManager._roots = oldManager._roots;
+							oldManager.enabled = false;
+							UnityEngine.Object.Destroy(oldManager);
+							customMapObject.name = "InvitationMap_" + mapName;
+							simpleMapManager.SimpleInit(resourcePath, customMapName);
+							simpleMapManager.CustomInit();
+							return customMapObject;
+						}
+					}
+				}
+			}
+			catch (Exception ex)
+			{
+				File.WriteAllText(Application.dataPath + "/Mods/InitializeMaperror.log", ex.Message + Environment.NewLine + ex.StackTrace);
+			}
+			return originalMapObject;
+		}
+		static MapManager GetMapComponentFixed(GameObject gameObject)
+		{
+			return gameObject.GetComponents<MapManager>().LastOrDefault();
+		}
+		//EgoMap
+		/*
+		[HarmonyPatch(typeof(BattleSceneRoot), nameof(BattleSceneRoot.ChangeToEgoMap))]
+		[HarmonyPrefix]
+		static bool BattleSceneRoot_ChangeToEgoMap_Pre(string mapName)
+		{
+			try
+			{
+				MapChangeFilter mapChangeFilter = BattleSceneRoot.Instance._mapChangeFilter;
+				GameObject gameObject = null;
+				string[] array = mapName.Split(new char[]
+				{
+			'_'
+				});
+				if (array[0].ToLower() == "custom" && CustomMapManager.TryGetValue(mapName.Substring("custom_".Length).Trim() + "MapManager", out Type mapmanager))
+				{
+					if (mapmanager == null)
+					{
+						return true;
+					}
+					gameObject = Util.LoadPrefab("LibraryMaps/KETHER_Map", BattleSceneRoot.Instance.transform);
+					GameObject borderFrame = gameObject.GetComponent<MapManager>().borderFrame;
+					GameObject backgroundRoot = gameObject.GetComponent<MapManager>().backgroundRoot;
+					try
+					{
+						UnityEngine.Object.Destroy(gameObject.GetComponent<MapManager>());
+					}
+					catch { }
+					gameObject.name = "EGO_CardMap_" + mapName;
+					MapManager mapManager = (MapManager)gameObject.AddComponent(mapmanager);
+					mapManager.borderFrame = borderFrame;
+					mapManager.backgroundRoot = backgroundRoot;
+					if (mapManager is CustomMapManager)
+					{
+						(mapManager as CustomMapManager).CustomInit();
+					}
+					if (gameObject != null)
+					{
+						mapChangeFilter.StartMapChangingEffect(Direction.RIGHT, true);
+						MapManager component = gameObject.GetComponent<MapManager>();
+						gameObject.name = "CreatureMap_" + mapName;
+						component.isBossPhase = false;
+						component.isEgo = true;
+						if (BattleSceneRoot.Instance.currentMapObject.isCreature)
+						{
+							UnityEngine.Object.Destroy(BattleSceneRoot.Instance.currentMapObject.gameObject);
+						}
+						else
+						{
+							BattleSceneRoot.Instance.currentMapObject.EnableMap(false);
+						}
+						if (component != null)
+						{
+							if (BattleSceneRoot.Instance.currentMapObject != null && BattleSceneRoot.Instance.currentMapObject.isCreature)
+							{
+								UnityEngine.Object.Destroy(BattleSceneRoot.Instance.currentMapObject.gameObject);
+								BattleSceneRoot.Instance.currentMapObject = null;
+							}
+							BattleSceneRoot.Instance.currentMapObject = component;
+							BattleSceneRoot.Instance.currentMapObject.ActiveMap(true);
+							BattleSceneRoot.Instance.currentMapObject.InitializeMap();
+							return false;
+						}
+						else
+						{
+							Debug.LogError("Ego map not found");
+						}
+					}
+				}
+			}
+			catch (Exception ex)
+			{
+				File.WriteAllText(Application.dataPath + "/Mods/ChangeToEgoMaperror.log", ex.Message + Environment.NewLine + ex.StackTrace);
+			}
+			return true;
+		}
+		*/
+		[HarmonyPatch(typeof(BattleSceneRoot), nameof(BattleSceneRoot.ChangeToEgoMap))]
+		[HarmonyTranspiler]
+		static IEnumerable<CodeInstruction> BattleSceneRoot_ChangeToEgoMap_In(IEnumerable<CodeInstruction> instructions)
+		{
+			var loadPrefabMethod = Method(typeof(Util), nameof(Util.LoadPrefab), new Type[] { typeof(string), typeof(Transform) });
+			var getComponentMethod = Method(typeof(GameObject), nameof(GameObject.GetComponent), Array.Empty<Type>(), new Type[] { typeof(MapManager) });
+			var getHelperMethod = Method(typeof(Harmony_Patch), nameof(GetMapComponentFixed));
+			var helperMethod = Method(typeof(Harmony_Patch), nameof(BattleSceneRoot_ChangeToEgoMap_CheckCustomMap));
+			foreach (var instruction in instructions)
+			{
+				if (instruction.Is(Callvirt, getComponentMethod))
+				{
+					yield return new CodeInstruction(Callvirt, getHelperMethod);
+				}
+				else
+				{
+					yield return instruction;
+				}
+				if (instruction.Is(Call, loadPrefabMethod))
+				{
+					yield return new CodeInstruction(Ldarg_1);
+					yield return new CodeInstruction(Call, helperMethod);
+				}
+			}
+		}
+		static GameObject BattleSceneRoot_ChangeToEgoMap_CheckCustomMap(GameObject originalMapObject, string mapName)
+		{
+			try
+			{
+				if (!mapName.ToLower().StartsWith("custom_"))
+				{
+					return originalMapObject;
+				}
 
-        public static Dictionary<string, Type> CustomEffects = new Dictionary<string, Type>();
+				var customMapName = mapName.Substring("custom_".Length).Trim();
+				if (CustomMapManager.TryGetValue(customMapName + "MapManager", out Type mapmanager))
+				{
+					Debug.Log("Find EGO MapManager:" + customMapName);
+					if (mapmanager == null)
+					{
+						return originalMapObject;
+					}
+					GameObject customMapObject = Util.LoadPrefab("LibraryMaps/KETHER_Map", BattleSceneRoot.Instance.transform);
+					MapManager oldManager = customMapObject.GetComponent<MapManager>();
+					MapManager newManager = (MapManager)customMapObject.AddComponent(mapmanager);
+					newManager.borderFrame = oldManager.borderFrame;
+					newManager.backgroundRoot = oldManager.backgroundRoot;
+					newManager._obstacleRoot = oldManager._obstacleRoot;
+					newManager._obstacles = oldManager._obstacles;
+					newManager._roots = oldManager._roots;
+					oldManager.enabled = false;
+					UnityEngine.Object.Destroy(oldManager);
+					customMapObject.name = "EGO_CardMap_" + mapName;
+					if (newManager is CustomMapManager)
+					{
+						(newManager as CustomMapManager).CustomInit();
+					}
+					return customMapObject;
+				}
+			}
+			catch (Exception ex)
+			{
+				File.WriteAllText(Application.dataPath + "/Mods/ChangeToEgoMaperror.log", ex.Message + Environment.NewLine + ex.StackTrace);
+			}
+			return originalMapObject;
+		}
+		//CanChangeMap
+		[HarmonyPatch(typeof(StageController), nameof(StageController.CanChangeMap))]
+		[HarmonyPostfix]
+		static void StageController_CanChangeMap_Post(ref bool __result)
+		{
+			if (BattleSceneRoot.Instance.currentMapObject is CustomMapManager customMap)
+			{
+				__result &= customMap.IsMapChangable();
+			}
+		}
+		//check to prevent AddEgoMapByAssimilation and most of its custom variants
+		[HarmonyPatch(typeof(StageController), nameof(StageController.IsTwistedArgaliaBattleEnd))]
+		[HarmonyPostfix]
+		static void StageController_IsTwistedArgaliaBattleEnd_Post(ref bool __result)
+		{
+			if (BattleSceneRoot.Instance.currentMapObject is CustomMapManager customMap)
+			{
+				var frame = new System.Diagnostics.StackFrame(2);
+				if (frame.GetMethod().Name.Contains("MapByAssimilation"))
+				{
+					__result |= !customMap.IsMapChangableByAssimilation();
+				}
+			}
+		}
+		//Not be used now
+		public static GameObject FindBaseMap(string name)
+		{
+			GameObject gameObject = null;
+			if (name == "malkuth")
+			{
+				gameObject = Util.LoadPrefab("LibraryMaps/MALKUTH_Map", BattleSceneRoot.Instance.transform);
+			}
+			if (name == "yesod")
+			{
+				gameObject = Util.LoadPrefab("LibraryMaps/YESOD_Map", BattleSceneRoot.Instance.transform);
+			}
+			if (name == "hod")
+			{
+				gameObject = Util.LoadPrefab("LibraryMaps/HOD_Map", BattleSceneRoot.Instance.transform);
+			}
+			if (name == "netzach")
+			{
+				gameObject = Util.LoadPrefab("LibraryMaps/NETZACH_Map", BattleSceneRoot.Instance.transform);
+			}
+			if (name == "tiphereth")
+			{
+				gameObject = Util.LoadPrefab("LibraryMaps/TIPHERETH_Map", BattleSceneRoot.Instance.transform);
+			}
+			if (name == "gebura")
+			{
+				gameObject = Util.LoadPrefab("LibraryMaps/GEBURAH_Map", BattleSceneRoot.Instance.transform);
+			}
+			if (name == "chesed")
+			{
+				gameObject = Util.LoadPrefab("LibraryMaps/CHESED_Map", BattleSceneRoot.Instance.transform);
+			}
+			if (name == "keter")
+			{
+				gameObject = Util.LoadPrefab("LibraryMaps/KETHER_Map", BattleSceneRoot.Instance.transform);
+			}
+			if (name == "hokma")
+			{
+				gameObject = Util.LoadPrefab("LibraryMaps/HOKMA_Map", BattleSceneRoot.Instance.transform);
+			}
+			if (name == "binah")
+			{
+				gameObject = Util.LoadPrefab("LibraryMaps/BINAH_Map", BattleSceneRoot.Instance.transform);
+			}
+			if (gameObject == null)
+			{
+				try
+				{
+					gameObject = Util.LoadPrefab("InvitationMaps/InvitationMap_" + name, BattleSceneRoot.Instance.transform);
+				}
+				catch (Exception)
+				{
+					gameObject = null;
+				}
+			}
+			if (gameObject == null)
+			{
+				try
+				{
+					gameObject = Util.LoadPrefab("CreatureMaps/CreatureMap_" + name, BattleSceneRoot.Instance.transform);
+				}
+				catch (Exception)
+				{
+					gameObject = null;
+				}
+			}
+			GameObject result;
+			if (gameObject != null)
+			{
+				result = gameObject;
+			}
+			else
+			{
+				result = null;
+			}
+			return result;
+		}
 
-        public static Dictionary<string, Type> CustomMapManager = new Dictionary<string, Type>();
+		//Others
+		//AutoMod1
+		[HarmonyPatch(typeof(UIStoryProgressPanel), nameof(UIStoryProgressPanel.SelectedSlot))]
+		[HarmonyPrefix]
+		static void UIStoryProgressPanel_SelectedSlot_Pre(UIStoryProgressIconSlot slot)
+		{
+			try
+			{
+				IsModStorySelected = !string.IsNullOrWhiteSpace(slot?._storyData?.FirstOrDefault()?.workshopID);
+			}
+			catch (Exception ex)
+			{
+				File.WriteAllText(Application.dataPath + "/Mods/CheckSelectedSloterror.log", ex.Message + Environment.NewLine + ex.StackTrace);
+			}
+		}
+		//AutoMod2
+		[HarmonyPatch(typeof(UIInvitationRightMainPanel), nameof(UIInvitationRightMainPanel.SetCustomInvToggle))]
+		[HarmonyPrefix]
+		static bool UIInvitationRightMainPanel_SetCustomInvToggle_Pre(UIInvitationRightMainPanel __instance, ref bool ison)
+		{
+			ison |= IsModStorySelected;
+			__instance._workshopInvitationToggle.SetIsOnWithoutNotify(ison);
+			__instance.customInvPanel.Close();
+			__instance.currentSelectedNormalstage = null;
+			return false;
+		}
+		//ErrorNull for delete card from deck
+		[HarmonyPatch(typeof(ItemXmlDataList), nameof(ItemXmlDataList.GetCardItem), new Type[] { typeof(LorId), typeof(bool) })]
+		[HarmonyTranspiler]
+		static IEnumerable<CodeInstruction> ItemXmlDataList_GetCardItem_In(IEnumerable<CodeInstruction> instructions)
+		{
+			var constructor = Constructor(typeof(DiceCardXmlInfo), new Type[] { typeof(LorId) });
+			foreach (var instruction in instructions)
+			{
+				if (instruction.Is(Newobj, constructor))
+				{
+					yield return new CodeInstruction(Call, Method(typeof(Harmony_Patch), nameof(ItemXmlDataList_GetCardItem_CheckNullCard)));
+				}
+				else
+				{
+					yield return instruction;
+				}
+			}
+		}
+		static DiceCardXmlInfo ItemXmlDataList_GetCardItem_CheckNullCard(LorId id)
+		{
+			if (errNullCard == null)
+			{
+				errNullCard = new DiceCardXmlInfo(LorId.None);
+			}
+			return errNullCard;
+		}
+		//0book to "∞"
+		[HarmonyPatch(typeof(UIInvitationDropBookSlot), nameof(UIInvitationDropBookSlot.SetData_DropBook))]
+		[HarmonyPostfix]
+		static void UIInvitationDropBookSlot_SetData_DropBook_Post(UIInvitationDropBookSlot __instance, LorId bookId)
+		{
+			try
+			{
+				if (DropBookInventoryModel.Instance.GetBookCount(bookId) == 0)
+				{
+					__instance.txt_bookNum.text = "∞";
+				}
+			}
+			catch { }
+		}
+		//ChangeLanguage
+		[HarmonyPatch(typeof(TextDataModel), nameof(TextDataModel.InitTextData))]
+		[HarmonyPostfix]
+		static void TextDataModel_InitTextData_Post()
+		{
+			try
+			{
+				LocalizedTextLoader_New.ExportOriginalFiles();
+				LocalizedTextLoader_New.LoadModFiles(ModContentManager.Instance._loadedContents);
+			}
+			catch (Exception ex)
+			{
+				ModContentManager.Instance.AddErrorLog(ex.Message + Environment.NewLine + ex.StackTrace);
+				File.WriteAllText(Application.dataPath + "/Mods/InitTextDataerror.log", ex.Message + Environment.NewLine + ex.StackTrace);
+			}
+		}
+		//LoadStory
+		[HarmonyPatch(typeof(StorySerializer), nameof(StorySerializer.LoadStory), new Type[] { typeof(bool) })]
+		[HarmonyPostfix]
+		static void StorySerializer_LoadStory_Post()
+		{
+			try
+			{
+				StorySerializer_new.ExportStory();
+			}
+			catch (Exception ex)
+			{
+				ModContentManager.Instance.AddErrorLog(ex.Message + Environment.NewLine + ex.StackTrace);
+				File.WriteAllText(Application.dataPath + "/Mods/LoadStoryerror.log", ex.Message + Environment.NewLine + ex.StackTrace);
+			}
+		}
+		//DiceAttackEffect
+		[HarmonyPatch(typeof(DiceEffectManager), nameof(DiceEffectManager.CreateBehaviourEffect))]
+		[HarmonyPrefix]
+		static bool DiceEffectManager_CreateBehaviourEffect_Pre(ref DiceAttackEffect __result, string resource, float scaleFactor, BattleUnitView self, BattleUnitView target, float time = 1f)
+		{
+			try
+			{
+				if (resource == null || string.IsNullOrWhiteSpace(resource))
+				{
+					__result = null;
+					return false;
+				}
+				else
+				{
+					if (CustomEffects.TryGetValue(resource, out var componentType))
+					{
+						DiceAttackEffect diceAttackEffect = new GameObject(resource).AddComponent(componentType) as DiceAttackEffect;
+						diceAttackEffect.Initialize(self, target, time);
+						diceAttackEffect.SetScale(scaleFactor);
+						__result = diceAttackEffect;
+						return false;
+					}
+				}
+			}
+			catch (Exception ex)
+			{
+				File.WriteAllText(Application.dataPath + "/Mods/CreateBehaviourEffecterror.log", ex.Message + Environment.NewLine + ex.StackTrace);
+			}
+			return true;
+		}
+		//More Waves UI
+		[HarmonyPatch(typeof(UIBattleSettingWaveList), nameof(UIBattleSettingWaveList.SetData))]
+		[HarmonyPrefix]
+		static void UIBattleSettingWaveList_SetData_Pre(UIBattleSettingWaveList __instance, StageModel stage)
+		{
+			try
+			{
+				if (__instance.transform.parent.GetComponent<ScrollRect>() == null)
+				{
+					var target = __instance.gameObject.transform as RectTransform;
+					var scrollView = new GameObject("[Rect]WaveListView");
+					var scrollTransform = scrollView.AddComponent<RectTransform>();
+					scrollTransform.SetParent(target.parent);
+					scrollTransform.localPosition = new Vector3(0, -35, 0);
+					scrollTransform.localEulerAngles = Vector3.zero;
+					scrollTransform.localScale = Vector3.one;
+					scrollTransform.sizeDelta = Vector2.one * 800;
+					scrollView.AddComponent<RectMask2D>();
+					target.SetParent(scrollTransform, true);
+					var scrollRect = scrollView.AddComponent<ScrollRect>();
+					scrollRect.content = target;
+					scrollRect.scrollSensitivity = 15f;
+					scrollRect.horizontal = false;
+					scrollRect.movementType = ScrollRect.MovementType.Elastic;
+					scrollRect.elasticity = 0.1f;
+				}
+				if (stage.waveList.Count > __instance.waveSlots.Count)
+				{
+					var newList = new List<UIBattleSettingWaveSlot>(stage.waveList.Count - __instance.waveSlots.Count);
+					for (int i = __instance.waveSlots.Count; i < stage.waveList.Count; i++)
+					{
+						UIBattleSettingWaveSlot uibattleSettingWaveSlot = UnityEngine.Object.Instantiate(__instance.waveSlots[0], __instance.waveSlots[0].transform.parent);
+						uibattleSettingWaveSlot.name = $"[Rect]WaveSlot ({i})";
+						newList.Add(uibattleSettingWaveSlot);
+					}
+					newList.Reverse();
+					__instance.waveSlots.InsertRange(0, newList);
+				}
+				InitUIBattleSettingWaveSlots(__instance.waveSlots);
+			}
+			catch (Exception ex)
+			{
+				File.WriteAllText(Application.dataPath + "/Mods/UIBSWLerror.log", ex.Message + Environment.NewLine + ex.StackTrace);
+			}
+		}
+		/* handled by SerializeField already
+		static void InitUIBattleSettingWaveSlot(UIBattleSettingWaveSlot slot, UIBattleSettingWaveList list)
+		{
+			slot.panel = list;
+			var rect = slot.transform as RectTransform;
+			slot.rect = rect;
+			var waveIcon = rect.Find("[Rect]WaveIcon");
+			var circle = waveIcon.Find("[Image]CircleFrame");
+			var circleGlow = waveIcon.Find("[Image]CircleFrameGlow");
+			var icon = waveIcon.Find("[Image]Icon");
+			var iconGlow = waveIcon.Find("[Image]IconGlow");
+			slot.img_circle = circle.GetComponent<Image>();
+			slot.hsv_Circle = circle.GetComponent<_2dxFX_HSV>();
+			slot.img_circleglow = circleGlow.GetComponent<Image>();
+			slot.hsv_CircleGlow = circleGlow.GetComponent<_2dxFX_HSV>();
+			slot.img_Icon = icon.GetComponent<Image>();
+			slot.hsv_Icon = icon.GetComponent<_2dxFX_HSV>();
+			slot.img_IconGlow = iconGlow.GetComponent<Image>();
+			slot.hsv_IconGlow = iconGlow.GetComponent<_2dxFX_HSV>();
+			var text = rect.Find("[Text]AlarmText");
+			slot.txt_Alarm = text.GetComponent<TextMeshProUGUI>();
+			slot.materialsetter_txtAlarm = text.GetComponent<TextMeshProMaterialSetter>();
+			slot.arrow = rect.Find("[Image]Arrow (1)").GetComponent<Image>();
+			slot.defeatColor = new Color(0.454902f, 0.1098039f, 0f, 1f);
+			slot.anim = slot.GetComponent<Animator>();
+			slot.cg = slot.GetComponent<CanvasGroup>();
+			slot.transform.localPosition = new Vector2(120f, 0f);
+			slot.gameObject.SetActive(false);
+		}
+		*/
+		static void InitUIBattleSettingWaveSlots(List<UIBattleSettingWaveSlot> slots)
+		{
+			for (int i = 0; i < slots.Count; i++)
+			{
+				slots[i].gameObject.transform.localScale = new Vector3(1f, 1f);
+			}
+		}
+		//over 999 dicevalue
+		[HarmonyPatch(typeof(BattleSimpleActionUI_Dice), nameof(BattleSimpleActionUI_Dice.SetDiceValue))]
+		[HarmonyPrefix]
+		static bool BattleSimpleActionUI_Dice_SetDiceValue_Pre(BattleSimpleActionUI_Dice __instance, bool enable, int diceValue)
+		{
+			try
+			{
+				int num = 0;
+				int num2 = diceValue;
+				List<GameObject> list = new List<GameObject>();
+				List<GameObject> list2 = new List<GameObject>();
+				for (int i = 0; i < __instance.layout_numbers.childCount; i++)
+				{
+					list.Add(__instance.layout_numbers.GetChild(i).gameObject);
+					list2.Add(__instance.layout_numberbgs.GetChild(i).gameObject);
+					__instance.layout_numbers.GetChild(i).gameObject.SetActive(false);
+					__instance.layout_numberbgs.GetChild(i).gameObject.SetActive(false);
+				}
+				bool flag;
+				do
+				{
+					num++;
+					num2 /= 10;
+					flag = (num2 == 0);
+				}
+				while (!flag);
+				int num3 = num - __instance.layout_numbers.childCount;
+				for (int j = 0; j < num3; j++)
+				{
+					GameObject gameObject = UnityEngine.Object.Instantiate(__instance.layout_numbers.GetChild(0).gameObject, __instance.layout_numbers);
+					list.Add(gameObject);
+					gameObject.gameObject.SetActive(false);
+					GameObject gameObject2 = UnityEngine.Object.Instantiate(__instance.layout_numberbgs.GetChild(0).gameObject, __instance.layout_numberbgs);
+					list2.Add(gameObject2);
+					gameObject2.gameObject.SetActive(false);
+				}
+				if (enable)
+				{
+					List<Sprite> battleDice_NumberAutoSlice = UISpriteDataManager.instance.BattleDice_NumberAutoSlice;
+					List<Sprite> battleDice_numberAutoSliceBg = UISpriteDataManager.instance.BattleDice_numberAutoSliceBg;
+					for (int k = 0; k < num; k++)
+					{
+						int index = diceValue % 10;
+						Sprite sprite = battleDice_NumberAutoSlice[index];
+						Image component = list[list.Count - k - 1].GetComponent<Image>();
+						component.sprite = sprite;
+						component.SetNativeSize();
+						component.gameObject.SetActive(true);
+						Sprite sprite2 = battleDice_numberAutoSliceBg[index];
+						Image component2 = list2[list.Count - k - 1].GetComponent<Image>();
+						component2.sprite = sprite2;
+						component2.SetNativeSize();
+						component2.gameObject.SetActive(true);
+						component2.rectTransform.anchoredPosition = component.rectTransform.anchoredPosition;
+						diceValue /= 10;
+					}
+				}
+				return false;
+			}
+			catch (Exception ex)
+			{
+				File.WriteAllText(Application.dataPath + "/Mods/SetDiceValueerror.log", ex.Message + Environment.NewLine + ex.StackTrace);
+			}
+			return true;
+		}
+		//VersionViewer
+		[HarmonyPatch(typeof(VersionViewer), nameof(VersionViewer.Start))]
+		[HarmonyPrefix]
+		static void VersionViewer_Start_Pre(VersionViewer __instance)
+		{
+			__instance.GetComponent<Text>().fontSize = 30;
+			__instance.gameObject.transform.localPosition = new Vector3(-830f, -460f);
+		}
+		//CopyCheck
+		[HarmonyPatch(typeof(DiceCardXmlInfo), nameof(DiceCardXmlInfo.Copy))]
+		[HarmonyPostfix]
+		static void DiceCardXmlInfo_Copy_Post(DiceCardXmlInfo __instance, ref DiceCardXmlInfo __result)
+		{
+			__result.Keywords = __instance.Keywords.ToList();
+		}
+		/*
+		//Mod_Update
+		//Using For Reload
+		[HarmonyPatch(typeof(DebugConsoleScript), nameof(DebugConsoleScript.Update))]
+		[HarmonyPrefix]
+		static void Mod_Update()
+		{
+			try
+			{
+				if (!IsEditing && entryScene != null && Input.GetKeyDown(KeyCode.R))
+				{
+					File.WriteAllText(Application.dataPath + "/Mods/PressSuccess.log", "success");
+					entryScene.OnCompleteInitializePlatform_xboxlive(true);
+				}
+				IsEditing = true;
+			}
+			catch (Exception ex)
+			{
+				ModContentManager.Instance.AddErrorLog(ex.Message + Environment.NewLine + ex.StackTrace);
+				File.WriteAllText(Application.dataPath + "/Mods/Updateerror.log", ex.Message + Environment.NewLine + ex.StackTrace);
+			}
+		}
+		//Using For Reload
+		[HarmonyPatch(typeof(ModContentManager), nameof(ModContentManager.SetActiveContents))]
+		[HarmonyPrefix]
+		static void ModContentManager_SetActiveContents_Pre(ModContentManager __instance)
+		{
+			__instance._loadedContents.Clear();
+		}
+		//Using For Reload
+		[HarmonyPatch(typeof(UIModPopup), nameof(UIModPopup.Close))]
+		[HarmonyPrefix]
+		static void UIModPopup_Close_Post()
+		{
+			try
+			{
+				if (IsEditing)
+				{
+					ReloadModFiles();
+					LoadAssemblyFiles();
+					LoadModFiles();
+				}
+			}
+			catch (Exception ex)
+			{
+				ModContentManager.Instance.AddErrorLog(ex.Message + Environment.NewLine + ex.StackTrace);
+				File.WriteAllText(Application.dataPath + "/Mods/ModSettingerror.log", ex.Message + Environment.NewLine + ex.StackTrace);
+			}
+			IsEditing = false;
+		}*/
 
-        public static Dictionary<string, Type> CustomBattleDialogModel = new Dictionary<string, Type>();
+		//ModItemSort
+		//BookSort
+		[HarmonyPatch(typeof(UIInvitationDropBookList), nameof(UIInvitationDropBookList.ApplyFilterAll))]
+		[HarmonyPostfix]
+		static void UIInvitationDropBookList_ApplyFilterAll_Post(UIInvitationDropBookList __instance)
+		{
+			try
+			{
+				var resorted = __instance._currentBookIdList.OrderBy(x => string.IsNullOrWhiteSpace(x.packageId) || x.packageId.EndsWith("@origin") ? "" : x.packageId).ToArray();
+				__instance._currentBookIdList.Clear();
+				__instance._currentBookIdList.AddRange(resorted);
+				__instance.SelectablePanel.ChildSelectable = __instance.BookSlotList[0].selectable;
+				__instance.UpdateBookListPage(false);
+			}
+			catch (Exception ex)
+			{
+				File.WriteAllText(Application.dataPath + "/Mods/ModBookSort_Invi.log", ex.Message + Environment.NewLine + ex.StackTrace);
+			}
+		}
+		//BookSort
+		[HarmonyPatch(typeof(UIInvenFeedBookList), nameof(UIInvenFeedBookList.ApplyFilterAll))]
+		[HarmonyPostfix]
+		static void UIInvenFeedBookList_ApplyFilterAll_Post(UIInvenFeedBookList __instance)
+		{
+			try
+			{
+				var resorted = __instance._currentBookIdList.OrderBy(x => string.IsNullOrWhiteSpace(x.packageId) || x.packageId.EndsWith("@origin") ? "" : x.packageId).ToArray();
+				__instance._currentBookIdList.Clear();
+				__instance._currentBookIdList.AddRange(resorted);
+				__instance.UpdateBookListPage(false);
+			}
+			catch (Exception ex)
+			{
+				File.WriteAllText(Application.dataPath + "/Mods/ModBookSort_Feed.log", ex.Message + Environment.NewLine + ex.StackTrace);
+			}
+		}
+		//CardSort
+		[HarmonyPatch(typeof(UIInvenCardListScroll), nameof(UIInvenCardListScroll.ApplyFilterAll))]
+		[HarmonyPrefix]
+		static bool UIInvenCardListScroll_ApplyFilterAll_Pre(UIInvenCardListScroll __instance)
+		{
+			try
+			{
+				__instance._currentCardListForFilter.Clear();
+				List<DiceCardItemModel> cardsByDetailFilterUI = __instance.GetCardsByDetailFilterUI(__instance.GetCardBySearchFilterUI(__instance.GetCardsByCostFilterUI(__instance.GetCardsByGradeFilterUI(__instance._originCardList))));
+				cardsByDetailFilterUI.Sort(new Comparison<DiceCardItemModel>(ModCardItemSort));
+				if (__instance._unitdata != null)
+				{
+					Predicate<DiceCardItemModel> cond1 = (DiceCardItemModel x) => true;
+					switch (__instance._unitdata.bookItem.ClassInfo.RangeType)
+					{
+						case EquipRangeType.Melee:
+							cond1 = (DiceCardItemModel x) => x.GetSpec().Ranged != CardRange.Far;
+							break;
+						case EquipRangeType.Range:
+							cond1 = (DiceCardItemModel x) => x.GetSpec().Ranged != CardRange.Near;
+							break;
+						case EquipRangeType.Hybrid:
+							cond1 = (DiceCardItemModel x) => true;
+							break;
+					}
+					List<DiceCardXmlInfo> onlyCards = __instance._unitdata.bookItem.GetOnlyCards();
+					Predicate<DiceCardItemModel> cond2 = ((DiceCardItemModel x) => onlyCards.Exists((DiceCardXmlInfo y) => y.id == x.GetID()));
+					__instance._currentCardListForFilter.AddRange(cardsByDetailFilterUI.FindAll((DiceCardItemModel x) => x.ClassInfo.optionList.Contains(CardOption.OnlyPage) ? cond2(x) : cond1(x)));
+					__instance._currentCardListForFilter.AddRange(cardsByDetailFilterUI.FindAll((DiceCardItemModel x) => x.ClassInfo.optionList.Contains(CardOption.OnlyPage) && !cond1(x)));
+				}
+				else
+				{
+					__instance._currentCardListForFilter.AddRange(cardsByDetailFilterUI);
+				}
+				int num = __instance.GetMaxRow();
+				__instance.scrollBar.SetScrollRectSize(__instance.column * __instance.slotWidth, (num + (float)__instance.row - 1f) * __instance.slotHeight);
+				__instance.scrollBar.SetWindowPosition(0f, 0f);
+				__instance.selectablePanel.ChildSelectable = __instance.slotList[0].selectable;
+				__instance.SetCardsData(__instance.GetCurrentPageList());
+				return false;
+			}
+			catch (Exception ex)
+			{
+				File.WriteAllText(Application.dataPath + "/Mods/ModCardSort.log", ex.Message + Environment.NewLine + ex.StackTrace);
+			}
+			return true;
+		}
+		static int ModCardItemSort(DiceCardItemModel a, DiceCardItemModel b)
+		{
+			int num = b.ClassInfo.optionList.Contains(CardOption.OnlyPage) ? 1 : 0;
+			int num2 = a.ClassInfo.optionList.Contains(CardOption.OnlyPage) ? 1 : 0;
+			int num3 = (b.ClassInfo.isError ? -1 : num) - (a.ClassInfo.isError ? -1 : num2);
+			int result;
+			if (num3 != 0)
+			{
+				result = num3;
+			}
+			else
+			{
+				num3 = a.GetSpec().Cost - b.GetSpec().Cost;
+				if (num3 != 0)
+				{
+					result = num3;
+				}
+				else
+				{
+					num3 = a.ClassInfo.workshopID.CompareTo(b.ClassInfo.workshopID);
+					result = ((num3 != 0) ? num3 : (a.GetID().id - b.GetID().id));
+				}
+			}
+			return result;
+		}
 
-        public static Dictionary<string, Type> CustomGiftPassive = new Dictionary<string, Type>();
+		//ModSetting
+		//SaveModSetting
+		[HarmonyPatch(typeof(SaveManager), nameof(SaveManager.SavePlayData))]
+		[HarmonyPrefix]
+		static void SaveManager_SavePlayData_Pre()
+		{
+			try
+			{
+				ModSaveTool.SaveModSaveData();/*
+				if (File.Exists(SaveManager.savePath + "/Player.log"))
+				{
+					if (File.Exists(Application.dataPath + "/Mods/Player.log"))
+					{
+						File.Delete(Application.dataPath + "/Mods/Player.log");
+					}
+					File.Copy(SaveManager.savePath + "/Player.log", Application.dataPath + "/Mods/Player.log");
+				}*/
+			}
+			catch (Exception ex)
+			{
+				File.WriteAllText(Application.dataPath + "/Mods/SaveFailed.log", ex.Message + Environment.NewLine + ex.StackTrace);
+			}
+		}
+		//RemoveUnknownSaves
+		/*
+		[HarmonyPatch(typeof(GameOpeningController), nameof(GameOpeningController.StopOpening))]
+		[HarmonyPostfix]
+		static void OnLoadMainScene(Scene scene, LoadSceneMode _)
+		{
+			if (scene.name == "Stage_Hod_New")
+			{
+				SceneManager.sceneLoaded -= OnLoadMainScene;
+				GameOpeningController_StopOpening_Post();
+			}
+		}
+		static void GameOpeningController_StopOpening_Post()
+		{
+			try
+			{
+				LoadCoreThumbs();
+				LoadCoreSounds();
+			}
+			catch (Exception ex)
+			{
+				File.WriteAllText(Application.dataPath + "/Mods/LoadFromModSaveDataerror.txt", ex.Message + Environment.NewLine + ex.StackTrace);
+			}
+		}
+		//CustomGift
+		//CreateGiftData
+		/*
+		[HarmonyPatch(typeof(CharacterAppearance), nameof(CharacterAppearance.CreateGiftData))]
+		[HarmonyPrefix]
+		static bool CharacterAppearance_CreateGiftData_Pre(CharacterAppearance __instance, ref GiftAppearance __result, GiftModel gift, string resPath)
+		{
+			try
+			{
+				if (__instance._customAppearance == null)
+				{
+					__result = null;
+					return false;
+				}
+				else
+				{
+					string[] array = resPath.Split(new char[]
+					{
+						'/'
+					});
+					string[] array2 = array[array.Length - 1].Split(new char[]
+					{
+						 '_'
+					});
+					if (array2[1].ToLower() != "custom")
+					{
+						return true;
+					}
+					else
+					{
+						bool flag = false;
+						GiftAppearance giftAppearance = null;
+						Dictionary<GiftPosition, GiftAppearance> dictionary = __instance._giftAppearanceDic;
+						if (dictionary.ContainsKey(gift.ClassInfo.Position))
+						{
+							giftAppearance = dictionary[gift.ClassInfo.Position];
+							if (giftAppearance.ResourceName != resPath)
+							{
+								dictionary.Remove(gift.ClassInfo.Position);
+								UnityEngine.Object.Destroy(giftAppearance.gameObject);
+								flag = true;
+							}
+						}
+						else
+						{
+							flag = true;
+						}
+						if (flag)
+						{
+							giftAppearance = UnityEngine.Object.Instantiate(Resources.Load<GameObject>("Prefabs/Gifts/Gifts_NeedRename/Gift_Challenger"), __instance.transform).GetComponent<GiftAppearance>();
+							SpriteRenderer spriteRenderer = giftAppearance._frontSpriteRenderer;
+							SpriteRenderer spriteRenderer2 = giftAppearance._sideSpriteRenderer;
+							SpriteRenderer spriteRenderer3 = giftAppearance._frontBackSpriteRenderer;
+							SpriteRenderer spriteRenderer4 = giftAppearance._sideBackSpriteRenderer;
+							spriteRenderer.gameObject.transform.localScale = new Vector2(1f, 1f);
+							if (CustomGiftAppearance.GiftArtWork.ContainsKey(array2[2] + "_front"))
+							{
+								spriteRenderer.sprite = CustomGiftAppearance.GiftArtWork[array2[2] + "_front"];
+							}
+							else
+							{
+								spriteRenderer.gameObject.SetActive(false);
+								giftAppearance._frontSpriteRenderer = null;
+							}
+							spriteRenderer2.gameObject.transform.localScale = new Vector2(1f, 1f);
+							if (CustomGiftAppearance.GiftArtWork.ContainsKey(array2[2] + "_side"))
+							{
+								spriteRenderer2.sprite = CustomGiftAppearance.GiftArtWork[array2[2] + "_side"];
+							}
+							else
+							{
+								spriteRenderer2.gameObject.SetActive(false);
+								giftAppearance._sideSpriteRenderer = null;
+							}
+							spriteRenderer3.gameObject.transform.localScale = new Vector2(1f, 1f);
+							if (CustomGiftAppearance.GiftArtWork.ContainsKey(array2[2] + "_frontBack"))
+							{
+								spriteRenderer3.sprite = CustomGiftAppearance.GiftArtWork[array2[2] + "_frontBack"];
+							}
+							else
+							{
+								spriteRenderer3.gameObject.SetActive(false);
+								giftAppearance._frontBackSpriteRenderer = null;
+							}
+							spriteRenderer4.gameObject.transform.localScale = new Vector2(1f, 1f);
+							if (CustomGiftAppearance.GiftArtWork.ContainsKey(array2[2] + "_sideBack"))
+							{
+								spriteRenderer4.sprite = CustomGiftAppearance.GiftArtWork[array2[2] + "_sideBack"];
+							}
+							else
+							{
+								spriteRenderer4.gameObject.SetActive(false);
+								giftAppearance._sideBackSpriteRenderer = null;
+							}
+							dictionary.Add(gift.ClassInfo.Position, giftAppearance);
+						}
+						if (giftAppearance != null)
+						{
+							string layer = __instance._layerName;
+							CharacterMotion motion = __instance._currentMotion;
+							giftAppearance.Init(gift, layer);
+							giftAppearance.RefreshAppearance(__instance.CustomAppearance, motion);
+						}
+						__result = giftAppearance;
+						return false;
+					}
+				}
+			}
+			catch (Exception ex)
+			{
+				File.WriteAllText(Application.dataPath + "/Mods/CACGDerror.log", ex.Message + Environment.NewLine + ex.StackTrace);
+			}
+			return true;
+		}
+		*/
+		[HarmonyPatch(typeof(CharacterAppearance), nameof(CharacterAppearance.CreateGiftData))]
+		[HarmonyTranspiler]
+		static IEnumerable<CodeInstruction> CharacterAppearance_CreateGiftData_In(IEnumerable<CodeInstruction> instructions)
+		{
+			MethodInfo loadMethod = GenericMethod(typeof(Resources), nameof(Resources.Load), new Type[] { typeof(GameObject) });
+			foreach (var instruction in instructions)
+			{
+				yield return instruction;
+				if (instruction.Is(Call, loadMethod))
+				{
+					yield return new CodeInstruction(Ldarg_2);
+					yield return new CodeInstruction(Call, Method(typeof(Harmony_Patch), nameof(CharacterAppearance_CreateGiftData_CheckCustomGift)));
+				}
+			}
+		}
+		static MethodInfo GenericMethod(Type type, string name, Type[] generics)
+		{
+			return FirstMethod(type, method => method.Name == name && method.IsGenericMethod).MakeGenericMethod(generics);
+		}
+		static GameObject CharacterAppearance_CreateGiftData_CheckCustomGift(GameObject originalGift, string resPath)
+		{
+			try
+			{
+				string[] array = resPath.Split(new char[]
+				{
+					'/'
+				});
+				string[] array2 = array[array.Length - 1].Split(new char[]
+				{
+					'_'
+				});
+				if (array2[1].ToLower() != "custom")
+				{
+					return originalGift;
+				}
+				else
+				{
+					var giftAppearance = CustomGiftAppearancePrefabObject;
 
-        public static Dictionary<string, Type> CustomEmotionCardAbility = new Dictionary<string, Type>();
+					giftAppearance._frontSpriteRenderer.enabled = CustomGiftAppearance.GiftArtWork.TryGetValue(array2[2] + "_front", out var frontSprite);
+					giftAppearance._frontSpriteRenderer.sprite = frontSprite;
 
-        public static Dictionary<string, int> CoreThumbDic = new Dictionary<string, int>();
+					giftAppearance._sideSpriteRenderer.enabled = CustomGiftAppearance.GiftArtWork.TryGetValue(array2[2] + "_side", out var sideSprite);
+					giftAppearance._sideSpriteRenderer.sprite = sideSprite;
 
-        public static Dictionary<BattleCardBehaviourResult, List<EffectTypoData>> CustomEffectTypoData = new Dictionary<BattleCardBehaviourResult, List<EffectTypoData>>();
+					giftAppearance._frontBackSpriteRenderer.enabled = CustomGiftAppearance.GiftArtWork.TryGetValue(array2[2] + "_frontBack", out var frontBackSprite);
+					giftAppearance._frontBackSpriteRenderer.sprite = frontBackSprite;
 
-        public static Dictionary<string, Sprite> ArtWorks = null;
+					giftAppearance._sideBackSpriteRenderer.enabled = CustomGiftAppearance.GiftArtWork.TryGetValue(array2[2] + "_sideBack", out var sideBackSprite);
+					giftAppearance._sideBackSpriteRenderer.sprite = sideBackSprite;
 
-        public static Dictionary<LorId, Sprite> BookThumb = null;
+					return giftAppearance.gameObject;
+				}
+			}
+			catch (Exception ex)
+			{
+				File.WriteAllText(Application.dataPath + "/Mods/CACGDerror.log", ex.Message + Environment.NewLine + ex.StackTrace);
+			}
+			return originalGift;
+		}
+		internal static GiftAppearance CustomGiftAppearancePrefabObject
+		{
+			get
+			{
+				if (_giftAppearance == null)
+				{
+					_giftAppearance = UnityEngine.Object.Instantiate(Resources.Load<GameObject>("Prefabs/Gifts/Gifts_NeedRename/Gift_Challenger"), XLRoot.persistentRoot.transform).GetComponent<GiftAppearance>();
+					_giftAppearance._frontSpriteRenderer.gameObject.transform.localScale = Vector2.one;
+					_giftAppearance._sideSpriteRenderer.gameObject.transform.localScale = Vector2.one;
+					_giftAppearance._frontBackSpriteRenderer.gameObject.transform.localScale = Vector2.one;
+					_giftAppearance._sideBackSpriteRenderer.gameObject.transform.localScale = Vector2.one;
+				}
+				return _giftAppearance;
+			}
+		}
 
-        public static Dictionary<string, AudioClip> AudioClips = null;
+		//GiftPassive
+		/*
+		[HarmonyPatch(typeof(GiftModel), nameof(GiftModel.CreateScripts))]
+		[HarmonyPrefix]
+		static bool GiftModel_CreateScripts_Pre(GiftModel __instance, ref List<PassiveAbilityBase> __result)
+		{
+			try
+			{
+				List<PassiveAbilityBase> list = new List<PassiveAbilityBase>();
+				foreach (int num in __instance.ClassInfo.ScriptList)
+				{
+					PassiveAbilityBase passiveAbilityBase = FindGiftPassiveAbility(num.ToString().Trim());
+					if (passiveAbilityBase != null)
+					{
+						passiveAbilityBase.name = __instance.GetName();
+						passiveAbilityBase.desc = __instance.GiftDesc;
+						list.Add(passiveAbilityBase);
+					}
+				}
+				__result = list;
+				return false;
+			}
+			catch (Exception ex)
+			{
+				File.WriteAllText(Application.dataPath + "/Mods/GMCSerror.log", ex.Message + Environment.NewLine + ex.StackTrace);
+			}
+			return true;
+		}
+		*/
+		[HarmonyPatch(typeof(GiftModel), nameof(GiftModel.CreateScripts))]
+		[HarmonyTranspiler]
+		static IEnumerable<CodeInstruction> GiftModel_CreateScripts_In(IEnumerable<CodeInstruction> instructions)
+		{
+			var getTypeMethod = Method(typeof(Type), nameof(Type.GetType), new Type[] { typeof(string) });
+			var hideMethod = Method(typeof(PassiveAbilityBase), nameof(PassiveAbilityBase.Hide));
+			foreach (var instruction in instructions)
+			{
+				if (instruction.Is(Callvirt, hideMethod))
+				{
+					yield return new CodeInstruction(Pop);
+					continue;
+				}
+				yield return instruction;
+				if (instruction.Is(Call, getTypeMethod))
+				{
+					yield return new CodeInstruction(Ldloc_2);
+					yield return new CodeInstruction(Call, Method(typeof(Harmony_Patch), nameof(GiftModel_CreateScripts_CheckCustomGiftAbility)));
+				}
+			}
+		}
+		[HarmonyPatch(typeof(GiftModel), nameof(GiftModel.CreateScripts))]
+		[HarmonyPostfix]
+		static void GiftModel_CreateScripts_Post(GiftModel __instance, List<PassiveAbilityBase> __result)
+		{
+			if (__instance.ClassInfo is GiftXmlInfo_V2 newInfo)
+			{
+				for (int i = 0; i < newInfo.CustomScriptList.Count; i++)
+				{
+					try
+					{
+						var ability = newInfo.CustomScriptList[i];
+						Type type = FindGiftPassiveAbilityType(ability);
+						PassiveAbilityBase passiveAbilityBase = null;
+						if (type != null)
+						{
+							try
+							{
+								passiveAbilityBase = (PassiveAbilityBase)Activator.CreateInstance(type);
+							}
+							catch
+							{
 
-        public static bool IsModStorySelected;
+							}
+						}
+						if (passiveAbilityBase == null)
+						{
+							passiveAbilityBase = new PassiveAbilityBase();
+						}
+						passiveAbilityBase.name = __instance.GetName();
+						passiveAbilityBase.desc = __instance.GiftDesc;
+						__result.Add(passiveAbilityBase);
+					}
+					catch (Exception)
+					{
 
-        private static List<string> ModPid;
+					}
+				}
+			}
+		}
+		static Type GiftModel_CreateScripts_CheckCustomGiftAbility(Type oldType, int num)
+		{
+			return FindGiftPassiveAbilityType(num.ToString().Trim()) ?? oldType;
+		}
+		public static PassiveAbilityBase FindGiftPassiveAbility(string name)
+		{
+			try
+			{
+				return Activator.CreateInstance(FindGiftPassiveAbilityType(name)) as PassiveAbilityBase;
+			}
+			catch
+			{
+				return null;
+			}
+		}
+		public static Type FindGiftPassiveAbilityType(string name)
+		{
+			if (string.IsNullOrWhiteSpace(name))
+			{
+				name = null;
+			}
+			else
+			{
+				name = name.Trim();
+				if (CustomGiftPassive.TryGetValue(name, out Type type))
+				{
+					return type;
+				}
+			}
 
-        public static Dictionary<LorId, UIStoryLine> ModEpMatch;
+			Type result = null;
+			if (!CoreGiftPassivesLoaded)
+			{
+				var baseType = typeof(PassiveAbilityBase);
+				foreach (Type type2 in Assembly.Load("Assembly-CSharp").GetTypes())
+				{
+					if (baseType.IsAssignableFrom(type2) && type2.Name.StartsWith("GiftPassiveAbility_"))
+					{
+						var typeName = type2.Name.Substring("GiftPassiveAbility_".Length);
+						if (!CustomGiftPassive.ContainsKey(typeName))
+						{
+							CustomGiftPassive[typeName] = type2;
+							if (typeName == name)
+							{
+								result = type2;
+							}
+						}
+					}
+				}
+				CoreGiftPassivesLoaded = true;
+			}
+			return result;
+		}
+		[HarmonyPatch(typeof(BattleUnitPassiveDetail), nameof(BattleUnitPassiveDetail.Init))]
+		[HarmonyTranspiler]
+		static IEnumerable<CodeInstruction> BattleUnitPassiveDetail_Init_In(IEnumerable<CodeInstruction> instructions)
+		{
+			var addRangeMethod = Method(typeof(List<PassiveAbilityBase>), nameof(List<PassiveAbilityBase>.AddRange));
+			var firstRangeMethod = Method(typeof(Harmony_Patch), nameof(BattleUnitPassiveDetail_Init_InsertFirst));
+			var bookPassivesMethod = Method(typeof(BookModel), nameof(BookModel.CreatePassiveList));
+			bool book = false;
+			foreach (var instruction in instructions)
+			{
+				if (book && instruction.Is(Callvirt, addRangeMethod))
+				{
+					yield return new CodeInstruction(Callvirt, firstRangeMethod);
+				}
+				else
+				{
+					yield return instruction;
+					if (instruction.Is(Callvirt, bookPassivesMethod))
+					{
+						book = true;
+					}
+				}
+			}
+		}
+		static void BattleUnitPassiveDetail_Init_InsertFirst(List<PassiveAbilityBase> passiveList, List<PassiveAbilityBase> bookPassiveList)
+		{
+			passiveList.InsertRange(0, bookPassiveList);
+		}
+		//GiftDataSlot
+		/*
+		[HarmonyPatch(typeof(UIGiftDataSlot), nameof(UIGiftDataSlot.SetData))]
+		[HarmonyPrefix]
+		static bool UIGiftDataSlot_SetData_Pre(UIGiftDataSlot __instance, GiftModel data)
+		{
+			try
+			{
+				if (data == null)
+				{
+					__instance.gameObject.SetActive(false);
+					return false;
+				}
+				else
+				{
+					string[] array = data.GetResourcePath().Split(new char[]
+					{
+						 '/'
+					});
+					string[] array2 = array[array.Length - 1].Split(new char[]
+					{
+						 '_'
+					});
+					GiftAppearance giftAppearance;
+					if (array2[1].ToLower() != "custom")
+					{
+						return true;
+					}
+					__instance.img_giftImage.enabled = true;
+					__instance.img_xmark.enabled = false;
+					__instance.img_giftMask.enabled = true;
+					__instance.OpenInit();
+					giftAppearance = CustomGiftAppearance.CreateCustomGift(array2);
+					giftAppearance.gameObject.SetActive(false);
+					if (giftAppearance != null)
+					{
+						if (giftAppearance is GiftAppearance_Aura)
+						{
+							__instance.img_giftImage.enabled = true;
+							__instance.img_giftImage.sprite = UISpriteDataManager.instance.GiftAuraIcon;
+							__instance.img_giftImage.rectTransform.localScale = new Vector2(0.8f, 0.8f);
+						}
+						else
+						{
+							__instance.img_giftImage.sprite = giftAppearance.GetGiftPreview();
+							__instance.img_giftImage.rectTransform.localScale = Vector2.one;
+						}
+						if (__instance.img_giftImage.sprite == null)
+						{
+							__instance.img_giftImage.enabled = false;
+						}
+					}
+					else
+					{
+						__instance.img_giftImage.enabled = false;
+						__instance.img_giftMask.enabled = false;
+					}
+					__instance.txt_giftName.text = data.GetName();
+					__instance.txt_giftNameDetail.text = data.GiftDesc;
+					__instance.img_giftImage.gameObject.SetActive(true);
+					string id = "";
+					switch (data.ClassInfo.Position)
+					{
+						case GiftPosition.Eye:
+							id = "ui_gift_eye";
+							break;
+						case GiftPosition.Nose:
+							id = "ui_gift_nose";
+							break;
+						case GiftPosition.Cheek:
+							id = "ui_gift_cheek";
+							break;
+						case GiftPosition.Mouth:
+							id = "ui_gift_mouth";
+							break;
+						case GiftPosition.Ear:
+							id = "ui_gift_ear";
+							break;
+						case GiftPosition.HairAccessory:
+							id = "ui_gift_headdress1";
+							break;
+						case GiftPosition.Hood:
+							id = "ui_gift_headdress2";
+							break;
+						case GiftPosition.Mask:
+							id = "ui_gift_headdress3";
+							break;
+						case GiftPosition.Helmet:
+							id = "ui_gift_headdress4";
+							break;
+					}
+					__instance.txt_giftPartName.text = TextDataModel.GetText(id, Array.Empty<object>());
+					return false;
+				}
+			}
+			catch (Exception ex)
+			{
+				File.WriteAllText(Application.dataPath + "/Mods/GiftSetDataerror.log", ex.Message + Environment.NewLine + ex.StackTrace);
+			}
+			return true;
+		}
+		*/
+		[HarmonyPatch(typeof(UIGiftInvenSlot), nameof(UIGiftInvenSlot.SetData))]
+		[HarmonyPatch(typeof(UIGiftDataSlot), nameof(UIGiftDataSlot.SetData))]
+		[HarmonyTranspiler]
+		static IEnumerable<CodeInstruction> UIGiftSlot_SetData_In(IEnumerable<CodeInstruction> instructions)
+		{
+			var loadGiftMethod = GenericMethod(typeof(Resources), nameof(Resources.Load), new Type[] { typeof(GiftAppearance) });
+			foreach (var instruction in instructions)
+			{
+				yield return instruction;
+				if (instruction.Is(Call, loadGiftMethod))
+				{
+					yield return new CodeInstruction(Ldarg_1);
+					yield return new CodeInstruction(Call, Method(typeof(Harmony_Patch), nameof(UIGiftDataSlot_SetData_CheckCustomGift)));
+				}
+			}
+		}
+		static GiftAppearance UIGiftDataSlot_SetData_CheckCustomGift(GiftAppearance originalAppearance, GiftModel data)
+		{
+			try
+			{
+				if (data != null)
+				{
+					string[] array = data.GetResourcePath().Split(new char[]
+					{
+						 '/'
+					});
+					string[] array2 = array[array.Length - 1].Split(new char[]
+					{
+						 '_'
+					});
+					if (array2[1].ToLower() != "custom")
+					{
+						return originalAppearance;
+					}
+					return CustomGiftAppearance.CreateCustomGift(array2);
+				}
+			}
+			catch (Exception ex)
+			{
+				File.WriteAllText(Application.dataPath + "/Mods/GiftSetDataerror.log", ex.Message + Environment.NewLine + ex.StackTrace);
+			}
+			return originalAppearance;
+		}
+		//UIGiftInvenSlot
+		/*
+		[HarmonyPatch(typeof(UIGiftInvenSlot), nameof(UIGiftInvenSlot.SetData))]
+		[HarmonyPrefix]
+		static bool UIGiftInvenSlot_SetData_Pre(UIGiftInvenSlot __instance, GiftModel gift, UIGiftInventory inven)
+		{
+			try
+			{
+				__instance.gameObject.SetActive(true);
+				__instance.giftData = gift;
+				__instance.panel = inven;
+				if (gift == null)
+				{
+					return false;
+				}
+				string id = "";
+				switch (gift.ClassInfo.Position)
+				{
+					case GiftPosition.Eye:
+						id = "ui_gift_eye";
+						break;
+					case GiftPosition.Nose:
+						id = "ui_gift_nose";
+						break;
+					case GiftPosition.Cheek:
+						id = "ui_gift_cheek";
+						break;
+					case GiftPosition.Mouth:
+						id = "ui_gift_mouth";
+						break;
+					case GiftPosition.Ear:
+						id = "ui_gift_ear";
+						break;
+					case GiftPosition.HairAccessory:
+						id = "ui_gift_headdress1";
+						break;
+					case GiftPosition.Hood:
+						id = "ui_gift_headdress2";
+						break;
+					case GiftPosition.Mask:
+						id = "ui_gift_headdress3";
+						break;
+					case GiftPosition.Helmet:
+						id = "ui_gift_headdress4";
+						break;
+				}
+				string[] array = gift.GetResourcePath().Split(new char[]
+				{
+				'/'
+				});
+				string[] array2 = array[array.Length - 1].Split(new char[]
+				{
+				'_'
+				});
+				GiftAppearance giftAppearance;
+				if (array2[1].ToLower() != "custom")
+				{
+					return true;
+				}
+				else
+				{
+					giftAppearance = CustomGiftAppearance.CreateCustomGift(array2);
+					giftAppearance.gameObject.SetActive(false);
+				}
+				__instance.img_Gift.enabled = true;
+				if (giftAppearance != null)
+				{
+					if (giftAppearance is GiftAppearance_Aura)
+					{
+						__instance.img_Gift.sprite = UISpriteDataManager.instance.GiftAuraIcon;
+						__instance.img_Gift.rectTransform.localScale = new Vector2(0.8f, 0.8f);
+					}
+					else
+					{
+						__instance.img_Gift.sprite = giftAppearance.GetGiftPreview();
+						__instance.img_Gift.rectTransform.localScale = new Vector2(1f, 1f);
+					}
+				}
+				if (__instance.img_Gift.sprite == null)
+				{
+					__instance.img_Gift.enabled = false;
+				}
+				__instance.txt_Part.text = TextDataModel.GetText(id, Array.Empty<object>());
+				__instance.txt_Name.text = gift.GetName();
+				__instance.txt_desc.text = gift.GiftDesc;
+				__instance.txt_getcondition.text = gift.GiftAcquireCondition;
+				__instance.conditionTextGameObject.SetActive(true);
+				return false;
+			}
+			catch (Exception ex)
+			{
+				File.WriteAllText(Application.dataPath + "/Mods/GiftInvSetDataerror.log", ex.Message + Environment.NewLine + ex.StackTrace);
+			}
+			return true;
+		}
+		*/
+		//UIGiftPreviewSlot
+		/*
+		[HarmonyPatch(typeof(UIGiftPreviewSlot), nameof(UIGiftPreviewSlot.UpdateSlot))]
+		[HarmonyPrefix]
+		static bool UIGiftPreviewSlot_UpdateSlot_Pre(UIGiftPreviewSlot __instance)
+		{
+			try
+			{
+				if (__instance.Gift != null)
+				{
+					string[] array = __instance.Gift.GetResourcePath().Split(new char[]
+					{
+						'/'
+					});
+					string[] array2 = array[array.Length - 1].Split(new char[]
+					{
+						'_'
+					});
+					GiftAppearance giftAppearance;
+					if (array2[1].ToLower() != "custom")
+					{
+						return true;
+					}
+					else
+					{
+						__instance.txt_GiftName.gameObject.SetActive(true);
+						__instance.txt_GiftName.text = __instance.Gift.GetName();
+						__instance.txt_GiftDesc.text = __instance.Gift.GiftDesc;
+						__instance.img_Gift.gameObject.SetActive(true);
+						__instance.img_Gift.enabled = true;
+						giftAppearance = CustomGiftAppearance.CreateCustomGift(array2);
+						giftAppearance.gameObject.SetActive(false);
+					}
+					if (giftAppearance != null)
+					{
+						if (giftAppearance is GiftAppearance_Aura)
+						{
+							__instance.img_Gift.sprite = UISpriteDataManager.instance.GiftAuraIcon;
+							__instance.img_Gift.rectTransform.localScale = new Vector2(0.8f, 0.8f);
+						}
+						else
+						{
+							__instance.img_Gift.sprite = giftAppearance.GetGiftPreview();
+							__instance.img_Gift.rectTransform.localScale = new Vector2(1f, 1f);
+						}
+					}
+					if (__instance.img_Gift.sprite == null)
+					{
+						__instance.img_Gift.enabled = false;
+					}
+					__instance.detailcRect.SetActive(__instance.panel.giftDetailToggle.isOn);
+				}
+				else
+				{
+					__instance.txt_GiftName.gameObject.SetActive(false);
+					__instance.img_Gift.gameObject.SetActive(false);
+					__instance.detailcRect.SetActive(false);
+				}
+				__instance.SetEyeButton(__instance.isEyeOpen);
+				__instance.SetHighlight(false);
+				__instance.SetEyeHighlight(false);
+				return false;
+			}
+			catch (Exception ex)
+			{
+				File.WriteAllText(Application.dataPath + "/Mods/GiftUpdateSloterror.log", ex.Message + Environment.NewLine + ex.StackTrace);
+			}
+			return true;
+		}
+		*/
+		[HarmonyPatch(typeof(UIGiftPreviewSlot), nameof(UIGiftPreviewSlot.UpdateSlot))]
+		[HarmonyTranspiler]
+		static IEnumerable<CodeInstruction> UIGiftPreviewSlot_UpdateSlot_In(IEnumerable<CodeInstruction> instructions)
+		{
+			var loadGiftMethod = GenericMethod(typeof(Resources), nameof(Resources.Load), new Type[] { typeof(GiftAppearance) });
+			foreach (var instruction in instructions)
+			{
+				yield return instruction;
+				if (instruction.Is(Call, loadGiftMethod))
+				{
+					yield return new CodeInstruction(Ldarg_0);
+					yield return new CodeInstruction(Ldfld, Field(typeof(UIGiftPreviewSlot), nameof(UIGiftPreviewSlot.Gift)));
+					yield return new CodeInstruction(Call, Method(typeof(Harmony_Patch), nameof(UIGiftDataSlot_SetData_CheckCustomGift)));
+				}
+			}
+		}
+		//LoadGift
+		[HarmonyPatch(typeof(GiftInventory), nameof(GiftInventory.LoadFromSaveData))]
+		[HarmonyPrefix]
+		static void GiftInventory_LoadFromSaveData_Pre(SaveData data)
+		{
+			FixGiftSaveList(data, "equipList");
+			FixGiftSaveList(data, "unequipList");
+			FixGiftSaveList(data, "offList");
+		}
+		static void FixGiftSaveList(SaveData data, string giftListName)
+		{
+			var saveData = data.GetData(giftListName);
+			if (saveData._list == null)
+			{
+				saveData._list = new List<SaveData>();
+			}
+			var saveList = saveData._list;
+			int i = 0;
+			int j = 0;
+			GiftXmlInfo info;
+			GiftXmlList giftXmlList = GiftXmlList.Instance;
+			for (; i < saveList.Count; i++)
+			{
+				info = null;
+				try
+				{
+					info = giftXmlList.GetData(saveData.GetIntSelf());
+				}
+				catch { }
+				if (info != null)
+				{
+					saveList[j] = saveList[i];
+					j++;
+				}
+			}
+			saveList.RemoveRange(j, i - j);
+		}
+		[HarmonyPatch(typeof(GiftInventory), nameof(GiftInventory.LoadFromSaveData))]
+		[HarmonyPostfix]
+		static void GiftInventory_LoadFromSaveData_Post(GiftInventory __instance)
+		{
+			var owner = __instance._owner;
+			if (owner == null)
+			{
+				return;
+			}
+			var floor = LibraryModel.Instance.GetFloor(owner.OwnerSephirah);
+			if (floor == null)
+			{
+				return;
+			}
+			var index = floor._unitDataList.FindIndex(unit => unit == owner);
+			if (index < 0)
+			{
+				return;
+			}
+			var basemodGiftData = LibraryModel.Instance.CustomStorage.GetStageStorageData("BasemodGift");
+			if (basemodGiftData == null)
+			{
+				return;
+			}
+			var floorData = basemodGiftData.GetData(owner.OwnerSephirah.ToString());
+			if (floorData == null)
+			{
+				return;
+			}
+			var data = floorData.GetData(index.ToString());
+			if (data == null)
+			{
+				return;
+			}
 
-        public static Dictionary<LorId, ModStroyCG> ModStoryCG = null;
+			SaveData eqList = data.GetData("equipList");
+			SaveData uneqList = data.GetData("unequipList");
+			SaveData offList = data.GetData("offList");
+			if (eqList != null)
+			{
+				foreach (SaveData saveData in eqList)
+				{
+					var id = LorId.LoadFromSaveData(saveData);
+					if (OrcTools.CustomGifts.TryGetValue(id, out var gift))
+					{
+						var model = new GiftModel(gift);
+						__instance.AddGift(model);
+						__instance.Equip(model);
+					}
+				}
+			}
+			if (uneqList != null)
+			{
+				foreach (SaveData saveData in uneqList)
+				{
+					var id = LorId.LoadFromSaveData(saveData);
+					if (OrcTools.CustomGifts.TryGetValue(id, out var gift))
+					{
+						var model = new GiftModel(gift);
+						__instance.AddGift(model);
+					}
+				}
+			}
+			if (offList != null)
+			{
+				foreach (SaveData saveData in offList)
+				{
+					var id = LorId.LoadFromSaveData(saveData);
+					if (OrcTools.CustomGifts.TryGetValue(id, out var gift))
+					{
+						var copy = __instance._equippedList.Find(model => model.ClassInfo == gift);
+						if (copy != null)
+						{
+							copy.isShowEquipGift = false;
+						}
+					}
+				}
+			}
+		}
+		//SaveGift
+		[HarmonyPatch(typeof(GiftInventory), nameof(GiftInventory.GetSaveData))]
+		[HarmonyTranspiler]
+		static IEnumerable<CodeInstruction> GiftInventory_GetSaveData_In(IEnumerable<CodeInstruction> instructions)
+		{
+			var field1 = Field(typeof(GiftInventory), nameof(GiftInventory._equippedList));
+			var field2 = Field(typeof(GiftInventory), nameof(GiftInventory._unequippedList));
+			var helper = Method(typeof(Harmony_Patch), nameof(FilterGiftsForSave));
+			foreach (var instruction in instructions)
+			{
+				yield return instruction;
+				if (instruction.LoadsField(field1) || instruction.LoadsField(field2))
+				{
+					yield return new CodeInstruction(Call, helper);
+				}
+			}
+		}
+		static List<GiftModel> FilterGiftsForSave(List<GiftModel> unfiltered)
+		{
+			return unfiltered.FindAll(gift => !(gift.ClassInfo is GiftXmlInfo_V2 giftNew) || giftNew.dontRemove);
+		}
+		[HarmonyPatch(typeof(CustomSaveStorageModel), nameof(CustomSaveStorageModel.GetSaveData))]
+		[HarmonyPrefix]
+		static void CustomSaveStorageModel_GetSaveData_Pre(CustomSaveStorageModel __instance)
+		{
+			var rootSave = __instance.GetStageStorageData("BasemodGift") ?? new SaveData(SaveDataType.Dictionary);
+			foreach (var floor in LibraryModel.Instance._floorList)
+			{
+				UpdateFloorGifts(rootSave, floor);
+			}
+			__instance.SetStageStorgeData("BasemodGift", rootSave);
+		}
+		static void UpdateFloorGifts(SaveData librarySave, LibraryFloorModel floor)
+		{
+			var floorSave = librarySave.GetData(floor.Sephirah.ToString()) ?? new SaveData(SaveDataType.Dictionary);
+			for (int i = 0; i < floor._unitDataList.Count; i++)
+			{
+				UpdateUnitGifts(floorSave, floor._unitDataList[i], i);
+			}
+			librarySave.GetDictionarySelf()[floor.Sephirah.ToString()] = floorSave;
+		}
+		static void UpdateUnitGifts(SaveData floorSave, UnitDataModel unit, int index)
+		{
+			var data = floorSave.GetData(index.ToString()) ?? new SaveData(SaveDataType.Dictionary);
 
-        public static Dictionary<Assembly, string> ModWorkShopId;
+			SaveData eqSave = data.GetData("equipList");
+			SaveData uneqSave = data.GetData("unequipList");
+			SaveData offSave = data.GetData("offList");
+			HashSet<LorId> eqIds = new HashSet<LorId>();
+			HashSet<LorId> uneqIds = new HashSet<LorId>();
+			HashSet<LorId> offIds = new HashSet<LorId>();
+			if (eqSave != null)
+			{
+				foreach (var idSave in eqSave)
+				{
+					var id = LorId.LoadFromSaveData(idSave);
+					eqIds.Add(id);
+				}
+			}
+			if (offSave != null)
+			{
+				foreach (var idSave in offSave)
+				{
+					var id = LorId.LoadFromSaveData(idSave);
+					offIds.Add(id);
+				}
+			}
+			if (uneqSave != null)
+			{
+				foreach (var idSave in uneqSave)
+				{
+					var id = LorId.LoadFromSaveData(idSave);
+					eqIds.Remove(id);
+					uneqIds.Add(id);
+				}
+			}
+			foreach (var gift in unit.giftInventory._equippedList)
+			{
+				if (gift.ClassInfo is GiftXmlInfo_V2 giftNew && !giftNew.dontRemove)
+				{
+					eqIds.Add(giftNew.lorId);
+					if (!gift.isShowEquipGift)
+					{
+						offIds.Add(giftNew.lorId);
+					}
+					uneqIds.Remove(giftNew.lorId);
+				}
+			}
+			foreach (var gift in unit.giftInventory._unequippedList)
+			{
+				if (gift.ClassInfo is GiftXmlInfo_V2 giftNew && !giftNew.dontRemove)
+				{
+					eqIds.Remove(giftNew.lorId);
+					uneqIds.Add(giftNew.lorId);
+				}
+			}
+			offIds.IntersectWith(eqIds);
 
-        //private static bool IsEditing = false;
+			eqSave = new SaveData(SaveDataType.List);
+			uneqSave = new SaveData(SaveDataType.List);
+			offSave = new SaveData(SaveDataType.List);
+			foreach (var id in eqIds)
+			{
+				eqSave.AddToList(id.GetSaveData());
+			}
+			foreach (var id in uneqIds)
+			{
+				uneqSave.AddToList(id.GetSaveData());
+			}
+			foreach (var id in offIds)
+			{
+				offSave.AddToList(id.GetSaveData());
+			}
 
-        private static DiceCardXmlInfo errNullCard = null;
+			data.GetDictionarySelf()["equipList"] = eqSave;
+			data.GetDictionarySelf()["unequipList"] = uneqSave;
+			data.GetDictionarySelf()["offList"] = offSave;
 
-        public static UIEquipPageCustomizePanel uiEquipPageCustomizePanel;
+			floorSave.GetDictionarySelf()[index.ToString()] = data;
+		}
+		//BehaviorAbilityData
+		[HarmonyPatch(typeof(BattleCardBehaviourResult), nameof(BattleCardBehaviourResult.GetAbilityDataAfterRoll))]
+		[HarmonyPostfix]
+		static List<EffectTypoData> BattleCardBehaviourResult_GetAbilityDataAfterRoll_Post(List<EffectTypoData> list, BattleCardBehaviourResult __instance)
+		{
+			try
+			{
+				if (CustomEffectTypoData.TryGetValue(__instance, out List<EffectTypoData> addedlist))
+				{
+					CustomEffectTypoData.Remove(__instance);
+					list.AddRange(addedlist);
+				}
+			}
+			catch { }
+			return list;
+		}
+		[HarmonyPatch(typeof(BattleActionTypoSlot), nameof(BattleActionTypoSlot.SetData))]
+		[HarmonyPostfix]
+		static void BattleActionTypoSlot_SetData_Post(BattleActionTypoSlot __instance, EffectTypoData data)
+		{
+			try
+			{
+				if (data is EffectTypoData_New newData)
+				{
+					if (newData.battleUIPassiveSet != null)
+					{
+						EffectTypoData_New.BattleUIPassiveSet newBattleUIPassiveSet = newData.battleUIPassiveSet;
+						BattleUIPassiveSet uIPassiveSet = new BattleUIPassiveSet()
+						{
+							type = newData.type,
+							frame = newBattleUIPassiveSet.frame,
+							Icon = newBattleUIPassiveSet.Icon,
+							IconGlow = newBattleUIPassiveSet.IconGlow,
+							textColor = newBattleUIPassiveSet.textColor,
+							IconColor = newBattleUIPassiveSet.IconColor,
+							IconGlowColor = newBattleUIPassiveSet.IconGlowColor,
+						};
+						UISpriteDataManager.instance.BattleUIEffectSetDic[uIPassiveSet.type] = uIPassiveSet;
+					}
+					if (UISpriteDataManager.instance.BattleUIEffectSetDic.TryGetValue(newData.type, out BattleUIPassiveSet battleUIPassiveSet))
+					{
+						__instance.img_Icon.sprite = battleUIPassiveSet.Icon;
+						__instance.img_Icon.color = battleUIPassiveSet.IconColor;
+						if (battleUIPassiveSet.IconGlow != null)
+						{
+							__instance.img_IconGlow.enabled = true;
+							__instance.img_IconGlow.sprite = battleUIPassiveSet.IconGlow;
+							__instance.img_IconGlow.color = battleUIPassiveSet.IconGlowColor;
+						}
+						else
+						{
+							__instance.img_IconGlow.enabled = false;
+						}
+						__instance.img_Frame.sprite = battleUIPassiveSet.frame;
+						__instance.txt_desc.color = battleUIPassiveSet.textColor;
+						__instance.txt_title.color = battleUIPassiveSet.textColor;
+						Color underlayColor = DirectingDataSetter.Instance.OnGrayScale ? (battleUIPassiveSet.textColor * battleUIPassiveSet.textColor.grayscale) : (battleUIPassiveSet.textColor * DirectingDataSetter.Instance.graycolor);
+						__instance.msetter_title.underlayColor = underlayColor;
 
-        public static bool InitWorkshopSkinChangeButton;
+						Vector2 sizeDelta2 = __instance.img_Frame.rectTransform.sizeDelta;
+						sizeDelta2.y = ((data.Title != "") ? __instance.TitleFrameHeight : __instance.defaultFrameHeight);
+						__instance.img_Frame.rectTransform.sizeDelta = sizeDelta2;
+					}
+				}
+			}
+			catch (Exception ex)
+			{
+				File.WriteAllText(Application.dataPath + "/Mods/CustomEffectUISeterror.log", ex.Message + Environment.NewLine + ex.StackTrace);
+			}
+		}
 
-        public static bool isModWorkshopSkin;
+		//Skeleton
+		//[HarmonyPatch(typeof(SkeletonJson), nameof(SkeletonJson.ReadSkeletonData), new Type[] { typeof(TextReader) })]
+		//[HarmonyPrefix]
+		/*
+		static bool SkeletonJson_ReadSkeletonData_Pre(ref SkeletonData __result, TextReader reader, SkeletonJson __instance)
+		{
+			bool result;
+			try
+			{
+				if (reader == null)
+				{
+					throw new ArgumentNullException("reader", "reader cannot be null.");
+				}
+				float scale = __instance.Scale;
+				SkeletonData skeletonData = new SkeletonData();
+				if (!(Json.Deserialize(reader) is Dictionary<string, object> dictionary))
+				{
+					throw new Exception("Invalid JSON.");
+				}
+				if (dictionary.ContainsKey("skeleton"))
+				{
+					Dictionary<string, object> dictionary2 = (Dictionary<string, object>)dictionary["skeleton"];
+					skeletonData.Hash = (string)dictionary2["hash"];
+					skeletonData.Version = (string)dictionary2["spine"];
+					skeletonData.X = SkeletonJSON_new.GetFloat(dictionary2, "x", 0f);
+					skeletonData.Y = SkeletonJSON_new.GetFloat(dictionary2, "y", 0f);
+					skeletonData.Width = SkeletonJSON_new.GetFloat(dictionary2, "width", 0f);
+					skeletonData.Height = SkeletonJSON_new.GetFloat(dictionary2, "height", 0f);
+					skeletonData.Fps = SkeletonJSON_new.GetFloat(dictionary2, "fps", 30f);
+					skeletonData.ImagesPath = SkeletonJSON_new.GetString(dictionary2, "images", null);
+					skeletonData.AudioPath = SkeletonJSON_new.GetString(dictionary2, "audio", null);
+				}
+				if (dictionary.ContainsKey("bones"))
+				{
+					foreach (object obj in ((List<object>)dictionary["bones"]))
+					{
+						Dictionary<string, object> dictionary3 = (Dictionary<string, object>)obj;
+						BoneData boneData = null;
+						if (dictionary3.ContainsKey("parent"))
+						{
+							boneData = skeletonData.FindBone((string)dictionary3["parent"]);
+							if (boneData == null)
+							{
+								string str = "Parent bone not found: ";
+								object obj2 = dictionary3["parent"];
+								throw new Exception(str + (obj2?.ToString()));
+							}
+						}
+						BoneData boneData2 = new BoneData(skeletonData.Bones.Count, (string)dictionary3["name"], boneData)
+						{
+							Length = SkeletonJSON_new.GetFloat(dictionary3, "length", 0f) * scale,
+							X = SkeletonJSON_new.GetFloat(dictionary3, "x", 0f) * scale,
+							Y = SkeletonJSON_new.GetFloat(dictionary3, "y", 0f) * scale,
+							Rotation = SkeletonJSON_new.GetFloat(dictionary3, "rotation", 0f),
+							ScaleX = SkeletonJSON_new.GetFloat(dictionary3, "scaleX", 1f),
+							ScaleY = SkeletonJSON_new.GetFloat(dictionary3, "scaleY", 1f),
+							ShearX = SkeletonJSON_new.GetFloat(dictionary3, "shearX", 0f),
+							ShearY = SkeletonJSON_new.GetFloat(dictionary3, "shearY", 0f)
+						};
+						string @string = SkeletonJSON_new.GetString(dictionary3, "transform", TransformMode.Normal.ToString());
+						boneData2.TransformMode = (TransformMode)Enum.Parse(typeof(TransformMode), @string, true);
+						boneData2.SkinRequired = SkeletonJSON_new.GetBoolean(dictionary3, "skin", false);
+						skeletonData.Bones.Add(boneData2);
+					}
+				}
+				if (dictionary.ContainsKey("slots"))
+				{
+					foreach (object obj3 in ((List<object>)dictionary["slots"]))
+					{
+						Dictionary<string, object> dictionary4 = (Dictionary<string, object>)obj3;
+						string name = (string)dictionary4["name"];
+						string text = (string)dictionary4["bone"];
+						BoneData boneData3 = skeletonData.FindBone(text);
+						if (boneData3 == null)
+						{
+							throw new Exception("Slot bone not found: " + text);
+						}
+						SlotData slotData = new SlotData(skeletonData.Slots.Count, name, boneData3);
+						if (dictionary4.ContainsKey("color"))
+						{
+							string hexString = (string)dictionary4["color"];
+							slotData.R = SkeletonJSON_new.ToColor(hexString, 0, 8);
+							slotData.G = SkeletonJSON_new.ToColor(hexString, 1, 8);
+							slotData.B = SkeletonJSON_new.ToColor(hexString, 2, 8);
+							slotData.A = SkeletonJSON_new.ToColor(hexString, 3, 8);
+						}
+						if (dictionary4.ContainsKey("dark"))
+						{
+							string hexString2 = (string)dictionary4["dark"];
+							slotData.R2 = SkeletonJSON_new.ToColor(hexString2, 0, 6);
+							slotData.G2 = SkeletonJSON_new.ToColor(hexString2, 1, 6);
+							slotData.B2 = SkeletonJSON_new.ToColor(hexString2, 2, 6);
+							slotData.HasSecondColor = true;
+						}
+						slotData.AttachmentName = SkeletonJSON_new.GetString(dictionary4, "attachment", null);
+						if (dictionary4.ContainsKey("blend"))
+						{
+							slotData.BlendMode = (BlendMode)Enum.Parse(typeof(BlendMode), (string)dictionary4["blend"], true);
+						}
+						else
+						{
+							slotData.BlendMode = BlendMode.Normal;
+						}
+						skeletonData.Slots.Add(slotData);
+					}
+				}
+				if (dictionary.ContainsKey("ik"))
+				{
+					foreach (object obj4 in ((List<object>)dictionary["ik"]))
+					{
+						Dictionary<string, object> dictionary5 = (Dictionary<string, object>)obj4;
+						IkConstraintData ikConstraintData = new IkConstraintData((string)dictionary5["name"])
+						{
+							Order = SkeletonJSON_new.GetInt(dictionary5, "order", 0),
+							SkinRequired = SkeletonJSON_new.GetBoolean(dictionary5, "skin", false)
+						};
+						if (dictionary5.ContainsKey("bones"))
+						{
+							foreach (object obj5 in ((List<object>)dictionary5["bones"]))
+							{
+								string text2 = (string)obj5;
+								BoneData boneData4 = skeletonData.FindBone(text2);
+								if (boneData4 == null)
+								{
+									throw new Exception("IK bone not found: " + text2);
+								}
+								ikConstraintData.Bones.Add(boneData4);
+							}
+						}
+						string text3 = (string)dictionary5["target"];
+						ikConstraintData.Target = skeletonData.FindBone(text3);
+						if (ikConstraintData.Target == null)
+						{
+							throw new Exception("IK target bone not found: " + text3);
+						}
+						ikConstraintData.Mix = SkeletonJSON_new.GetFloat(dictionary5, "mix", 1f);
+						ikConstraintData.Softness = SkeletonJSON_new.GetFloat(dictionary5, "softness", 0f) * scale;
+						ikConstraintData.BendDirection = (SkeletonJSON_new.GetBoolean(dictionary5, "bendPositive", true) ? 1 : -1);
+						ikConstraintData.Compress = SkeletonJSON_new.GetBoolean(dictionary5, "compress", false);
+						ikConstraintData.Stretch = SkeletonJSON_new.GetBoolean(dictionary5, "stretch", false);
+						ikConstraintData.Uniform = SkeletonJSON_new.GetBoolean(dictionary5, "uniform", false);
+						skeletonData.IkConstraints.Add(ikConstraintData);
+					}
+				}
+				if (dictionary.ContainsKey("transform"))
+				{
+					foreach (object obj6 in ((List<object>)dictionary["transform"]))
+					{
+						Dictionary<string, object> dictionary6 = (Dictionary<string, object>)obj6;
+						TransformConstraintData transformConstraintData = new TransformConstraintData((string)dictionary6["name"])
+						{
+							Order = SkeletonJSON_new.GetInt(dictionary6, "order", 0),
+							SkinRequired = SkeletonJSON_new.GetBoolean(dictionary6, "skin", false)
+						};
+						if (dictionary6.ContainsKey("bones"))
+						{
+							foreach (object obj7 in ((List<object>)dictionary6["bones"]))
+							{
+								string text4 = (string)obj7;
+								BoneData boneData5 = skeletonData.FindBone(text4);
+								if (boneData5 == null)
+								{
+									throw new Exception("Transform constraint bone not found: " + text4);
+								}
+								transformConstraintData.Bones.Add(boneData5);
+							}
+						}
+						string text5 = (string)dictionary6["target"];
+						transformConstraintData.Target = skeletonData.FindBone(text5);
+						if (transformConstraintData.Target == null)
+						{
+							throw new Exception("Transform constraint target bone not found: " + text5);
+						}
+						transformConstraintData.Local = SkeletonJSON_new.GetBoolean(dictionary6, "local", false);
+						transformConstraintData.Relative = SkeletonJSON_new.GetBoolean(dictionary6, "relative", false);
+						transformConstraintData.OffsetRotation = SkeletonJSON_new.GetFloat(dictionary6, "rotation", 0f);
+						transformConstraintData.OffsetX = SkeletonJSON_new.GetFloat(dictionary6, "x", 0f) * scale;
+						transformConstraintData.OffsetY = SkeletonJSON_new.GetFloat(dictionary6, "y", 0f) * scale;
+						transformConstraintData.OffsetScaleX = SkeletonJSON_new.GetFloat(dictionary6, "scaleX", 0f);
+						transformConstraintData.OffsetScaleY = SkeletonJSON_new.GetFloat(dictionary6, "scaleY", 0f);
+						transformConstraintData.OffsetShearY = SkeletonJSON_new.GetFloat(dictionary6, "shearY", 0f);
+						transformConstraintData.RotateMix = SkeletonJSON_new.GetFloat(dictionary6, "rotateMix", 1f);
+						transformConstraintData.TranslateMix = SkeletonJSON_new.GetFloat(dictionary6, "translateMix", 1f);
+						transformConstraintData.ScaleMix = SkeletonJSON_new.GetFloat(dictionary6, "scaleMix", 1f);
+						transformConstraintData.ShearMix = SkeletonJSON_new.GetFloat(dictionary6, "shearMix", 1f);
+						skeletonData.TransformConstraints.Add(transformConstraintData);
+					}
+				}
+				if (dictionary.ContainsKey("path"))
+				{
+					foreach (object obj8 in ((List<object>)dictionary["path"]))
+					{
+						Dictionary<string, object> dictionary7 = (Dictionary<string, object>)obj8;
+						PathConstraintData pathConstraintData = new PathConstraintData((string)dictionary7["name"])
+						{
+							Order = SkeletonJSON_new.GetInt(dictionary7, "order", 0),
+							SkinRequired = SkeletonJSON_new.GetBoolean(dictionary7, "skin", false)
+						};
+						if (dictionary7.ContainsKey("bones"))
+						{
+							foreach (object obj9 in ((List<object>)dictionary7["bones"]))
+							{
+								string text6 = (string)obj9;
+								BoneData boneData6 = skeletonData.FindBone(text6);
+								if (boneData6 == null)
+								{
+									throw new Exception("Path bone not found: " + text6);
+								}
+								pathConstraintData.Bones.Add(boneData6);
+							}
+						}
+						string text7 = (string)dictionary7["target"];
+						pathConstraintData.Target = skeletonData.FindSlot(text7);
+						if (pathConstraintData.Target == null)
+						{
+							throw new Exception("Path target slot not found: " + text7);
+						}
+						pathConstraintData.PositionMode = (PositionMode)Enum.Parse(typeof(PositionMode), SkeletonJSON_new.GetString(dictionary7, "positionMode", "percent"), true);
+						pathConstraintData.SpacingMode = (SpacingMode)Enum.Parse(typeof(SpacingMode), SkeletonJSON_new.GetString(dictionary7, "spacingMode", "length"), true);
+						pathConstraintData.RotateMode = (RotateMode)Enum.Parse(typeof(RotateMode), SkeletonJSON_new.GetString(dictionary7, "rotateMode", "tangent"), true);
+						pathConstraintData.OffsetRotation = SkeletonJSON_new.GetFloat(dictionary7, "rotation", 0f);
+						pathConstraintData.Position = SkeletonJSON_new.GetFloat(dictionary7, "position", 0f);
+						if (pathConstraintData.PositionMode == PositionMode.Fixed)
+						{
+							pathConstraintData.Position *= scale;
+						}
+						pathConstraintData.Spacing = SkeletonJSON_new.GetFloat(dictionary7, "spacing", 0f);
+						if (pathConstraintData.SpacingMode == SpacingMode.Length || pathConstraintData.SpacingMode == SpacingMode.Fixed)
+						{
+							pathConstraintData.Spacing *= scale;
+						}
+						pathConstraintData.RotateMix = SkeletonJSON_new.GetFloat(dictionary7, "rotateMix", 1f);
+						pathConstraintData.TranslateMix = SkeletonJSON_new.GetFloat(dictionary7, "translateMix", 1f);
+						skeletonData.PathConstraints.Add(pathConstraintData);
+					}
+				}
+				if (dictionary.ContainsKey("skins"))
+				{
+					try
+					{
+						foreach (KeyValuePair<string, object> keyValuePair in ((Dictionary<string, object>)dictionary["skins"]))
+						{
+							Skin skin = new Skin(keyValuePair.Key);
+							foreach (KeyValuePair<string, object> keyValuePair2 in ((Dictionary<string, object>)keyValuePair.Value))
+							{
+								int slotIndex = skeletonData.FindSlotIndex(keyValuePair2.Key);
+								foreach (KeyValuePair<string, object> keyValuePair3 in ((Dictionary<string, object>)keyValuePair2.Value))
+								{
+									try
+									{
+										Attachment attachment = SkeletonJSON_new.ReadAttachment(__instance, (Dictionary<string, object>)keyValuePair3.Value, skin, slotIndex, keyValuePair3.Key, skeletonData);
+										if (attachment != null)
+										{
+											skin.SetAttachment(slotIndex, keyValuePair3.Key, attachment);
+										}
+									}
+									catch (Exception innerException)
+									{
+										throw new Exception(string.Concat(new object[]
+										{
+									"Error reading attachment: ",
+									keyValuePair3.Key,
+									", skin: ",
+									skin
+										}), innerException);
+									}
+								}
+							}
+							skeletonData.Skins.Add(skin);
+							if (skin.Name == "default")
+							{
+								skeletonData.DefaultSkin = skin;
+							}
+						}
+					}
+					catch
+					{
+						foreach (object obj10 in ((List<object>)dictionary["skins"]))
+						{
+							Dictionary<string, object> dictionary8 = (Dictionary<string, object>)obj10;
+							Skin skin2 = new Skin((string)dictionary8["name"]);
+							if (dictionary8.ContainsKey("attachments"))
+							{
+								foreach (KeyValuePair<string, object> keyValuePair4 in ((Dictionary<string, object>)dictionary8["attachments"]))
+								{
+									int slotIndex2 = skeletonData.FindSlotIndex(keyValuePair4.Key);
+									foreach (KeyValuePair<string, object> keyValuePair5 in ((Dictionary<string, object>)keyValuePair4.Value))
+									{
+										try
+										{
+											Attachment attachment2 = SkeletonJSON_new.ReadAttachment(__instance, (Dictionary<string, object>)keyValuePair5.Value, skin2, slotIndex2, keyValuePair5.Key, skeletonData);
+											if (attachment2 != null)
+											{
+												skin2.SetAttachment(slotIndex2, keyValuePair5.Key, attachment2);
+											}
+										}
+										catch (Exception innerException2)
+										{
+											throw new Exception(string.Concat(new object[]
+											{
+										"Error reading attachment: ",
+										keyValuePair5.Key,
+										", skin: ",
+										skin2
+											}), innerException2);
+										}
+									}
+								}
+							}
+							skeletonData.Skins.Add(skin2);
+							if (skin2.Name == "default")
+							{
+								skeletonData.DefaultSkin = skin2;
+							}
+						}
+					}
+				}
+				int i = 0;
+				int count = SkeletonJSON_new.linkedMeshes.Count;
+				while (i < count)
+				{
+					SkeletonJSON_new.LinkedMesh linkedMesh = SkeletonJSON_new.linkedMeshes[i];
+					Skin skin3 = (linkedMesh.skin == null) ? skeletonData.DefaultSkin : skeletonData.FindSkin(linkedMesh.skin);
+					if (skin3 == null)
+					{
+						throw new Exception("Slot not found: " + linkedMesh.skin);
+					}
+					Attachment attachment3 = skin3.GetAttachment(linkedMesh.slotIndex, linkedMesh.parent);
+					if (attachment3 == null)
+					{
+						throw new Exception("Parent mesh not found: " + linkedMesh.parent);
+					}
+					linkedMesh.mesh.ParentMesh = (MeshAttachment)attachment3;
+					linkedMesh.mesh.UpdateUVs();
+					i++;
+				}
+				SkeletonJSON_new.linkedMeshes.Clear();
+				if (dictionary.ContainsKey("events"))
+				{
+					foreach (KeyValuePair<string, object> keyValuePair6 in ((Dictionary<string, object>)dictionary["events"]))
+					{
+						Dictionary<string, object> map = (Dictionary<string, object>)keyValuePair6.Value;
+						EventData eventData = new EventData(keyValuePair6.Key)
+						{
+							Int = SkeletonJSON_new.GetInt(map, "int", 0),
+							Float = SkeletonJSON_new.GetFloat(map, "float", 0f),
+							String = SkeletonJSON_new.GetString(map, "string", string.Empty),
+							AudioPath = SkeletonJSON_new.GetString(map, "audio", null)
+						};
+						if (eventData.AudioPath != null)
+						{
+							eventData.Volume = SkeletonJSON_new.GetFloat(map, "volume", 1f);
+							eventData.Balance = SkeletonJSON_new.GetFloat(map, "balance", 0f);
+						}
+						skeletonData.Events.Add(eventData);
+					}
+				}
+				if (dictionary.ContainsKey("animations"))
+				{
+					foreach (KeyValuePair<string, object> keyValuePair7 in ((Dictionary<string, object>)dictionary["animations"]))
+					{
+						try
+						{
+							SkeletonJSON_new.ReadAnimation(__instance, (Dictionary<string, object>)keyValuePair7.Value, keyValuePair7.Key, skeletonData);
+						}
+						catch (Exception)
+						{
+							try
+							{
+								SkeletonJSON_new.ReadAnimation_new(__instance, (Dictionary<string, object>)keyValuePair7.Value, keyValuePair7.Key, skeletonData);
+							}
+							catch (Exception innerException3)
+							{
+								throw new Exception("Error reading animation: " + keyValuePair7.Key, innerException3);
+							}
+						}
+					}
+				}
+				skeletonData.Bones.TrimExcess();
+				skeletonData.Slots.TrimExcess();
+				skeletonData.Skins.TrimExcess();
+				skeletonData.Events.TrimExcess();
+				skeletonData.Animations.TrimExcess();
+				skeletonData.IkConstraints.TrimExcess();
+				__result = skeletonData;
+				result = false;
+			}
+			catch (Exception)
+			{
+				try
+				{
+					__result = ReadSkeletonData(__instance, reader);
+					result = false;
+				}
+				catch (Exception)
+				{
+					reader.GetType().GetField("_pos", all).SetValue(reader, 0);
+					result = true;
+				}
+			}
+			return result;
+		}
+		static SkeletonData ReadSkeletonData(SkeletonJson __instance, TextReader reader)
+		{
+			reader.GetType().GetField("_pos", all).SetValue(reader, 0);
+			if (reader == null)
+			{
+				throw new ArgumentNullException("reader", "reader cannot be null.");
+			}
+			float scale = __instance.Scale;
+			SkeletonData skeletonData = new SkeletonData();
+			if (!(Json.Deserialize(reader) is Dictionary<string, object> dictionary))
+			{
+				throw new Exception("Invalid JSON.");
+			}
+			if (dictionary.ContainsKey("skeleton"))
+			{
+				Dictionary<string, object> dictionary2 = (Dictionary<string, object>)dictionary["skeleton"];
+				skeletonData.Hash = (string)dictionary2["hash"];
+				if (dictionary2.ContainsKey("spine"))
+				{
+					skeletonData.Version = (string)dictionary2["spine"];
+				}
+				else
+				{
+					skeletonData.Version = "3.6.50";
+				}
+				skeletonData.Width = SkeletonJSON_new.GetFloat(dictionary2, "width", 0f);
+				skeletonData.Height = SkeletonJSON_new.GetFloat(dictionary2, "height", 0f);
+				skeletonData.Fps = SkeletonJSON_new.GetFloat(dictionary2, "fps", 30f);
+				skeletonData.ImagesPath = SkeletonJSON_new.GetString(dictionary2, "images", null);
+			}
+			if (dictionary.ContainsKey("bones"))
+			{
+				foreach (object obj in ((List<object>)dictionary["bones"]))
+				{
+					Dictionary<string, object> dictionary3 = (Dictionary<string, object>)obj;
+					BoneData boneData = null;
+					if (dictionary3.ContainsKey("parent"))
+					{
+						boneData = skeletonData.FindBone((string)dictionary3["parent"]);
+						if (boneData == null)
+						{
+							string str = "Parent bone not found: ";
+							object obj2 = dictionary3["parent"];
+							throw new Exception(str + (obj2?.ToString()));
+						}
+					}
+					BoneData boneData2 = new BoneData(skeletonData.Bones.Count, (string)dictionary3["name"], boneData)
+					{
+						Length = SkeletonJSON_new.GetFloat(dictionary3, "length", 0f) * scale,
+						X = SkeletonJSON_new.GetFloat(dictionary3, "x", 0f) * scale,
+						Y = SkeletonJSON_new.GetFloat(dictionary3, "y", 0f) * scale,
+						Rotation = SkeletonJSON_new.GetFloat(dictionary3, "rotation", 0f),
+						ScaleX = SkeletonJSON_new.GetFloat(dictionary3, "scaleX", 1f),
+						ScaleY = SkeletonJSON_new.GetFloat(dictionary3, "scaleY", 1f),
+						ShearX = SkeletonJSON_new.GetFloat(dictionary3, "shearX", 0f),
+						ShearY = SkeletonJSON_new.GetFloat(dictionary3, "shearY", 0f)
+					};
+					string @string = SkeletonJSON_new.GetString(dictionary3, "transform", TransformMode.Normal.ToString());
+					boneData2.TransformMode = (TransformMode)Enum.Parse(typeof(TransformMode), @string, true);
+					skeletonData.Bones.Add(boneData2);
+				}
+			}
+			if (dictionary.ContainsKey("slots"))
+			{
+				foreach (object obj3 in ((List<object>)dictionary["slots"]))
+				{
+					Dictionary<string, object> dictionary4 = (Dictionary<string, object>)obj3;
+					string name = (string)dictionary4["name"];
+					string text = (string)dictionary4["bone"];
+					BoneData boneData3 = skeletonData.FindBone(text);
+					if (boneData3 == null)
+					{
+						throw new Exception("Slot bone not found: " + text);
+					}
+					SlotData slotData = new SlotData(skeletonData.Slots.Count, name, boneData3);
+					if (dictionary4.ContainsKey("color"))
+					{
+						string hexString = (string)dictionary4["color"];
+						slotData.R = SkeletonJSON_new.ToColor(hexString, 0, 8);
+						slotData.G = SkeletonJSON_new.ToColor(hexString, 1, 8);
+						slotData.B = SkeletonJSON_new.ToColor(hexString, 2, 8);
+						slotData.A = SkeletonJSON_new.ToColor(hexString, 3, 8);
+					}
+					if (dictionary4.ContainsKey("dark"))
+					{
+						string hexString2 = (string)dictionary4["dark"];
+						slotData.R2 = SkeletonJSON_new.ToColor(hexString2, 0, 6);
+						slotData.G2 = SkeletonJSON_new.ToColor(hexString2, 1, 6);
+						slotData.B2 = SkeletonJSON_new.ToColor(hexString2, 2, 6);
+						slotData.HasSecondColor = true;
+					}
+					slotData.AttachmentName = SkeletonJSON_new.GetString(dictionary4, "attachment", null);
+					if (dictionary4.ContainsKey("blend"))
+					{
+						slotData.BlendMode = (BlendMode)Enum.Parse(typeof(BlendMode), (string)dictionary4["blend"], true);
+					}
+					else
+					{
+						slotData.BlendMode = BlendMode.Normal;
+					}
+					skeletonData.Slots.Add(slotData);
+				}
+			}
+			if (dictionary.ContainsKey("ik"))
+			{
+				foreach (object obj4 in ((List<object>)dictionary["ik"]))
+				{
+					Dictionary<string, object> dictionary5 = (Dictionary<string, object>)obj4;
+					IkConstraintData ikConstraintData = new IkConstraintData((string)dictionary5["name"])
+					{
+						Order = SkeletonJSON_new.GetInt(dictionary5, "order", 0)
+					};
+					if (dictionary5.ContainsKey("bones"))
+					{
+						foreach (object obj5 in ((List<object>)dictionary5["bones"]))
+						{
+							string text2 = (string)obj5;
+							BoneData boneData4 = skeletonData.FindBone(text2);
+							if (boneData4 == null)
+							{
+								throw new Exception("IK bone not found: " + text2);
+							}
+							ikConstraintData.Bones.Add(boneData4);
+						}
+					}
+					string text3 = (string)dictionary5["target"];
+					ikConstraintData.Target = skeletonData.FindBone(text3);
+					if (ikConstraintData.Target == null)
+					{
+						throw new Exception("IK target bone not found: " + text3);
+					}
+					ikConstraintData.Mix = SkeletonJSON_new.GetFloat(dictionary5, "mix", 1f);
+					ikConstraintData.BendDirection = (SkeletonJSON_new.GetBoolean(dictionary5, "bendPositive", true) ? 1 : -1);
+					skeletonData.IkConstraints.Add(ikConstraintData);
+				}
+			}
+			if (dictionary.ContainsKey("transform"))
+			{
+				foreach (object obj6 in ((List<object>)dictionary["transform"]))
+				{
+					Dictionary<string, object> dictionary6 = (Dictionary<string, object>)obj6;
+					TransformConstraintData transformConstraintData = new TransformConstraintData((string)dictionary6["name"])
+					{
+						Order = SkeletonJSON_new.GetInt(dictionary6, "order", 0)
+					};
+					if (dictionary6.ContainsKey("bones"))
+					{
+						foreach (object obj7 in ((List<object>)dictionary6["bones"]))
+						{
+							string text4 = (string)obj7;
+							BoneData boneData5 = skeletonData.FindBone(text4);
+							if (boneData5 == null)
+							{
+								throw new Exception("Transform constraint bone not found: " + text4);
+							}
+							transformConstraintData.Bones.Add(boneData5);
+						}
+					}
+					string text5 = (string)dictionary6["target"];
+					transformConstraintData.Target = skeletonData.FindBone(text5);
+					if (transformConstraintData.Target == null)
+					{
+						throw new Exception("Transform constraint target bone not found: " + text5);
+					}
+					transformConstraintData.Local = SkeletonJSON_new.GetBoolean(dictionary6, "local", false);
+					transformConstraintData.Relative = SkeletonJSON_new.GetBoolean(dictionary6, "relative", false);
+					transformConstraintData.OffsetRotation = SkeletonJSON_new.GetFloat(dictionary6, "rotation", 0f);
+					transformConstraintData.OffsetX = SkeletonJSON_new.GetFloat(dictionary6, "x", 0f) * scale;
+					transformConstraintData.OffsetY = SkeletonJSON_new.GetFloat(dictionary6, "y", 0f) * scale;
+					transformConstraintData.OffsetScaleX = SkeletonJSON_new.GetFloat(dictionary6, "scaleX", 0f);
+					transformConstraintData.OffsetScaleY = SkeletonJSON_new.GetFloat(dictionary6, "scaleY", 0f);
+					transformConstraintData.OffsetShearY = SkeletonJSON_new.GetFloat(dictionary6, "shearY", 0f);
+					transformConstraintData.RotateMix = SkeletonJSON_new.GetFloat(dictionary6, "rotateMix", 1f);
+					transformConstraintData.TranslateMix = SkeletonJSON_new.GetFloat(dictionary6, "translateMix", 1f);
+					transformConstraintData.ScaleMix = SkeletonJSON_new.GetFloat(dictionary6, "scaleMix", 1f);
+					transformConstraintData.ShearMix = SkeletonJSON_new.GetFloat(dictionary6, "shearMix", 1f);
+					skeletonData.TransformConstraints.Add(transformConstraintData);
+				}
+			}
+			if (dictionary.ContainsKey("path"))
+			{
+				foreach (object obj8 in ((List<object>)dictionary["path"]))
+				{
+					Dictionary<string, object> dictionary7 = (Dictionary<string, object>)obj8;
+					PathConstraintData pathConstraintData = new PathConstraintData((string)dictionary7["name"])
+					{
+						Order = SkeletonJSON_new.GetInt(dictionary7, "order", 0)
+					};
+					if (dictionary7.ContainsKey("bones"))
+					{
+						foreach (object obj9 in ((List<object>)dictionary7["bones"]))
+						{
+							string text6 = (string)obj9;
+							BoneData boneData6 = skeletonData.FindBone(text6);
+							if (boneData6 == null)
+							{
+								throw new Exception("Path bone not found: " + text6);
+							}
+							pathConstraintData.Bones.Add(boneData6);
+						}
+					}
+					string text7 = (string)dictionary7["target"];
+					pathConstraintData.Target = skeletonData.FindSlot(text7);
+					if (pathConstraintData.Target == null)
+					{
+						throw new Exception("Path target slot not found: " + text7);
+					}
+					pathConstraintData.PositionMode = (PositionMode)Enum.Parse(typeof(PositionMode), SkeletonJSON_new.GetString(dictionary7, "positionMode", "percent"), true);
+					pathConstraintData.SpacingMode = (SpacingMode)Enum.Parse(typeof(SpacingMode), SkeletonJSON_new.GetString(dictionary7, "spacingMode", "length"), true);
+					pathConstraintData.RotateMode = (RotateMode)Enum.Parse(typeof(RotateMode), SkeletonJSON_new.GetString(dictionary7, "rotateMode", "tangent"), true);
+					pathConstraintData.OffsetRotation = SkeletonJSON_new.GetFloat(dictionary7, "rotation", 0f);
+					pathConstraintData.Position = SkeletonJSON_new.GetFloat(dictionary7, "position", 0f);
+					if (pathConstraintData.PositionMode == PositionMode.Fixed)
+					{
+						pathConstraintData.Position *= scale;
+					}
+					pathConstraintData.Spacing = SkeletonJSON_new.GetFloat(dictionary7, "spacing", 0f);
+					if (pathConstraintData.SpacingMode == SpacingMode.Length || pathConstraintData.SpacingMode == SpacingMode.Fixed)
+					{
+						pathConstraintData.Spacing *= scale;
+					}
+					pathConstraintData.RotateMix = SkeletonJSON_new.GetFloat(dictionary7, "rotateMix", 1f);
+					pathConstraintData.TranslateMix = SkeletonJSON_new.GetFloat(dictionary7, "translateMix", 1f);
+					skeletonData.PathConstraints.Add(pathConstraintData);
+				}
+			}
+			if (dictionary.ContainsKey("skins"))
+			{
+				try
+				{
+					foreach (KeyValuePair<string, object> keyValuePair in ((Dictionary<string, object>)dictionary["skins"]))
+					{
+						Skin skin = new Skin(keyValuePair.Key);
+						foreach (KeyValuePair<string, object> keyValuePair2 in ((Dictionary<string, object>)keyValuePair.Value))
+						{
+							int slotIndex = skeletonData.FindSlotIndex(keyValuePair2.Key);
+							foreach (KeyValuePair<string, object> keyValuePair3 in ((Dictionary<string, object>)keyValuePair2.Value))
+							{
+								Attachment attachment = SkeletonJSON_new.ReadAttachment(__instance, (Dictionary<string, object>)keyValuePair3.Value, skin, slotIndex, keyValuePair3.Key, skeletonData);
+								if (attachment != null)
+								{
+									skin.SetAttachment(slotIndex, keyValuePair3.Key, attachment);
+								}
+							}
+						}
+						skeletonData.Skins.Add(skin);
+						if (skin.Name == "default")
+						{
+							skeletonData.DefaultSkin = skin;
+						}
+					}
+				}
+				catch (Exception)
+				{
+					foreach (object obj10 in ((List<object>)dictionary["skins"]))
+					{
+						Dictionary<string, object> dictionary8 = (Dictionary<string, object>)obj10;
+						Skin skin2 = new Skin((string)dictionary8["name"]);
+						if (dictionary8.ContainsKey("attachments"))
+						{
+							foreach (KeyValuePair<string, object> keyValuePair4 in ((Dictionary<string, object>)dictionary8["attachments"]))
+							{
+								int slotIndex2 = skeletonData.FindSlotIndex(keyValuePair4.Key);
+								foreach (KeyValuePair<string, object> keyValuePair5 in ((Dictionary<string, object>)keyValuePair4.Value))
+								{
+									try
+									{
+										Attachment attachment2 = SkeletonJSON_new.ReadAttachment_new(__instance, (Dictionary<string, object>)keyValuePair5.Value, skin2, slotIndex2, keyValuePair5.Key, skeletonData);
+										if (attachment2 != null)
+										{
+											skin2.SetAttachment(slotIndex2, keyValuePair5.Key, attachment2);
+										}
+									}
+									catch (Exception innerException)
+									{
+										throw new Exception(string.Concat(new object[]
+										{
+									"Error reading attachment: ",
+									keyValuePair5.Key,
+									", skin: ",
+									skin2
+										}), innerException);
+									}
+								}
+							}
+						}
+						skeletonData.Skins.Add(skin2);
+						if (skin2.Name == "default")
+						{
+							skeletonData.DefaultSkin = skin2;
+						}
+					}
+				}
+			}
+			int i = 0;
+			int count = SkeletonJSON_new.linkedMeshes.Count;
+			while (i < count)
+			{
+				SkeletonJSON_new.LinkedMesh linkedMesh = SkeletonJSON_new.linkedMeshes[i];
+				Skin skin3 = (linkedMesh.skin == null) ? skeletonData.DefaultSkin : skeletonData.FindSkin(linkedMesh.skin);
+				if (skin3 == null)
+				{
+					throw new Exception("Slot not found: " + linkedMesh.skin);
+				}
+				Attachment attachment3 = skin3.GetAttachment(linkedMesh.slotIndex, linkedMesh.parent);
+				if (attachment3 == null)
+				{
+					throw new Exception("Parent mesh not found: " + linkedMesh.parent);
+				}
+				linkedMesh.mesh.ParentMesh = (MeshAttachment)attachment3;
+				linkedMesh.mesh.UpdateUVs();
+				i++;
+			}
+			SkeletonJSON_new.linkedMeshes.Clear();
+			if (dictionary.ContainsKey("events"))
+			{
+				foreach (KeyValuePair<string, object> keyValuePair6 in ((Dictionary<string, object>)dictionary["events"]))
+				{
+					Dictionary<string, object> map = (Dictionary<string, object>)keyValuePair6.Value;
+					EventData eventData = new EventData(keyValuePair6.Key)
+					{
+						Int = SkeletonJSON_new.GetInt(map, "int", 0),
+						Float = SkeletonJSON_new.GetFloat(map, "float", 0f),
+						String = SkeletonJSON_new.GetString(map, "string", string.Empty)
+					};
+					skeletonData.Events.Add(eventData);
+				}
+			}
+			if (dictionary.ContainsKey("animations"))
+			{
+				foreach (KeyValuePair<string, object> keyValuePair7 in ((Dictionary<string, object>)dictionary["animations"]))
+				{
+					try
+					{
+						SkeletonJSON_new.ReadAnimation_new(__instance, (Dictionary<string, object>)keyValuePair7.Value, keyValuePair7.Key, skeletonData);
+					}
+					catch (Exception)
+					{
+						try
+						{
+							SkeletonJSON_new.ReadAnimation(__instance, (Dictionary<string, object>)keyValuePair7.Value, keyValuePair7.Key, skeletonData);
+						}
+						catch (Exception innerException2)
+						{
+							throw new Exception("Error reading animation: " + keyValuePair7.Key, innerException2);
+						}
+					}
+				}
+			}
+			skeletonData.Bones.TrimExcess();
+			skeletonData.Slots.TrimExcess();
+			skeletonData.Skins.TrimExcess();
+			skeletonData.Events.TrimExcess();
+			skeletonData.Animations.TrimExcess();
+			skeletonData.IkConstraints.TrimExcess();
+			return skeletonData;
+		}
+		*/
+		//?
+		/*
+		static void RegionlessAttachmentLoader_get_EmptyRegion()
+		{
+			if (Spine.Unity.RegionlessAttachmentLoader.emptyRegion == null)
+			{
+				AtlasRegion region = new AtlasRegion
+				{
+					name = "Empty AtlasRegion",
+					page = new AtlasPage
+					{
+						name = "Empty AtlasPage",
+						rendererObject = new Material(Shader.Find("UI/Default"))
+						{
+							name = "NoRender Material"
+						}
+					}
+				};
+				Spine.Unity.RegionlessAttachmentLoader.emptyRegion = region;
+			}
+		}
+		*/
 
-        public static Dictionary<int, LorId> ModWorkshopBookIndex;
-    }
+		static string GetCardName(LorId cardID)
+		{
+			return BattleCardDescXmlList.Instance.GetCardName(cardID);
+		}
+		static void GetArtWorks()
+		{
+			ArtWorks = new Dictionary<string, Sprite>();
+			foreach (ModContent modContent in LoadedModContents)
+			{
+				DirectoryInfo directoryInfo = modContent._dirInfo;
+				if (Directory.Exists(directoryInfo.FullName + "/ArtWork"))
+				{
+					DirectoryInfo directoryInfo2 = new DirectoryInfo(directoryInfo.FullName + "/ArtWork");
+					if (directoryInfo2.GetDirectories().Length != 0)
+					{
+						DirectoryInfo[] directories = directoryInfo2.GetDirectories();
+						for (int i = 0; i < directories.Length; i++)
+						{
+							GetArtWorks(directories[i]);
+						}
+					}
+					foreach (FileInfo fileInfo in directoryInfo2.GetFiles())
+					{
+						Texture2D texture2D = new Texture2D(2, 2);
+						texture2D.LoadImage(File.ReadAllBytes(fileInfo.FullName));
+						Sprite value = Sprite.Create(texture2D, new Rect(0f, 0f, texture2D.width, texture2D.height), new Vector2(0.5f, 0.5f));
+						string fileNameWithoutExtension = Path.GetFileNameWithoutExtension(fileInfo.FullName);
+						ArtWorks[fileNameWithoutExtension] = value;
+					}
+				}
+			}
+		}
+		static void GetArtWorks(DirectoryInfo dir)
+		{
+			if (dir.GetDirectories().Length != 0)
+			{
+				DirectoryInfo[] directories = dir.GetDirectories();
+				for (int i = 0; i < directories.Length; i++)
+				{
+					GetArtWorks(directories[i]);
+				}
+			}
+			foreach (FileInfo fileInfo in dir.GetFiles())
+			{
+				Texture2D texture2D = new Texture2D(2, 2);
+				texture2D.LoadImage(File.ReadAllBytes(fileInfo.FullName));
+				Sprite value = Sprite.Create(texture2D, new Rect(0f, 0f, texture2D.width, texture2D.height), new Vector2(0.5f, 0.5f));
+				string fileNameWithoutExtension = Path.GetFileNameWithoutExtension(fileInfo.FullName);
+				ArtWorks[fileNameWithoutExtension] = value;
+			}
+		}
+		public static string BuildPath(params string[] paths)
+		{
+			StringBuilder stringBuilder = new StringBuilder();
+			stringBuilder.Append("Xml/");
+			foreach (string value in paths)
+			{
+				stringBuilder.Append(value);
+			}
+			return stringBuilder.ToString();
+		}
+		public class ModStroyCG
+		{
+			public string path;
+			public Sprite sprite;
+		}
+
+		static string path = string.Empty;
+
+		static string Staticpath;
+
+		static string StoryStaticpath;
+
+		static string Storylocalizepath;
+
+		static string Localizepath;
+
+		static List<Assembly> AssemList;
+
+		static List<string> LoadedAssembly;
+
+		public static Dictionary<string, Type> CustomEffects = new Dictionary<string, Type>();
+
+		public static Dictionary<string, Type> CustomMapManager = new Dictionary<string, Type>();
+
+		public static Dictionary<string, Type> CustomBattleDialogModel = new Dictionary<string, Type>();
+
+		public static Dictionary<string, Type> CustomQuest = new Dictionary<string, Type>();
+
+		static bool CoreDialogsLoaded = false;
+
+		public static Dictionary<string, Type> CustomGiftPassive = new Dictionary<string, Type>();
+
+		public static Dictionary<string, Type> CustomEmotionCardAbility = new Dictionary<string, Type>();
+
+		public static Dictionary<string, int> CoreThumbDic;
+
+		public static Dictionary<BattleCardBehaviourResult, List<EffectTypoData>> CustomEffectTypoData = new Dictionary<BattleCardBehaviourResult, List<EffectTypoData>>();
+
+		public static Dictionary<string, Sprite> ArtWorks = null;
+
+		public static Dictionary<LorId, Sprite> BookThumb;
+
+		public static Dictionary<string, AudioClip> AudioClips = null;
+
+		public static bool IsModStorySelected;
+
+		public static Dictionary<LorId, UIStoryLine> ModEpMatch = new Dictionary<LorId, UIStoryLine>();
+
+		static readonly int ModEpMin = 200;
+
+		static readonly HashSet<string> CheckedCustomSprites = new HashSet<string>();
+
+		public static Dictionary<LorId, ModStroyCG> ModStoryCG = null;
+
+		static readonly HashSet<LorId> CheckedModStoryCG = new HashSet<LorId>();
+
+		public static Dictionary<Assembly, string> ModWorkShopId;
+
+		//static bool IsEditing = false;
+
+		static DiceCardXmlInfo errNullCard = null;
+
+		static readonly List<(string pid, string filename, ModInitializer initializer)> allInitializers = new List<(string, string, ModInitializer)>();
+
+		static bool CoreEmotionCardsLoaded = false;
+
+		static bool CoreQuestsLoaded = false;
+
+		static GiftAppearance _giftAppearance;
+
+		static bool CoreGiftPassivesLoaded = false;
+	}
 }
