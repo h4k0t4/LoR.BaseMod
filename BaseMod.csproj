@@ -206,7 +206,6 @@
     <Compile Include="GTMDProjectMoon\QuestXml_New.cs" />
     <Compile Include="GTMDProjectMoon\TitleXml_New.cs" />
     <Compile Include="GTMDProjectMoon\ToolTipXml_New.cs" />
-    <Compile Include="GTMDProjectMoon\Xml_New - 复制 - 复制.cs" />
     <Compile Include="GTMDProjectMoon\Xml_New - 复制.cs" />
     <Compile Include="GTMDProjectMoon\PassiveXml_New.cs" />
     <Compile Include="GTMDProjectMoon\BookXml_New.cs" />
@@ -236,7 +235,4 @@
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
-  <PropertyGroup>
-    <PostBuildEvent>copy /Y "$(TargetDir)\*.dll" "D:\Gaems\SteamLibrary\steamapps\common\Library Of Ruina\LibraryOfRuina_Data\Mods\BMX\Assemblies"</PostBuildEvent>
-  </PropertyGroup>
 </Project>
