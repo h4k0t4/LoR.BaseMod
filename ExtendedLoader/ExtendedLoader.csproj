@@ -82,7 +82,6 @@
     <Compile Include="Patches\WorkshopSetterPatch.cs" />
     <Compile Include="Commons\XLInitializer.cs" />
     <Compile Include="Commons\XLRoot.cs" />
-    <Compile Include="GlobalSuppressions.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>

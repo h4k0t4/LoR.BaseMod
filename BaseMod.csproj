@@ -193,7 +193,6 @@
     <Compile Include="BaseMod\UIPanelTool.cs" />
     <Compile Include="BaseMod\UtilTools.cs" />
     <Compile Include="BaseMod\Tools.cs" />
-    <Compile Include="GlobalSuppressions.cs" />
     <Compile Include="GTMDProjectMoon\BasemodConfig.cs" />
     <Compile Include="GTMDProjectMoon\Character_New.cs" />
     <Compile Include="GTMDProjectMoon\DeckXml_New.cs" />
