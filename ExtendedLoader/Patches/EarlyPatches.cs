@@ -179,49 +179,49 @@ namespace ExtendedLoader
 				}
 				XmlNode versionXml = rootNode.Attributes.GetNamedItem("version") ?? rootNode.Attributes.GetNamedItem("Version");
 				FaceData faceData = null;
-				XmlNode faceNode = rootNode.SelectSingleNode("FaceInfo");
-				if (faceNode != null && __result.faceCustomInfo != null)
+				XmlNode extendedFaceNode = rootNode.SelectSingleNode("ExtendedFaceInfo");
+				if (extendedFaceNode != null)
 				{
-					XmlNode extendedFaceNode = rootNode.SelectSingleNode("ExtendedFaceInfo");
-					if (extendedFaceNode != null)
+					if (__result.faceCustomInfo == null)
 					{
-						faceData = new FaceData(__result.faceCustomInfo);
-						for (int i = 0; i < 6; i++)
-						{
-							CustomizeType key = (CustomizeType)i;
-							string xpath = key.ToString();
-							XmlNode customNameNode = extendedFaceNode.SelectSingleNode(xpath);
-							if (customNameNode != null)
-							{
-								string name = customNameNode.InnerText;
-								if (!string.IsNullOrWhiteSpace(name))
-								{
-									if (int.TryParse(name, out var index))
-									{
-										faceData.customIds[key] = index;
-									}
-									else
-									{
-										faceData.customNames[key] = name;
-									}
-								}
-							}
-						}
-						for (int i = 0; i < 3; i++)
-						{
-							CustomizeColor key = (CustomizeColor)i;
-							string xpath = key.ToString();
-							XmlNode customColorNode = extendedFaceNode.SelectSingleNode(xpath);
-							if (customColorNode != null)
-							{
-								if (ColorUtility.TryParseHtmlString(customColorNode.InnerText, out var color))
-								{
-									faceData.customColors[key] = color;
-								}
-							}
-						}
-						XLRoot.LoadFaceCustom(__result.faceCustomInfo, XLRoot.GetCustomLocationKeyByFolder(rootPath));
+						__result.faceCustomInfo = new Dictionary<Workshop.FaceCustomType, Sprite>();
 					}
+					faceData = new FaceData(__result.faceCustomInfo);
+					for (int i = 0; i < 6; i++)
+					{
+						CustomizeType key = (CustomizeType)i;
+						string xpath = key.ToString();
+						XmlNode customNameNode = extendedFaceNode.SelectSingleNode(xpath);
+						if (customNameNode != null)
+						{
+							string name = customNameNode.InnerText;
+							if (!string.IsNullOrWhiteSpace(name))
+							{
+								if (int.TryParse(name, out var index))
+								{
+									faceData.customIds[key] = index;
+								}
+								else
+								{
+									faceData.customNames[key] = name;
+								}
+							}
+						}
+					}
+					for (int i = 0; i < 3; i++)
+					{
+						CustomizeColor key = (CustomizeColor)i;
+						string xpath = key.ToString();
+						XmlNode customColorNode = extendedFaceNode.SelectSingleNode(xpath);
+						if (customColorNode != null)
+						{
+							if (ColorUtility.TryParseHtmlString(customColorNode.InnerText, out var color))
+							{
+								faceData.customColors[key] = color;
+							}
+						}
+					}
+					XLRoot.LoadFaceCustom(__result.faceCustomInfo, XLRoot.GetCustomLocationKeyByFolder(rootPath));
 				}
 				XmlNode clothNode = rootNode.SelectSingleNode("ClothInfo");
 				if (clothNode != null)
