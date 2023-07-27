@@ -499,7 +499,7 @@ namespace ExtendedLoader
 			var customBookGetter = PropertyGetter(typeof(UnitDataModel), nameof(UnitDataModel.CustomBookItem));
 			var unitGenderField = Field(typeof(UnitDataModel), nameof(UnitDataModel.gender));
 			var fixGenderMethod = Method(typeof(CustomSkinCreatePatch), nameof(TryInjectAbnormalGender));
-			var customPrefabGetter = PropertyGetter(typeof(XLRoot), nameof(XLRoot.UICustomAppearancePrefab));
+			var customPrefabGetter = PropertyGetter(typeof(XLRoot), nameof(XLRoot.CustomAppearancePrefab));
 			var codes = new List<CodeInstruction>(instructions);
 			for (var i = 0; i < codes.Count; i++)
 			{
