@@ -186,10 +186,28 @@ namespace ExtendedLoader
 		static void ReLoadWorkshopCustomAppearance()
 		{
 			SetOriginalIndexes();
+			TryFixThatOneHair();
 			ReloadExternalData();
 			LoadWorkshopCustomAppearanceFolder(PlatformManager.Instance.GetWorkshopDirPath());
 			ResetIndexes();
 			LoadWorkshopCustomAppearanceFolder(Path.Combine(Application.dataPath, "Mods"));
+		}
+		static void TryFixThatOneHair()
+		{
+			if (originalRearHairIndex >= 18)
+			{
+				var rears = CustomizingResourceLoader.Instance._rearHairResources;
+				var thatOneHair = rears[17];
+				if (thatOneHair.Default?.name == "BackHair_Front_2_1" && thatOneHair.Side_Front?.name == "BackHair_FrontLayer_3_0")
+				{
+					var thatOneSprite = thatOneHair.Side_Front;
+					for (int i = 17; i < originalRearHairIndex - 1; i++)
+					{
+						rears[i].Side_Front = rears[i + 1].Side_Front;
+					}
+					rears[originalRearHairIndex - 1].Side_Front = thatOneSprite;
+				}
+			}
 		}
 		static void LoadWorkshopCustomAppearanceFolder(string path)
 		{

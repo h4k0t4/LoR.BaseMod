@@ -72,6 +72,7 @@
     <Compile Include="ExtendedTypes\ExtendedType.cs" />
     <Compile Include="Patches\EditorPatches.cs" />
     <Compile Include="Patches\FaceOverridePatch.cs" />
+    <Compile Include="Patches\FrontRearHairColorPatch.cs" />
     <Compile Include="Patches\GenderVariantCheckPatch.cs" />
     <Compile Include="Patches\GiftOrderPatch.cs" />
     <Compile Include="Patches\ReversePatches.cs" />
