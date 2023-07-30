@@ -510,9 +510,9 @@ namespace BaseMod
 
 namespace BaseMod
 {
-	[Obsolete("Use EnumExtenderV2 and KeywordUtil for native compatibility with original KeywordBuf system", false)]
 	public static class BuffExtension
 	{
+		[Obsolete("Use EnumExtenderV2 and KeywordUtil for native compatibility with original KeywordBuf system", false)]
 		public static BattleUnitBuf AddBufByCard(this BattleUnitBufListDetail unitBufListDetail, BattleUnitBuf buf, int stack, BattleUnitModel actor = null, BufReadyType readyType = BufReadyType.ThisRound)
 		{
 			if (buf == null)
@@ -533,6 +533,7 @@ namespace BaseMod
 			battleUnitBuf.Modify(stack, actor, true);
 			return battleUnitBuf;
 		}
+		[Obsolete("Use EnumExtenderV2 and KeywordUtil for native compatibility with original KeywordBuf system", false)]
 		public static T AddBufByCard<T>(this BattleUnitBufListDetail unitBufListDetail, int stack, BattleUnitModel actor = null, BufReadyType readyType = BufReadyType.ThisRound) where T : BattleUnitBuf
 		{
 			if (actor == null)
@@ -550,6 +551,7 @@ namespace BaseMod
 			battleUnitBuf.Modify(stack, actor, true);
 			return (T)battleUnitBuf;
 		}
+		[Obsolete("Use EnumExtenderV2 and KeywordUtil for native compatibility with original KeywordBuf system", false)]
 		public static BattleUnitBuf AddBufByEtc(this BattleUnitBufListDetail unitBufListDetail, BattleUnitBuf buf, int stack, BattleUnitModel actor = null, BufReadyType readyType = BufReadyType.ThisRound)
 		{
 			if (buf == null)
@@ -570,6 +572,7 @@ namespace BaseMod
 			battleUnitBuf.Modify(stack, actor, false);
 			return battleUnitBuf;
 		}
+		[Obsolete("Use EnumExtenderV2 and KeywordUtil for native compatibility with original KeywordBuf system", false)]
 		public static T AddBufByEtc<T>(this BattleUnitBufListDetail unitBufListDetail, int stack, BattleUnitModel actor = null, BufReadyType readyType = BufReadyType.ThisRound) where T : BattleUnitBuf
 		{
 			if (actor == null)
@@ -612,11 +615,13 @@ namespace BaseMod
 			}
 			return list;
 		}
+		[Obsolete("Use EnumExtenderV2 and KeywordUtil for native compatibility with original KeywordBuf system", false)]
 		public static int AddBufStack(this BattleUnitBuf buf, int stack, BattleUnitModel actor = null, bool byCard = true)
 		{
 			buf.Modify(stack, actor, byCard);
 			return buf.stack;
 		}
+		[Obsolete("Use EnumExtenderV2 and KeywordUtil for native compatibility with original KeywordBuf system", false)]
 		public static int SetBufStack<TResult>(this BattleUnitBufListDetail unitBufListDetail, int stack, BufReadyType readyType = BufReadyType.ThisRound) where TResult : BattleUnitBuf
 		{
 			BattleUnitBuf buf = unitBufListDetail.FindBuf<TResult>(readyType);
@@ -644,6 +649,7 @@ namespace BaseMod
 			}
 			return battleUnitBuf;
 		}
+		[Obsolete("Use EnumExtenderV2 and KeywordUtil for native compatibility with original KeywordBuf system", false)]
 		static BattleUnitBuf Modify(this BattleUnitBuf buf, int stack, BattleUnitModel actor, bool byCard = true)
 		{
 			if (byCard)
