@@ -289,7 +289,7 @@ namespace SummonLiberation
 			try
 			{
 				var fixedIndex = UICharacterRenderer_SetCharacter_GetIndexWithSkip(index);
-				var minCharCount = Math.Max(199, fixedIndex);
+				var minCharCount = Math.Max(199, fixedIndex + 1);
 				while (__instance.characterList.Count < minCharCount)
 				{
 					__instance.characterList.Add(new UICharacter(null, null));
