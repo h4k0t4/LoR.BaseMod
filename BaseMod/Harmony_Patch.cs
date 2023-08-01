@@ -1385,9 +1385,16 @@ namespace BaseMod
 					};
 					__result.card = card;
 				}
-				else if (!__result.card.isKeepedCard)
+				else
 				{
-					__result.card.cardAbility = __result;
+					if (!__result.card.isKeepedCard)
+					{
+						__result.card.cardAbility = __result;
+					}
+					if (__result.card.owner == null)
+					{
+						__result.card.owner = __instance.owner;
+					}
 				}
 			}
 			catch (Exception ex)
