@@ -34,23 +34,44 @@ namespace ExtendedLoader
 				{
 					return true;
 				}
-				WorkshopSkinData expectedSkinData = null;
+				WorkshopSkinData baseSkinData = null;
+				WorkshopSkinData baseSkinDataAlt = null;
+				WorkshopSkinData upgradeSkinData = null;
 				if (skinName == null)
 				{
-					if (unit.workshopSkin != null)
+					if (unit.workshopSkin == null)
 					{
-						expectedSkinData = CustomizingResourceLoader.Instance.GetWorkshopSkinData(unit.workshopSkin);
-					}
-					else if (unit.CustomBookItem.ClassInfo.skinType == "Custom")
-					{
-						expectedSkinData = SkinTools.GetWorkshopBookSkinData(unit.CustomBookItem.BookId.packageId, unit.CustomBookItem.GetCharacterName(), "_" + unit.appearanceType);
+						upgradeSkinData = SkinTools.GetWorkshopBookSkinData(unit.CustomBookItem.BookId.packageId, unit.CustomBookItem.GetCharacterName(), "_" + unit.appearanceType);
+						if (unit.CustomBookItem.ClassInfo.skinType == "Custom" || unit.CustomBookItem.IsWorkshop)
+						{
+							baseSkinData = CustomizingBookSkinLoader.Instance.GetWorkshopBookSkinData(unit.CustomBookItem.BookId.packageId, unit.CustomBookItem.GetCharacterName());
+						}
+						if (unit._CustomBookItem != unit.bookItem && (unit.bookItem.ClassInfo.skinType == "Custom" || unit.bookItem.IsWorkshop))
+						{
+							baseSkinDataAlt = CustomizingBookSkinLoader.Instance.GetWorkshopBookSkinData(unit.bookItem.BookId.packageId, unit.bookItem.GetCharacterName());
+						}
 					}
 				}
 				else
 				{
-					expectedSkinData = SkinTools.GetWorkshopBookSkinData(new LorName(unit.bookItem.BookId.packageId, skinName), "");
+					upgradeSkinData = SkinTools.GetWorkshopBookSkinData(new LorName(unit.bookItem.BookId.packageId, skinName), "");
+					if (unit.workshopSkin == null)
+					{
+						if (unit.CustomBookItem.ClassInfo.skinType == "Custom" || unit.CustomBookItem.IsWorkshop)
+						{
+							baseSkinData = CustomizingBookSkinLoader.Instance.GetWorkshopBookSkinData(unit.CustomBookItem.BookId.packageId, unit.CustomBookItem.GetCharacterName());
+						}
+						if (unit._CustomBookItem != unit.bookItem && (unit.bookItem.ClassInfo.skinType == "Custom" || unit.bookItem.IsWorkshop))
+						{
+							baseSkinDataAlt = CustomizingBookSkinLoader.Instance.GetWorkshopBookSkinData(unit.bookItem.BookId.packageId, unit.bookItem.GetCharacterName());
+						}
+					}
+					else
+					{
+						baseSkinData = CustomizingResourceLoader.Instance.GetWorkshopSkinData(unit.workshopSkin);
+					}
 				}
-				return expectedSkinData != null && expectedSkinData != appliedSkinData;
+				return (appliedSkinData == baseSkinData || appliedSkinData == baseSkinDataAlt) && appliedSkinData != upgradeSkinData;
 			}
 		}
 
