@@ -2468,13 +2468,36 @@ namespace BaseMod
 			var codes = instructions.ToList();
 			for (int i = 0; i < codes.Count - 3; i++)
 			{
-				if (codes[i].Is(Ldtoken, typeof(UIStoryLine)) && codes[i + 1].Is(Call, method1) && codes[i + 2].Is(Call, method2)
-					&& codes[i + 3].Is(Callvirt, method3))
+				if (codes[i].Is(Ldtoken, typeof(UIStoryLine)) && codes[i + 1].Calls(method1) && codes[i + 2].Calls(method2)
+					&& codes[i + 3].Calls(method3))
 				{
 					codes.RemoveRange(i + 1, 3);
 					UIStoryLine[] originalValues = EnumExtender.GetOriginalValues<UIStoryLine>();
 					int index = Array.BinarySearch(originalValues, UIStoryLine.Chapter1) - 1;
 					codes[i] = new CodeInstruction(Ldc_I4, (int)originalValues[index]);
+					break;
+				}
+			}
+			return codes;
+		}
+
+		[HarmonyPatch(typeof(StoryTotal), nameof(StoryTotal.SetData))]
+		[HarmonyTranspiler]
+		static IEnumerable<CodeInstruction> StoryTotal_SetData_In(IEnumerable<CodeInstruction> instructions)
+		{
+			var method1 = Method(typeof(Type), nameof(Type.GetTypeFromHandle));
+			var method2 = Method(typeof(Enum), nameof(Enum.GetValues));
+			var method3 = PropertyGetter(typeof(Array), nameof(Array.Length));
+			var codes = instructions.ToList();
+			for (int i = 0; i < codes.Count - 3; i++)
+			{
+				if (codes[i].Is(Ldtoken, typeof(UIStoryLine)) && codes[i + 1].Calls(method1) && codes[i + 2].Calls(method2)
+					&& codes[i + 3].Calls(method3))
+				{
+					codes.RemoveRange(i + 1, 3);
+					UIStoryLine[] originalValues = EnumExtender.GetOriginalValues<UIStoryLine>();
+					int index = Array.BinarySearch(originalValues, UIStoryLine.Chapter1) - 1;
+					codes[i] = new CodeInstruction(Ldc_I4, (int)originalValues[index] + 1);
 					break;
 				}
 			}
