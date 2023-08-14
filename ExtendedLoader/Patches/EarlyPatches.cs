@@ -97,7 +97,10 @@ namespace ExtendedLoader
 		[HarmonyPrefix]
 		static void WorkshopAppearanceItemLoader_LoadCustomAppearanceInfo_Prefix(ref bool isBookSkin)
 		{
-			isBookSkin = false;
+			if (isBookSkin && UnityEngine.Object.CurrentThreadIsMainThread())
+			{
+				isBookSkin = false;
+			}
 		}
 
 		static readonly Vector2 midPivot = new Vector2(0.5f, 0.5f);
