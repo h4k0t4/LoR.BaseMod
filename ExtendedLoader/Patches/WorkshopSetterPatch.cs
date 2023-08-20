@@ -21,7 +21,11 @@ namespace ExtendedLoader
 			var extendedData = SkinData.GetExtraData(data.dic);
 			if (extendedData != null && extendedData.faceData != null)
 			{
-				var dataHolder = __instance.GetComponent<CharacterFaceData>() ?? __instance.gameObject.AddComponent<CharacterFaceData>();
+				var dataHolder = __instance.GetComponent<CharacterFaceData>();
+				if (dataHolder == null)
+				{
+					dataHolder = __instance.gameObject.AddComponent<CharacterFaceData>();
+				}
 				dataHolder.faceData = extendedData.faceData;
 			}
 			if (__instance is UIWorkshopSkinDataSetter)
@@ -155,7 +159,11 @@ namespace ExtendedLoader
 		[HarmonyFinalizer]
 		static void WorkshopSkinDataSetter_SetData_Finalizer(WorkshopSkinDataSetter __instance, WorkshopSkinData data)
 		{
-			WorkshopSkinDataCacher cache = __instance.GetComponent<WorkshopSkinDataCacher>() ?? __instance.gameObject.AddComponent<WorkshopSkinDataCacher>();
+			WorkshopSkinDataCacher cache = __instance.GetComponent<WorkshopSkinDataCacher>();
+			if (cache == null)
+			{
+				cache = __instance.gameObject.AddComponent<WorkshopSkinDataCacher>();
+			}
 			cache.data = data;
 			if (!(__instance is UIWorkshopSkinDataSetter))
 			{
@@ -312,7 +320,11 @@ namespace ExtendedLoader
 						transformHead.localRotation = Quaternion.Euler(data1.headPivot.localEulerAngles);
 						transformHead.gameObject.SetActive(data.headEnabled);
 					}
-					ExtendedCharacterMotion faceData = characterMotion.GetComponent<ExtendedCharacterMotion>() ?? characterMotion.gameObject.AddComponent<ExtendedCharacterMotion>();
+					ExtendedCharacterMotion faceData = characterMotion.GetComponent<ExtendedCharacterMotion>();
+					if (faceData == null)
+					{
+						faceData = characterMotion.gameObject.AddComponent<ExtendedCharacterMotion>();
+					}
 					faceData.faceOverride = data1.faceOverride;
 					if (data1.additionalPivots != null)
 					{

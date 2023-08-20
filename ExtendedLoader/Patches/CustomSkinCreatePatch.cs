@@ -20,6 +20,7 @@ namespace ExtendedLoader
 		{
 			if (appearance == null)
 			{
+				Debug.Log("XL: Failed to create CharacterAppearance! Trying to recreate...");
 				return true;
 			}
 			else
@@ -32,6 +33,7 @@ namespace ExtendedLoader
 				var appliedSkinData = appearance.GetComponent<WorkshopSkinDataCacher>()?.data;
 				if (appliedSkinData == null)
 				{
+					Debug.Log("XL: Found WorkshopSetter, but no data in WorkshopCacher! Trying to recreate...");
 					return true;
 				}
 				WorkshopSkinData baseSkinData = null;
@@ -39,7 +41,7 @@ namespace ExtendedLoader
 				WorkshopSkinData upgradeSkinData = null;
 				if (skinName == null)
 				{
-					if (unit.workshopSkin == null)
+					if (unit.workshopSkin == null && unit.CustomBookItem.ClassInfo.skinType == "Custom" && (unit.CustomBookItem.IsWorkshop || CustomizingBookSkinLoader.Instance.GetWorkshopBookSkinData("") != null))
 					{
 						upgradeSkinData = SkinTools.GetWorkshopBookSkinData(unit.CustomBookItem.BookId.packageId, unit.CustomBookItem.GetCharacterName(), "_" + unit.appearanceType);
 						if (unit.CustomBookItem.ClassInfo.skinType == "Custom" || unit.CustomBookItem.IsWorkshop)
@@ -71,7 +73,15 @@ namespace ExtendedLoader
 						baseSkinData = CustomizingResourceLoader.Instance.GetWorkshopSkinData(unit.workshopSkin);
 					}
 				}
-				return (appliedSkinData == baseSkinData || appliedSkinData == baseSkinDataAlt) && appliedSkinData != upgradeSkinData;
+				if (appliedSkinData != upgradeSkinData && upgradeSkinData != null)
+				{
+					if (appliedSkinData == baseSkinData || appliedSkinData == baseSkinDataAlt)
+					{
+						Debug.Log($"XL: Found cached data for {appliedSkinData.dataName} {appliedSkinData.contentFolderIdx} in WorkshopCacher, but also a possible upgrade to {upgradeSkinData.dataName} {upgradeSkinData.contentFolderIdx} (changing to {(skinName ?? "null")}); trying to recreate...");
+						return true;
+					}
+				}
+				return false;
 			}
 		}
 
@@ -371,7 +381,23 @@ namespace ExtendedLoader
 			{
 				if (IsBrokenSkin(unit, null, __result))
 				{
+					var oldres = __result;
 					__result = ReversePatches.SdCharacterUtil_CreateSkin_Snapshot(unit, faction, characterRoot);
+					if (IsBrokenSkin(unit, null, __result))
+					{
+						if (__result != null)
+						{
+							UnityEngine.Object.Destroy(__result.gameObject);
+						}
+						__result = oldres;
+					}
+					else
+					{
+						if (oldres != null)
+						{
+							UnityEngine.Object.Destroy(oldres.gameObject);
+						}
+					}
 				}
 			}
 			catch (Exception ex)
