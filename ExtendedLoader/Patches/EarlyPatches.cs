@@ -224,6 +224,20 @@ namespace ExtendedLoader
 							}
 						}
 					}
+					for (int i = 0; i < 10; i++)
+					{
+						GiftPosition key = (GiftPosition)i;
+						string xpath = "Gift" + key.ToString();
+						XmlNode customGiftNode = extendedFaceNode.SelectSingleNode(xpath);
+						if (customGiftNode != null)
+						{
+							string name = customGiftNode.InnerText;
+							if (!string.IsNullOrWhiteSpace(name))
+							{
+								faceData.customVisualGifts[key] = name;
+							}
+						}
+					}
 					XLRoot.LoadFaceCustom(__result.faceCustomInfo, XLRoot.GetCustomLocationKeyByFolder(rootPath));
 				}
 				XmlNode clothNode = rootNode.SelectSingleNode("ClothInfo");

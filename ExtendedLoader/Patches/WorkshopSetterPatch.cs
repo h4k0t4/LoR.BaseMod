@@ -457,7 +457,7 @@ namespace ExtendedLoader
 
 		[HarmonyPatch(typeof(CharacterAppearance), nameof(CharacterAppearance.InitCustomData))]
 		[HarmonyPrefix]
-		static void CharacterAppearance_InitCustomData_Prefix(CharacterAppearance __instance, ref UnitCustomizingData customizeData)
+		static void CharacterAppearance_InitCustomData_Prefix(CharacterAppearance __instance, ref UnitCustomizingData customizeData, ref Dictionary<GiftPosition, string> __state)
 		{
 			if (!customizeData.UseCustomData)
 			{
@@ -476,15 +476,27 @@ namespace ExtendedLoader
 						eyeColor = faceData.TryGetColor(CustomizeColor.EyeColor),
 						skinColor = faceData.TryGetColor(CustomizeColor.SkinColor)
 					};
+					if (faceData.customVisualGifts.Count > 0)
+					{
+						__state = faceData.customVisualGifts;
+					}
 				}
 			}
 		}
 
 		[HarmonyPatch(typeof(CharacterAppearance), nameof(CharacterAppearance.InitCustomData))]
 		[HarmonyPostfix]
-		static void CharacterAppearance_InitCustomData_Postfix(CharacterAppearance __instance)
+		static void CharacterAppearance_InitCustomData_Postfix(CharacterAppearance __instance, ref Dictionary<GiftPosition, string> __state)
 		{
 			__instance.GetComponent<WorkshopSkinDataSetter>()?.LateInit();
+			if (__state != null && __state.Count > 0)
+			{
+				foreach (var kvp in __state)
+				{
+					__instance.SetTemporaryGift(kvp.Value, kvp.Key, false);
+				}
+				__instance.RefreshAppearanceByGifts();
+			}
 		}
 	}
 }

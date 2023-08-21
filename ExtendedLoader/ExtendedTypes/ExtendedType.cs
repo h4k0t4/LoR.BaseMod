@@ -44,6 +44,8 @@ namespace ExtendedLoader
 
 		public readonly Dictionary<CustomizeColor, Color> customColors = new Dictionary<CustomizeColor, Color>();
 
+		public readonly Dictionary<GiftPosition, string> customVisualGifts = new Dictionary<GiftPosition, string>();
+
 		public static readonly Dictionary<CustomizeType, Dictionary<string, int>> idsByNames = new Dictionary<CustomizeType, Dictionary<string, int>> {
 			[CustomizeType.FrontHair] = new Dictionary<string, int>(),
 			[CustomizeType.RearHair] = new Dictionary<string, int>(),
