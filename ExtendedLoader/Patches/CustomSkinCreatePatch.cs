@@ -257,7 +257,7 @@ namespace ExtendedLoader
 			{
 				Debug.LogException(__exception);
 			}
-			if (index < UICharacterRenderer_SetCharacter_GetMaxWithoutSkip(__instance))
+			if (index >= UICharacterRenderer_SetCharacter_GetMaxWithoutSkip(__instance))
 			{
 				return null;
 			}
