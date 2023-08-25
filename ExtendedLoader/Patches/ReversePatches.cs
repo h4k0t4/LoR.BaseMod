@@ -4,7 +4,7 @@ using UnityEngine;
 
 namespace ExtendedLoader
 {
-	internal class ReversePatches
+	internal static class ReversePatches
 	{
 		[HarmonyReversePatch(HarmonyReversePatchType.Snapshot)]
 		[HarmonyPatch(typeof(UICharacterRenderer), nameof(UICharacterRenderer.SetCharacter))]

@@ -156,8 +156,9 @@ namespace ExtendedLoader
 		}
 
 		[HarmonyPatch(typeof(WorkshopSkinDataSetter), nameof(WorkshopSkinDataSetter.SetData), new Type[] { typeof(WorkshopSkinData) })]
-		[HarmonyFinalizer]
-		static void WorkshopSkinDataSetter_SetData_Finalizer(WorkshopSkinDataSetter __instance, WorkshopSkinData data)
+		[HarmonyPostfix]
+		[HarmonyPriority(Priority.High)]
+		static void WorkshopSkinDataSetter_SetData_Postfix(WorkshopSkinDataSetter __instance, WorkshopSkinData data)
 		{
 			WorkshopSkinDataCacher cache = __instance.GetComponent<WorkshopSkinDataCacher>();
 			if (cache == null)

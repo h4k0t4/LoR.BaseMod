@@ -267,7 +267,7 @@ namespace ExtendedLoader
 			{
 				try
 				{
-					ReversePatches.UICharacterRenderer_SetCharacter_Snapshot(__instance, unit, index, forcelyReload, renderRealtime);
+					ReversePatches.UICharacterRenderer_SetCharacter_Snapshot(__instance, unit, index, true, renderRealtime);
 				}
 				catch (Exception ex)
 				{
@@ -281,7 +281,7 @@ namespace ExtendedLoader
 					var unfixedUiChar = __instance.characterList[index];
 					if (unfixedUiChar.unitModel != __state || IsBrokenSkin(__state, null, unfixedUiChar.unitAppearance))
 					{
-						ReversePatches.UICharacterRenderer_SetCharacter_Snapshot(__instance, __state, index - 1, forcelyReload, renderRealtime);
+						ReversePatches.UICharacterRenderer_SetCharacter_Snapshot(__instance, __state, index - 1, true, renderRealtime);
 					}
 				}
 				catch (Exception ex)

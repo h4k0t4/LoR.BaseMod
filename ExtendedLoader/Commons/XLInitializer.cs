@@ -100,7 +100,27 @@ namespace ExtendedLoader
 			if (scene.name == "Stage_Hod_New")
 			{
 				SceneManager.sceneLoaded -= DoReversePatches;
-				new Harmony("Cyaminthe.ExtendedLoader.Reverse").PatchAll(typeof(ReversePatches));
+				var harmony = new Harmony("Cyaminthe.ExtendedLoader.Reverse");
+				foreach (var method in typeof(ReversePatches).GetMethods())
+				{
+					var target = method.GetCustomAttributes<HarmonyPatch>()?.FirstOrDefault();
+					if (target != null)
+					{
+						var targetMethod = AccessTools.Method(target.info.declaringType, target.info.methodName, target.info.argumentTypes);
+						if (targetMethod != null)
+						{
+							var patcher = harmony.CreateReversePatcher(targetMethod, new HarmonyMethod(method));
+							if (Harmony.GetPatchInfo(targetMethod) != null)
+							{
+								patcher.Patch(HarmonyReversePatchType.Snapshot);
+							}
+							else
+							{
+								patcher.Patch(HarmonyReversePatchType.Original);
+							}
+						}
+					}
+				}
 			}
 		}
 

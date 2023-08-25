@@ -5,7 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using HarmonyLib;
 
-namespace ExtendedLoader.Patches
+namespace ExtendedLoader
 {
 	[HarmonyPatch]
 	class FrontRearHairColorPatch
