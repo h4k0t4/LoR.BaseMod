@@ -265,6 +265,7 @@ namespace ExtendedLoader
 							AddSkinRenderers(motion, transform);
 						}
 					}
+					motion.transform.name = $"Custom_Extended_{motion.actionDetail}";
 				}
 			}
 			Destroy(gameObject.GetComponent<WorkshopSkinDataSetter>());
@@ -294,6 +295,7 @@ namespace ExtendedLoader
 						AddSkinRenderers(oldMotion, transform);
 					}
 				}
+				oldMotion.transform.name = $"Custom_Extended_{actionDetail}";
 			}
 			CharacterMotion masterMotion = appearance._motionList[0];
 			Transform masterTransform = masterMotion.transform.parent;
@@ -303,7 +305,7 @@ namespace ExtendedLoader
 			addedMotion.transform.localPosition = masterMotion.transform.localPosition;
 			addedMotion.transform.localScale = masterMotion.transform.localScale;
 			addedMotion.actionDetail = action;
-			addedMotion.transform.name = "Custom_" + action.ToString();
+			addedMotion.transform.name = $"Custom_Extended_{action}";
 			appearance._motionList.Add(addedMotion);
 			for (int i = 12; i < 31; i++)
 			{
@@ -313,7 +315,7 @@ namespace ExtendedLoader
 				addedMotion.transform.localPosition = masterMotion.transform.localPosition;
 				addedMotion.transform.localScale = masterMotion.transform.localScale;
 				addedMotion.actionDetail = action;
-				addedMotion.transform.name = "Custom_" + action.ToString();
+				addedMotion.transform.name = $"Custom_Extended_{action}";
 				appearance._motionList.Add(addedMotion);
 			}
 			gameObject.name = "Appearance_Custom_Extended";

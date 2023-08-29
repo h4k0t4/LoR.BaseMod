@@ -210,6 +210,7 @@ namespace ExtendedLoader
 
 		[HarmonyPatch(typeof(WorkshopSkinDataSetter), nameof(WorkshopSkinDataSetter.SetMotionData))]
 		[HarmonyPrefix]
+		[HarmonyPriority(Priority.HigherThanNormal)]
 		static bool WorkshopSkinDataSetter_SetMotionData_Prefix(ActionDetail motion, ClothCustomizeData data, WorkshopSkinDataSetter __instance)
 		{
 			try
@@ -222,6 +223,18 @@ namespace ExtendedLoader
 				}
 				if (data is ExtendedClothCustomizeData data1)
 				{
+					if (!characterMotion.name.StartsWith("Custom_Extended_"))
+					{
+						__instance._appearance._motionList.RemoveAll(charMotion => charMotion.actionDetail == motion);
+						__instance._appearance._characterMotionDic.Remove(motion);
+						var parent = characterMotion.transform.parent;
+						UnityEngine.Object.Destroy(characterMotion);
+						characterMotion = UnityEngine.Object.Instantiate(XLRoot.CustomAppearancePrefab.GetComponent<CharacterAppearance>().GetCharacterMotion(ActionDetail.Default), parent);
+						characterMotion.name = $"Custom_Extended_{motion}";
+						characterMotion.actionDetail = motion;
+						__instance._appearance._motionList.Add(characterMotion);
+						__instance._appearance._characterMotionDic[motion] = characterMotion;
+					}
 					Transform transformHead = null;
 					Transform transformMid = null;
 					Transform transformBack = null;

@@ -289,6 +289,8 @@ namespace BaseMod
 			LocalizedTextLoader_New.LoadModFiles(LoadedModContents);
 			StorySerializer_new.ExportStory();
 			LoadBookSkins(_bookSkinData);
+			//fix issues caused by some patches possibly running this in an async context
+			GetArtWorks();
 		}
 		static void ReloadModFiles()
 		{
