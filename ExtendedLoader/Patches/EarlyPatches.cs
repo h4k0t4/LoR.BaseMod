@@ -64,7 +64,23 @@ namespace ExtendedLoader
 
 		static string SanitizeDecimals(string source)
 		{
-			return ParseFloatSafe(source).ToString();
+			var d = ParseDoubleSafe(source);
+			if (d >= 0)
+			{
+				if (d > int.MaxValue)
+				{
+					return int.MaxValue.ToString();
+				}
+				return ((int)(d + 0.5)).ToString();
+			}
+			else
+			{
+				if (d < int.MinValue)
+				{
+					return int.MinValue.ToString();
+				}
+				return ((int)(d - 0.5)).ToString();
+			}
 		}
 
 		public static float ParseFloatSafe(string s)
@@ -76,6 +92,18 @@ namespace ExtendedLoader
 			catch
 			{
 				Debug.Log("ExtendedLoader: could not parse float (" + s + "), using 0 as fallback");
+				return 0;
+			}
+		}
+		public static double ParseDoubleSafe(string s)
+		{
+			try
+			{
+				return double.Parse(s.Replace(',', '.').Replace('/', '.'), invariant);
+			}
+			catch
+			{
+				Debug.Log("ExtendedLoader: could not parse double (" + s + "), using 0 as fallback");
 				return 0;
 			}
 		}
