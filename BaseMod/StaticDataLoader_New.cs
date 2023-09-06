@@ -382,6 +382,10 @@ namespace BaseMod
 		}
 		static void LoadPassive_MOD(DirectoryInfo dir, string uniqueId, TrackerDict<PassiveXmlInfo_V2> dict)
 		{
+			if (Harmony_Patch.IsBasemodDebugMode)
+			{
+				Debug.Log("Basemod: loading folder at " + dir.FullName);
+			}
 			LoadPassive_MOD_Checking(dir, uniqueId, dict);
 			if (dir.GetDirectories().Length != 0)
 			{
@@ -536,6 +540,10 @@ namespace BaseMod
 		}
 		static void LoadCard_MOD(DirectoryInfo dir, string uniqueId, TrackerDict<DiceCardXmlInfo> dict, SplitTrackerDict<string, DiceCardXmlInfo> splitDict)
 		{
+			if (Harmony_Patch.IsBasemodDebugMode)
+			{
+				Debug.Log("Basemod: loading folder at " + dir.FullName);
+			}
 			LoadCard_MOD_Checking(dir, uniqueId, dict, splitDict);
 			if (dir.GetDirectories().Length != 0)
 			{
@@ -638,6 +646,10 @@ namespace BaseMod
 		}
 		static void LoadDeck_MOD(DirectoryInfo dir, string uniqueId, TrackerDict<DeckXmlInfo> dict)
 		{
+			if (Harmony_Patch.IsBasemodDebugMode)
+			{
+				Debug.Log("Basemod: loading folder at " + dir.FullName);
+			}
 			LoadDeck_MOD_Checking(dir, uniqueId, dict);
 			if (dir.GetDirectories().Length != 0)
 			{
@@ -710,6 +722,10 @@ namespace BaseMod
 		}
 		static void LoadBook_MOD(DirectoryInfo dir, string uniqueId, TrackerDict<BookXmlInfo_V2> dict, SplitTrackerDict<string, BookXmlInfo_V2> splitDict)
 		{
+			if (Harmony_Patch.IsBasemodDebugMode)
+			{
+				Debug.Log("Basemod: loading folder at " + dir.FullName);
+			}
 			LoadBook_MOD_Checking(dir, uniqueId, dict, splitDict);
 			if (dir.GetDirectories().Length != 0)
 			{
@@ -799,6 +815,10 @@ namespace BaseMod
 		}
 		static void LoadCardDropTable_MOD(DirectoryInfo dir, string uniqueId, TrackerDict<CardDropTableXmlInfo> dict, SplitTrackerDict<string, CardDropTableXmlInfo> splitDict)
 		{
+			if (Harmony_Patch.IsBasemodDebugMode)
+			{
+				Debug.Log("Basemod: loading folder at " + dir.FullName);
+			}
 			LoadCardDropTable_MOD_Checking(dir, uniqueId, dict, splitDict);
 			if (dir.GetDirectories().Length != 0)
 			{
@@ -897,6 +917,10 @@ namespace BaseMod
 		}
 		static void LoadDropBook_MOD_Checking(DirectoryInfo dir, string uniqueId, TrackerDict<DropBookXmlInfo> dict, SplitTrackerDict<string, DropBookXmlInfo> splitDict)
 		{
+			if (Harmony_Patch.IsBasemodDebugMode)
+			{
+				Debug.Log("Basemod: loading folder at " + dir.FullName);
+			}
 			foreach (FileInfo fileInfo in dir.GetFiles())
 			{
 				try
@@ -996,6 +1020,10 @@ namespace BaseMod
 		}
 		static void LoadGift_MOD(DirectoryInfo dir, string uniqueId, TrackerDict<GiftXmlInfo_V2> dict)
 		{
+			if (Harmony_Patch.IsBasemodDebugMode)
+			{
+				Debug.Log("Basemod: loading folder at " + dir.FullName);
+			}
 			LoadGift_MOD_Checking(dir, uniqueId, dict);
 			bool flag = dir.GetDirectories().Length != 0;
 			if (flag)
@@ -1039,6 +1067,10 @@ namespace BaseMod
 		}
 		static void LoadTitle_MOD(DirectoryInfo dir, string uniqueId, TrackerDict<TitleXmlInfo_V2> prefixDict, TrackerDict<TitleXmlInfo_V2> postfixDict)
 		{
+			if (Harmony_Patch.IsBasemodDebugMode)
+			{
+				Debug.Log("Basemod: loading folder at " + dir.FullName);
+			}
 			LoadTitle_MOD_Checking(dir, uniqueId, prefixDict, postfixDict);
 			if (dir.GetDirectories().Length != 0)
 			{
@@ -1177,6 +1209,10 @@ namespace BaseMod
 		}
 		static void LoadEmotionCard_MOD(DirectoryInfo dir, string uniqueId, SplitTrackerDict<SephirahType, EmotionCardXmlInfo_V2> dict)
 		{
+			if (Harmony_Patch.IsBasemodDebugMode)
+			{
+				Debug.Log("Basemod: loading folder at " + dir.FullName);
+			}
 			LoadEmotionCard_MOD_Checking(dir, uniqueId, dict);
 			if (dir.GetDirectories().Length != 0)
 			{
@@ -1290,6 +1326,10 @@ namespace BaseMod
 		}
 		static void LoadEmotionEgo_MOD(DirectoryInfo dir, string uniqueId, SplitTrackerDict<SephirahType, EmotionEgoXmlInfo_V2> dict)
 		{
+			if (Harmony_Patch.IsBasemodDebugMode)
+			{
+				Debug.Log("Basemod: loading folder at " + dir.FullName);
+			}
 			LoadEmotionEgo_MOD_Checking(dir, uniqueId, dict);
 			if (dir.GetDirectories().Length != 0)
 			{
@@ -1416,6 +1456,10 @@ namespace BaseMod
 		}
 		static void LoadToolTip_MOD(DirectoryInfo dir, string uniqueId, TrackerDict<ToolTipXmlInfo> dict)
 		{
+			if (Harmony_Patch.IsBasemodDebugMode)
+			{
+				Debug.Log("Basemod: loading folder at " + dir.FullName);
+			}
 			LoadToolTip_MOD_Checking(dir, uniqueId, dict);
 			if (dir.GetDirectories().Length != 0)
 			{
@@ -1502,6 +1546,10 @@ namespace BaseMod
 		}
 		static void LoadFormation_MOD(DirectoryInfo dir, string uniqueId, TrackerDict<FormationXmlInfo_V2> dict)
 		{
+			if (Harmony_Patch.IsBasemodDebugMode)
+			{
+				Debug.Log("Basemod: loading folder at " + dir.FullName);
+			}
 			LoadFormation_MOD_Checking(dir, uniqueId, dict);
 			if (dir.GetDirectories().Length != 0)
 			{
@@ -1587,6 +1635,10 @@ namespace BaseMod
 		}
 		static void LoadQuest_MOD(DirectoryInfo dir, string uniqueId, SplitTrackerDict<SephirahType, QuestXmlInfo_V2> dict)
 		{
+			if (Harmony_Patch.IsBasemodDebugMode)
+			{
+				Debug.Log("Basemod: loading folder at " + dir.FullName);
+			}
 			LoadQuest_MOD_Checking(dir, uniqueId, dict);
 			if (dir.GetDirectories().Length != 0)
 			{
@@ -1665,6 +1717,10 @@ namespace BaseMod
 		}
 		static void LoadEnemyUnit_MOD(DirectoryInfo dir, string uniqueId, TrackerDict<EnemyUnitClassInfo_V2> dict, SplitTrackerDict<string, EnemyUnitClassInfo_V2> splitDict)
 		{
+			if (Harmony_Patch.IsBasemodDebugMode)
+			{
+				Debug.Log("Basemod: loading folder at " + dir.FullName);
+			}
 			LoadEnemyUnit_MOD_Checking(dir, uniqueId, dict, splitDict);
 			if (dir.GetDirectories().Length != 0)
 			{
@@ -1806,6 +1862,10 @@ namespace BaseMod
 		}
 		static void LoadStage_MOD(DirectoryInfo dir, string uniqueId, TrackerDict<StageClassInfo_V2> dict, SplitTrackerDict<string, StageClassInfo_V2> splitDict)
 		{
+			if (Harmony_Patch.IsBasemodDebugMode)
+			{
+				Debug.Log("Basemod: loading folder at " + dir.FullName);
+			}
 			LoadStage_MOD_Checking(dir, uniqueId, dict, splitDict);
 			if (dir.GetDirectories().Length != 0)
 			{
@@ -1921,6 +1981,10 @@ namespace BaseMod
 		}
 		static void LoadFloorInfo_MOD(DirectoryInfo dir, string uniqueId, SplitTrackerDict<SephirahType, FloorLevelXmlInfo_V2> dict)
 		{
+			if (Harmony_Patch.IsBasemodDebugMode)
+			{
+				Debug.Log("Basemod: loading folder at " + dir.FullName);
+			}
 			LoadFloorInfo_MOD_Checking(dir, uniqueId, dict);
 			if (dir.GetDirectories().Length != 0)
 			{

@@ -155,6 +155,10 @@ namespace BaseMod
 						{
 							LoadedAssembly.Add(fileInfo.Directory.FullName);
 							errorname = "LoadAssembly";
+							if (IsBasemodDebugMode)
+							{
+								Debug.Log("Basemod load : " + fileInfo.FullName);
+							}
 							currentAssembly = Assembly.LoadFile(fileInfo.FullName);
 							errorname = "GetAssemblyTypes";
 							IEnumerable<Type> types;
@@ -6370,5 +6374,7 @@ namespace BaseMod
 		static GiftAppearance _giftAppearance;
 
 		static bool CoreGiftPassivesLoaded = false;
+
+		public static bool IsBasemodDebugMode = true;
 	}
 }

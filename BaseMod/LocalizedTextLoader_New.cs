@@ -372,6 +372,10 @@ namespace BaseMod
 
 		public static void LoadLocalizeFile_MOD(DirectoryInfo dir)
 		{
+			if (Harmony_Patch.IsBasemodDebugMode)
+			{
+				Debug.Log("BasemodLocalize: loading folder at " + dir.FullName);
+			}
 			LoadLocalizeFile_MOD_Checking(dir, TextDataModel.textDic);
 			if (dir.GetDirectories().Length != 0)
 			{
@@ -382,8 +386,6 @@ namespace BaseMod
 				}
 			}
 		}
-
-
 		public static void LoadLocalizeFile_MOD_Checking(DirectoryInfo dir, Dictionary<string, string> dic)
 		{
 			foreach (FileInfo fileInfo in dir.GetFiles())
@@ -410,6 +412,10 @@ namespace BaseMod
 
 		static void LoadBattleDialogues_Relations_MOD(DirectoryInfo dir, string uniqueId, SplitTrackerDict<string, LOR_XML.BattleDialogRelationWithBookID> dict)
 		{
+			if (Harmony_Patch.IsBasemodDebugMode)
+			{
+				Debug.Log("BasemodLocalize: loading folder at " + dir.FullName);
+			}
 			LoadBattleDialogues_Relations_MOD_Checking(dir, uniqueId, dict);
 			if (dir.GetDirectories().Length != 0)
 			{
@@ -456,6 +462,10 @@ namespace BaseMod
 
 		static void LoadBattleDialogues_MOD(DirectoryInfo dir, string uniqueId)
 		{
+			if (Harmony_Patch.IsBasemodDebugMode)
+			{
+				Debug.Log("BasemodLocalize: loading folder at " + dir.FullName);
+			}
 			LoadBattleDialogues_MOD_Checking(dir, uniqueId);
 			if (dir.GetDirectories().Length != 0)
 			{
@@ -497,6 +507,10 @@ namespace BaseMod
 
 		static void LoadCharactersName_MOD(DirectoryInfo dir, string uniqueId)
 		{
+			if (Harmony_Patch.IsBasemodDebugMode)
+			{
+				Debug.Log("BasemodLocalize: loading folder at " + dir.FullName);
+			}
 			LoadCharactersName_MOD_Checking(dir, uniqueId);
 			if (dir.GetDirectories().Length != 0)
 			{
@@ -544,6 +558,10 @@ namespace BaseMod
 
 		static void LoadLibrariansName_MOD(DirectoryInfo dir, string uniqueId)
 		{
+			if (Harmony_Patch.IsBasemodDebugMode)
+			{
+				Debug.Log("BasemodLocalize: loading folder at " + dir.FullName);
+			}
 			LoadLibrariansName_MOD_Checking(dir, uniqueId);
 			if (dir.GetDirectories().Length != 0)
 			{
@@ -591,6 +609,10 @@ namespace BaseMod
 
 		static void LoadStageName_MOD(DirectoryInfo dir, string uniqueId)
 		{
+			if (Harmony_Patch.IsBasemodDebugMode)
+			{
+				Debug.Log("BasemodLocalize: loading folder at " + dir.FullName);
+			}
 			LoadStageName_MOD_Checking(dir, uniqueId);
 			if (dir.GetDirectories().Length != 0)
 			{
@@ -638,6 +660,10 @@ namespace BaseMod
 
 		static void LoadPassiveDesc_MOD(DirectoryInfo dir, string uniqueId)
 		{
+			if (Harmony_Patch.IsBasemodDebugMode)
+			{
+				Debug.Log("BasemodLocalize: loading folder at " + dir.FullName);
+			}
 			LoadPassiveDesc_MOD_Checking(dir, uniqueId);
 			if (dir.GetDirectories().Length != 0)
 			{
@@ -676,6 +702,10 @@ namespace BaseMod
 
 		static void LoadGiftDesc_MOD(DirectoryInfo dir)
 		{
+			if (Harmony_Patch.IsBasemodDebugMode)
+			{
+				Debug.Log("BasemodLocalize: loading folder at " + dir.FullName);
+			}
 			LoadGiftDesc_MOD_Checking(dir);
 			if (dir.GetDirectories().Length != 0)
 			{
@@ -713,6 +743,10 @@ namespace BaseMod
 
 		static void LoadBattleCardDescriptions_MOD(DirectoryInfo dir, string uniqueId)
 		{
+			if (Harmony_Patch.IsBasemodDebugMode)
+			{
+				Debug.Log("BasemodLocalize: loading folder at " + dir.FullName);
+			}
 			LoadBattleCardDescriptions_MOD_Checking(dir, uniqueId);
 			if (dir.GetDirectories().Length != 0)
 			{
@@ -751,6 +785,10 @@ namespace BaseMod
 
 		static void LoadBattleCardAbilityDescriptions_MOD(DirectoryInfo dir)
 		{
+			if (Harmony_Patch.IsBasemodDebugMode)
+			{
+				Debug.Log("BasemodLocalize: loading folder at " + dir.FullName);
+			}
 			LoadBattleCardAbilityDescriptions_MOD_Checking(dir);
 			if (dir.GetDirectories().Length != 0)
 			{
@@ -788,6 +826,10 @@ namespace BaseMod
 
 		static void LoadBattleEffectTexts_MOD(DirectoryInfo dir)
 		{
+			if (Harmony_Patch.IsBasemodDebugMode)
+			{
+				Debug.Log("BasemodLocalize: loading folder at " + dir.FullName);
+			}
 			LoadBattleEffectTexts_MOD_Checking(dir);
 			if (dir.GetDirectories().Length != 0)
 			{
@@ -825,6 +867,10 @@ namespace BaseMod
 
 		static void LoadAbnormalityCardDescriptions_MOD(DirectoryInfo dir)
 		{
+			if (Harmony_Patch.IsBasemodDebugMode)
+			{
+				Debug.Log("BasemodLocalize: loading folder at " + dir.FullName);
+			}
 			LoadAbnormalityCardDescriptions_MOD_Checking(dir);
 			if (dir.GetDirectories().Length != 0)
 			{
@@ -865,6 +911,10 @@ namespace BaseMod
 
 		static void LoadAbnormalityAbilityDescription_MOD(DirectoryInfo dir)
 		{
+			if (Harmony_Patch.IsBasemodDebugMode)
+			{
+				Debug.Log("BasemodLocalize: loading folder at " + dir.FullName);
+			}
 			LoadAbnormalityAbilityDescription_MOD_Checking(dir);
 			if (dir.GetDirectories().Length != 0)
 			{
@@ -901,6 +951,10 @@ namespace BaseMod
 
 		static void LoadBookDescriptions_MOD(DirectoryInfo dir, string uniqueId, SplitTrackerDict<string, BookDesc_V2> dict)
 		{
+			if (Harmony_Patch.IsBasemodDebugMode)
+			{
+				Debug.Log("BasemodLocalize: loading folder at " + dir.FullName);
+			}
 			LoadBookDescriptions_MOD_Checking(dir, uniqueId, dict);
 			if (dir.GetDirectories().Length != 0)
 			{
