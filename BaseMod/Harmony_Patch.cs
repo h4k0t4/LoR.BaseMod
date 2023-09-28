@@ -1408,6 +1408,39 @@ namespace BaseMod
 				File.WriteAllText(Application.dataPath + "/Mods/ScriptFixPosterror.txt", ex.Message + Environment.NewLine + ex.StackTrace);
 			}
 		}
+
+		//Apparently the script/owner fixes above break (non-realization) Pinocchio because it's coded REALLY DUMBLY
+		[HarmonyPatch(typeof(PassiveAbility_1003011), nameof(PassiveAbility_1003011.OnWaveStart))]
+		[HarmonyPatch(typeof(PassiveAbility_1003021), nameof(PassiveAbility_1003021.OnWaveStart))]
+		[HarmonyPatch(typeof(PassiveAbility_1003031), nameof(PassiveAbility_1003031.OnWaveStart))]
+		[HarmonyTranspiler]
+		[HarmonyPriority(Priority.VeryLow)]
+		static IEnumerable<CodeInstruction> PassiveAbility_10030x1_OnWaveStart_In(IEnumerable<CodeInstruction> instructions)
+		{
+			var original = Method(typeof(BattleAllyCardDetail), nameof(BattleAllyCardDetail.GetAllDeck));
+			var replacement = Method(typeof(Harmony_Patch), nameof(GetAllDeckCopy));
+			foreach (var instruction in instructions)
+			{
+				if (instruction.Calls(original))
+				{
+					yield return new CodeInstruction(Call, replacement);
+				}
+				else
+				{
+					yield return instruction;
+				}
+			}
+		}
+		static List<BattleDiceCardModel> GetAllDeckCopy(BattleAllyCardDetail allyCardDetail)
+		{
+			var list = allyCardDetail.GetAllDeck();
+			for (int i = 0; i < list.Count; i++)
+			{
+				list[i] = BattleDiceCardModel.CreatePlayingCard(list[i].XmlData.Copy(true));
+			}
+			return list;
+		}
+
 		//Apply owner for personal card
 		/*
 		[HarmonyPatch(typeof(BattlePersonalEgoCardDetail), nameof(BattlePersonalEgoCardDetail.AddCard), new Type[] { typeof(LorId) })]
