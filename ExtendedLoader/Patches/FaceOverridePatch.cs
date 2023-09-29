@@ -1,17 +1,16 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using HarmonyLib;
 using System.Reflection;
 using System.Reflection.Emit;
 
 namespace ExtendedLoader
 {
-
-	static class FaceOverridePatch
+	[HarmonyPatch]
+	internal class FaceOverridePatch
 	{
 		[HarmonyPatch(typeof(CustomizedAppearance), nameof(CustomizedAppearance.RefreshAppearanceByMotion))]
 		[HarmonyTranspiler]
-		static IEnumerable<CodeInstruction> CustomizedAppearanceRefreshTranspiler(IEnumerable<CodeInstruction> instructions)
+		static IEnumerable<CodeInstruction> CustomizedAppearance_RefreshAppearanceByMotion_Transpiler(IEnumerable<CodeInstruction> instructions)
 		{
 			int count = 0;
 			foreach (var instruction in instructions)
@@ -31,7 +30,7 @@ namespace ExtendedLoader
 
 		[HarmonyPatch(typeof(SpecialCustomizedAppearance), nameof(SpecialCustomizedAppearance.RefreshAppearanceByMotion))]
 		[HarmonyTranspiler]
-		static IEnumerable<CodeInstruction> SpecialCustomizedAppearanceRefreshTranspiler(IEnumerable<CodeInstruction> instructions)
+		static IEnumerable<CodeInstruction> SpecialCustomizedAppearance_RefreshAppearanceByMotion_Transpiler(IEnumerable<CodeInstruction> instructions)
 		{
 			bool waiting = true;
 			foreach (var instruction in instructions)
@@ -43,15 +42,15 @@ namespace ExtendedLoader
 					{
 						yield return new CodeInstruction(OpCodes.Ldarg_1);
 						yield return new CodeInstruction(OpCodes.Call, checkOverride);
+						waiting = false;
 					}
-					waiting = false;
 				}
 			}
 		}
 
 		static ActionDetail CheckOverride(ActionDetail originalAction, CharacterMotion motion)
 		{
-			if (motion is ExtendedCharacterMotion extendedMotion && extendedMotion.faceOverride != FaceOverride.None)
+			if (motion.GetComponent<ExtendedCharacterMotion>() is ExtendedCharacterMotion extendedMotion && extendedMotion.faceOverride != FaceOverride.None)
 			{
 				return (ActionDetail)extendedMotion.faceOverride;
 			}
@@ -71,6 +70,6 @@ namespace ExtendedLoader
 		}
 
 		static readonly FieldInfo actionField = AccessTools.Field(typeof(CharacterMotion), nameof(CharacterMotion.actionDetail));
-		static readonly MethodInfo checkOverride = AccessTools.Method(typeof(FaceOverridePatch), nameof(FaceOverridePatch.CheckOverride));
+		static readonly MethodInfo checkOverride = AccessTools.Method(typeof(FaceOverridePatch), nameof(CheckOverride));
 	}
 }

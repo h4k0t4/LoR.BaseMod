@@ -5,17 +5,58 @@ using System.Xml.Serialization;
 //NewXml
 namespace GTMDProjectMoon
 {
-	public class PassiveXmlRoot
+	[XmlType("PassiveXmlRoot")]
+	public class PassiveXmlRoot_V2 : XmlRoot
 	{
-		[XmlElement("Pid")]
-		public string workshopID = "";
-
 		[XmlElement("Passive")]
-		public List<PassiveXmlInfo_New> list;
+		public List<PassiveXmlInfo_V2> list;
+
+		[XmlIgnore]
+		public static XmlAttributeOverrides Overrides
+		{
+			get
+			{
+				if (_overrides == null)
+				{
+					_overrides = new XmlAttributeOverrides();
+					_overrides.Add(typeof(PassiveXmlInfo), nameof(PassiveXmlInfo.workshopID), new XmlAttributes { XmlIgnore = false, XmlAttribute = new XmlAttributeAttribute("Pid") });
+				}
+				return _overrides;
+			}
+		}
+		static XmlAttributeOverrides _overrides;
 	}
-	public class PassiveXmlInfo_New : PassiveXmlInfo
+	public class PassiveXmlInfo_V2 : PassiveXmlInfo
 	{
+		[XmlElement("CopyInnerType")]
+		public LorIdXml CopyInnerTypeXml = new LorIdXml("", -1);
+
+		[XmlIgnore]
+		public LorId CopyInnerType = LorId.None;
+
 		[XmlElement("CustomInnerType")]
 		public string CustomInnerType = "";
+	}
+
+	[XmlType("PassiveDescRoot")]
+	public class PassiveDescRoot_V2 : XmlRoot
+	{
+		[XmlElement("PassiveDesc")]
+		public List<PassiveDesc> descList;
+
+		[XmlIgnore]
+		public static XmlAttributeOverrides Overrides
+		{
+			get
+			{
+				if (_overrides == null)
+				{
+					_overrides = new XmlAttributeOverrides();
+					_overrides.Add(typeof(PassiveDesc), nameof(PassiveDesc.workshopID), new XmlAttributes { XmlIgnore = false, XmlAttribute = new XmlAttributeAttribute("Pid") });
+				}
+				return _overrides;
+			}
+		}
+		static XmlAttributeOverrides _overrides;
 	}
 }

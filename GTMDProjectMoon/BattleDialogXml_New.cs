@@ -1,64 +1,122 @@
 ﻿using LOR_XML;
+using System;
 using System.Collections.Generic;
 using System.Xml.Serialization;
 
 //BattleDialogXml_New for battledialog
 namespace GTMDProjectMoon
 {
-    public class BattleDialogRoot
-    {
-        [XmlElement("GroupName")]
-        public string groupName;
+	[XmlType("BattleDialogRoot")]
+	public class BattleDialogRoot_V2 : XmlRoot
+	{
+		[XmlElement("GroupName")]
+		public string groupName;
 
-        [XmlElement("Character")]
-        public List<BattleDialogCharacter_New> characterList = new List<BattleDialogCharacter_New>();
-    }
-    public class BattleDialogCharacter_New
-    {
-        [XmlIgnore]
-        public LorId id
-        {
-            get
-            {
-                return new LorId(workshopId, bookId);
-            }
-        }
+		[XmlElement("Character")]
+		public List<BattleDialogCharacter_V2> characterList = new List<BattleDialogCharacter_V2>();
 
-        [XmlAttribute("Name")]
-        public string characterName = "";
+		[XmlIgnore]
+		public static XmlAttributeOverrides Overrides
+		{
+			get
+			{
+				if (_overrides == null)
+				{
+					_overrides = new XmlAttributeOverrides();
+					_overrides.Add(typeof(BattleDialogCharacter), nameof(BattleDialogCharacter.workshopId), new XmlAttributes { XmlIgnore = false, XmlAttribute = new XmlAttributeAttribute("Pid") });
+				}
+				return _overrides;
+			}
+		}
+		static XmlAttributeOverrides _overrides;
+	}
+	public class BattleDialogCharacter_V2 : BattleDialogCharacter
+	{
+		[XmlAttribute("Name")]
+		public string characterName = "";
+	}
+	[XmlType("BattleDialogRelationRoot")]
+	public class BattleDialogRelationRoot_V2 : XmlRoot 
+	{
+		[XmlElement("Relation")]
+		public List<BattleDialogRelationWithBookID_V2> list;
+	}
+	public class BattleDialogRelationWithBookID_V2 : BattleDialogRelationWithBookID
+	{
+		[XmlAttribute("Pid")]
+		public string workshopId = "";
 
-        [XmlAttribute("ID")]
-        public string characterID;
+		[XmlIgnore]
+		public LorId bookLorId => new LorId(workshopId, bookID);
+	}
 
-        [XmlElement("Type")]
-        public List<BattleDialogType> dialogTypeList = new List<BattleDialogType>();
 
-        [XmlIgnore]
-        public string workshopId = "";
+	[Obsolete]
+	public class BattleDialogRoot
+	{
+		[XmlElement("GroupName")]
+		public string groupName;
 
-        [XmlIgnore]
-        public int bookId;
-    }
-    public class BattleDialogRelationRoot
-    {
-        [XmlElement("Relation")]
-        public List<BattleDialogRelationWithBookID_New> list;
-    }
-    public class BattleDialogRelationWithBookID_New
-    {
-        [XmlAttribute("Pid")]
-        public string workshopId = "";
+		[XmlElement("Character")]
+		public List<BattleDialogCharacter_New> characterList = new List<BattleDialogCharacter_New>();
+	}
+	[Obsolete]
+	public class BattleDialogCharacter_New
+	{
+		[XmlIgnore]
+		public LorId id
+		{
+			get
+			{
+				return new LorId(this.workshopId, this.bookId);
+			}
+		}
 
-        [XmlAttribute("BookID")]
-        public int bookID;
+		[XmlAttribute("Name")]
+		public string characterName = "";
 
-        [XmlAttribute("StoryID")]
-        public int storyID;
+		[XmlAttribute("ID")]
+		public string characterID;
 
-        [XmlElement("GroupName")]
-        public string groupName;
+		[XmlElement("Type")]
+		public List<BattleDialogType> dialogTypeList = new List<BattleDialogType>();
 
-        [XmlElement("CharacterID")]
-        public string characterID;
-    }
+		[XmlIgnore]
+		public string workshopId = "";
+
+		[XmlIgnore]
+		public int bookId;
+	}
+	[Obsolete]
+	public class BattleDialogRelationRoot
+	{
+		public BattleDialogRelationRoot()
+		{
+		}
+
+		[XmlElement("Relation")]
+		public List<BattleDialogRelationWithBookID_New> list;
+	}
+	[Obsolete]
+	public class BattleDialogRelationWithBookID_New
+	{
+		public BattleDialogRelationWithBookID_New()
+		{
+		}
+
+		[XmlAttribute("Pid")]
+		public string workshopId = "";
+
+		[XmlAttribute("BookID")]
+		public int bookID;
+
+		[XmlAttribute("StoryID")]
+		public int storyID;
+
+		[XmlElement("GroupName")]
+		public string groupName;
+
+		[XmlElement("CharacterID")]
+		public string characterID;
+	}
 }
