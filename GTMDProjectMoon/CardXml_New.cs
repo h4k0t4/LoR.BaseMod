@@ -28,6 +28,14 @@ namespace GTMDProjectMoon
 					_overrides.Add(typeof(DiceCardXmlInfo), nameof(DiceCardXmlInfo.category), ignore);
 					_overrides.Add(typeof(DiceCardXmlInfo), nameof(DiceCardXmlInfo.optionList), ignore);
 					_overrides.Add(typeof(DiceCardXmlInfo), nameof(DiceCardXmlInfo.workshopID), new XmlAttributes { XmlIgnore = false, XmlAttribute = new XmlAttributeAttribute("Pid") });
+#pragma warning disable CS0618 // Type or member is obsolete
+					var unignore = new XmlAttributes
+					{
+						XmlIgnore = false
+					};
+					unignore.XmlElements.Add(new XmlElementAttribute("CustomCategory"));
+					_overrides.Add(typeof(DiceCardXmlInfo_V2), nameof(DiceCardXmlInfo_V2.customCategoryFallback), unignore);
+#pragma warning restore CS0618 // Type or member is obsolete
 				}
 				return _overrides;
 			}
@@ -40,7 +48,7 @@ namespace GTMDProjectMoon
 		[XmlElement("Category")]
 		public string customCategory;
 
-		[Obsolete]
+		[Obsolete("Just use the Category tag; if multiple entries are desired, use the Option tag instead (for cardOptions)", false)]
 		[XmlElement("CustomCategory")]
 		public string customCategoryFallback;
 
@@ -49,16 +57,16 @@ namespace GTMDProjectMoon
 
 		public void InitOldFields()
 		{
-#pragma warning disable CS0612 // Type or member is obsolete
 			if (!string.IsNullOrWhiteSpace(customCategory))
 			{
 				category = BaseMod.Tools.MakeEnum<BookCategory>(customCategory);
 			}
+#pragma warning disable CS0618 // Type or member is obsolete
 			else if (!string.IsNullOrWhiteSpace(customCategoryFallback))
 			{
 				category = BaseMod.Tools.MakeEnum<BookCategory>(customCategoryFallback);
 			}
-#pragma warning restore CS0612 // Type or member is obsolete
+#pragma warning restore CS0618 // Type or member is obsolete
 			optionList = customOptionList.Where(x => !string.IsNullOrWhiteSpace(x)).Select(x => BaseMod.Tools.MakeEnum<CardOption>(x)).ToList();
 		}
 	}

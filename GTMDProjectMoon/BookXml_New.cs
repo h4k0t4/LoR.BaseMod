@@ -34,6 +34,14 @@ namespace GTMDProjectMoon
 					_overrides.Add(typeof(BookXmlInfo), nameof(BookXmlInfo.episode), ignore);
 					_overrides.Add(typeof(BookXmlInfo), nameof(BookXmlInfo.skinType), ignore);
 					_overrides.Add(typeof(BookXmlInfo), nameof(BookXmlInfo.workshopID), new XmlAttributes { XmlIgnore = false, XmlAttribute = new XmlAttributeAttribute("Pid") });
+#pragma warning disable CS0618 // Type or member is obsolete
+					var unignore = new XmlAttributes
+					{
+						XmlIgnore = false
+					};
+					unignore.XmlElements.Add(new XmlElementAttribute("CustomCategory"));
+					_overrides.Add(typeof(BookXmlInfo_V2), nameof(BookXmlInfo_V2.customCategoryListFallback), unignore);
+#pragma warning restore CS0618 // Type or member is obsolete
 				}
 				return _overrides;
 			}
@@ -49,7 +57,7 @@ namespace GTMDProjectMoon
 		public List<string> customCategoryList = new List<string>();
 
 		[XmlElement("CustomCategory")]
-		[Obsolete("Just use the Category tag now", false)]
+		[Obsolete("Just use the Category tag", false)]
 		public List<string> customCategoryListFallback;
 
 		[XmlElement("EquipEffect")]

@@ -93,14 +93,14 @@ namespace ExtendedLoader
 				}
 				if (extendedData.atkEffectPivotDic != null)
 				{
-					Transform root = __instance.Appearance.atkEffectRoot;
-					Transform parent = __instance.Appearance.atkEffectRoot.parent;
+					Transform root = characterAppearance.atkEffectRoot;
+					Transform parent = characterAppearance.atkEffectRoot.parent;
 					if (extendedData.atkEffectPivotDic.TryGetValue("atkEffectRoot", out EffectPivot atkEffectRoot))
 					{
-						__instance.Appearance.atkEffectRoot.position = Vector3.zero;
-						__instance.Appearance.atkEffectRoot.localPosition = atkEffectRoot.localPosition;
-						__instance.Appearance.atkEffectRoot.localScale = atkEffectRoot.localScale;
-						__instance.Appearance.atkEffectRoot.localEulerAngles = atkEffectRoot.localEulerAngles;
+						characterAppearance.atkEffectRoot.position = Vector3.zero;
+						characterAppearance.atkEffectRoot.localPosition = atkEffectRoot.localPosition;
+						characterAppearance.atkEffectRoot.localScale = atkEffectRoot.localScale;
+						characterAppearance.atkEffectRoot.localEulerAngles = atkEffectRoot.localEulerAngles;
 						if (!atkEffectRoot.isNested)
 						{
 							root = parent;
@@ -108,43 +108,43 @@ namespace ExtendedLoader
 					}
 					if (extendedData.atkEffectPivotDic.TryGetValue("atkEffectPivot_H", out EffectPivot atkEffectPivot_H))
 					{
-						__instance.Appearance.atkEffectPivot_H = CreateTransform(atkEffectPivot_H.isNested ? root : parent, "atkEffectPivot_H", atkEffectPivot_H);
+						characterAppearance.atkEffectPivot_H = CreateTransform(atkEffectPivot_H.isNested ? root : parent, "atkEffectPivot_H", atkEffectPivot_H);
 					}
 					if (extendedData.atkEffectPivotDic.TryGetValue("atkEffectPivot_J", out EffectPivot atkEffectPivot_J))
 					{
-						__instance.Appearance.atkEffectPivot_J = CreateTransform(atkEffectPivot_J.isNested ? root : parent, "atkEffectPivot_J", atkEffectPivot_J);
+						characterAppearance.atkEffectPivot_J = CreateTransform(atkEffectPivot_J.isNested ? root : parent, "atkEffectPivot_J", atkEffectPivot_J);
 					}
 					if (extendedData.atkEffectPivotDic.TryGetValue("atkEffectPivot_Z", out EffectPivot atkEffectPivot_Z))
 					{
-						__instance.Appearance.atkEffectPivot_Z = CreateTransform(atkEffectPivot_Z.isNested ? root : parent, "atkEffectPivot_Z", atkEffectPivot_Z);
+						characterAppearance.atkEffectPivot_Z = CreateTransform(atkEffectPivot_Z.isNested ? root : parent, "atkEffectPivot_Z", atkEffectPivot_Z);
 					}
 					if (extendedData.atkEffectPivotDic.TryGetValue("atkEffectPivot_G", out EffectPivot atkEffectPivot_G))
 					{
-						__instance.Appearance.atkEffectPivot_G = CreateTransform(atkEffectPivot_G.isNested ? root : parent, "atkEffectPivot_G", atkEffectPivot_G);
+						characterAppearance.atkEffectPivot_G = CreateTransform(atkEffectPivot_G.isNested ? root : parent, "atkEffectPivot_G", atkEffectPivot_G);
 					}
 					if (extendedData.atkEffectPivotDic.TryGetValue("atkEffectPivot_E", out EffectPivot atkEffectPivot_E))
 					{
-						__instance.Appearance.atkEffectPivot_E = CreateTransform(atkEffectPivot_E.isNested ? root : parent, "atkEffectPivot_E", atkEffectPivot_E);
+						characterAppearance.atkEffectPivot_E = CreateTransform(atkEffectPivot_E.isNested ? root : parent, "atkEffectPivot_E", atkEffectPivot_E);
 					}
 					if (extendedData.atkEffectPivotDic.TryGetValue("atkEffectPivot_S", out EffectPivot atkEffectPivot_S))
 					{
-						__instance.Appearance.atkEffectPivot_S = CreateTransform(atkEffectPivot_S.isNested ? root : parent, "atkEffectPivot_S", atkEffectPivot_S);
+						characterAppearance.atkEffectPivot_S = CreateTransform(atkEffectPivot_S.isNested ? root : parent, "atkEffectPivot_S", atkEffectPivot_S);
 					}
 					if (extendedData.atkEffectPivotDic.TryGetValue("atkEffectPivot_F", out EffectPivot atkEffectPivot_F))
 					{
-						__instance.Appearance.atkEffectPivot_F = CreateTransform(atkEffectPivot_F.isNested ? root : parent, "atkEffectPivot_F", atkEffectPivot_F);
+						characterAppearance.atkEffectPivot_F = CreateTransform(atkEffectPivot_F.isNested ? root : parent, "atkEffectPivot_F", atkEffectPivot_F);
 					}
 				}
 				if (extendedData.specialMotionPivotDic != null && extendedData.specialMotionPivotDic.Count > 0)
 				{
-					Transform SpecialPivot = CreateTransform(__instance.Appearance.transform, "SpecialPivot", Vector3.zero, new Vector3(1, 1, 1), Vector3.zero);
-					if (__instance.Appearance._specialMotionPivotList == null)
+					Transform SpecialPivot = CreateTransform(characterAppearance.transform, "SpecialPivot", Vector3.zero, new Vector3(1, 1, 1), Vector3.zero);
+					if (characterAppearance._specialMotionPivotList == null)
 					{
-						__instance.Appearance._specialMotionPivotList = new List<CharacterAppearance.MotionPivot>();
+						characterAppearance._specialMotionPivotList = new List<CharacterAppearance.MotionPivot>();
 					}
 					foreach (KeyValuePair<ActionDetail, EffectPivot> keyValuePair in extendedData.specialMotionPivotDic)
 					{
-						__instance.Appearance._specialMotionPivotList.Add(new CharacterAppearance.MotionPivot()
+						characterAppearance._specialMotionPivotList.Add(new CharacterAppearance.MotionPivot()
 						{
 							motion = keyValuePair.Key,
 							pivot = CreateTransform(SpecialPivot, "Special_" + keyValuePair.Key.ToString(), keyValuePair.Value)
