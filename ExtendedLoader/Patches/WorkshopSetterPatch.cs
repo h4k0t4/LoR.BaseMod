@@ -234,6 +234,7 @@ namespace ExtendedLoader
 						characterMotion.actionDetail = motion;
 						__instance._appearance._motionList.Add(characterMotion);
 						__instance._appearance._characterMotionDic[motion] = characterMotion;
+						characterMotion.gameObject.SetActive(false);
 					}
 					Transform transformHead = null;
 					Transform transformMid = null;
