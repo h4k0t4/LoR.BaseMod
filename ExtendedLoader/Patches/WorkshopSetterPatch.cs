@@ -8,6 +8,8 @@ using UnityEngine;
 using Workshop;
 using static System.Reflection.Emit.OpCodes;
 using static HarmonyLib.AccessTools;
+using SaveTest;
+using static Workshop.WorkshopSkinDataSetter;
 
 namespace ExtendedLoader
 {
@@ -210,6 +212,38 @@ namespace ExtendedLoader
 
 		[HarmonyPatch(typeof(WorkshopSkinDataSetter), nameof(WorkshopSkinDataSetter.SetMotionData))]
 		[HarmonyPrefix]
+		[HarmonyPriority(Priority.VeryHigh)]
+		static void WorkshopSkinDataSetter_SetMotionData_PrefixEarly(ActionDetail motion, WorkshopSkinDataSetter __instance)
+		{
+			try
+			{
+				CharacterMotion characterMotion = __instance.Appearance.GetCharacterMotion(motion);
+				if (characterMotion == null)
+				{
+					Debug.LogError("MotionNull! " + motion.ToString());
+					return;
+				}
+				foreach (Transform transform in characterMotion.transform)
+				{
+					if (transform.name == "Customize_Renderer")
+					{
+						SpriteRenderer spriteRenderer = transform.GetComponent<SpriteRenderer>();
+						if (spriteRenderer && spriteRenderer.sortingOrder < 4)
+						{
+							spriteRenderer.sortingOrder = 4;
+						}
+						return;
+					}
+				}
+			}
+			catch (Exception ex)
+			{
+				Debug.LogException(ex);
+			}
+		}
+
+		[HarmonyPatch(typeof(WorkshopSkinDataSetter), nameof(WorkshopSkinDataSetter.SetMotionData))]
+		[HarmonyPrefix]
 		[HarmonyPriority(Priority.HigherThanNormal)]
 		static bool WorkshopSkinDataSetter_SetMotionData_Prefix(ActionDetail motion, ClothCustomizeData data, WorkshopSkinDataSetter __instance)
 		{
@@ -218,7 +252,6 @@ namespace ExtendedLoader
 				CharacterMotion characterMotion = __instance.Appearance.GetCharacterMotion(motion);
 				if (characterMotion == null)
 				{
-					Debug.LogError("MotionNull! " + motion.ToString());
 					return true;
 				}
 				if (data is ExtendedClothCustomizeData data1)
@@ -276,28 +309,28 @@ namespace ExtendedLoader
 						}
 					}
 					var partRenderer = new SkinPartRenderer { action = motion };
-					SpriteRenderer spriteRendererMid = transformMid?.gameObject.GetComponent<SpriteRenderer>();
+					SpriteRenderer spriteRendererMid = transformMid?.GetComponent<SpriteRenderer>();
 					if (spriteRendererMid)
 					{
 						spriteRendererMid.sprite = data1.sprite;
 						spriteRendererMid.gameObject.SetActive(data1.sprite);
 						partRenderer.rear = spriteRendererMid;
 					}
-					SpriteRenderer spriteRendererFront = transformFront?.gameObject.GetComponent<SpriteRenderer>();
+					SpriteRenderer spriteRendererFront = transformFront?.GetComponent<SpriteRenderer>();
 					if (spriteRendererFront)
 					{
 						spriteRendererFront.sprite = data1.frontSprite;
 						spriteRendererFront.gameObject.SetActive(data1.frontSprite);
 						partRenderer.front = spriteRendererFront;
 					}
-					SpriteRenderer spriteRendererBack = transformBack?.gameObject.GetComponent<SpriteRenderer>();
+					SpriteRenderer spriteRendererBack = transformBack?.GetComponent<SpriteRenderer>();
 					if (spriteRendererBack)
 					{
 						spriteRendererBack.sprite = data1.backSprite;
 						spriteRendererBack.gameObject.SetActive(data1.backSprite);
 						partRenderer.rearest = spriteRendererBack;
 					}
-					SpriteRenderer spriteRendererBackSkin = transformBackSkin?.gameObject.GetComponent<SpriteRenderer>();
+					SpriteRenderer spriteRendererBackSkin = transformBackSkin?.GetComponent<SpriteRenderer>();
 					if (spriteRendererBackSkin)
 					{
 						spriteRendererBackSkin.sprite = data1.backSkinSprite;
@@ -307,21 +340,21 @@ namespace ExtendedLoader
 						}
 						partRenderer.rearestSkin = spriteRendererBackSkin;
 					}
-					SpriteRenderer spriteRendererMidSkin = transformMidSkin?.gameObject.GetComponent<SpriteRenderer>();
+					SpriteRenderer spriteRendererMidSkin = transformMidSkin?.GetComponent<SpriteRenderer>();
 					if (spriteRendererMidSkin)
 					{
 						spriteRendererMidSkin.sprite = data1.skinSprite;
 						spriteRendererMidSkin.gameObject.SetActive(data1.skinSprite);
 						partRenderer.rearSkin = spriteRendererMidSkin;
 					}
-					SpriteRenderer spriteRendererFrontSkin = transformFrontSkin?.gameObject.GetComponent<SpriteRenderer>();
+					SpriteRenderer spriteRendererFrontSkin = transformFrontSkin?.GetComponent<SpriteRenderer>();
 					if (spriteRendererFrontSkin)
 					{
 						spriteRendererFrontSkin.sprite = data1.frontSkinSprite;
 						spriteRendererFrontSkin.gameObject.SetActive(data1.frontSkinSprite);
 						partRenderer.frontSkin = spriteRendererFrontSkin;
 					}
-					SpriteRenderer spriteRendererEffect = transformEffect?.gameObject.GetComponent<SpriteRenderer>();
+					SpriteRenderer spriteRendererEffect = transformEffect?.GetComponent<SpriteRenderer>();
 					if (transformEffect)
 					{
 						spriteRendererEffect.sprite = data1.effectSprite;
@@ -370,6 +403,27 @@ namespace ExtendedLoader
 		}
 
 		[HarmonyPatch(typeof(WorkshopSkinDataSetter), nameof(WorkshopSkinDataSetter.SetOrder))]
+		[HarmonyTranspiler]
+		static IEnumerable<CodeInstruction> WorkshopSkinDataSetter_SetOrder_Transpiler(IEnumerable<CodeInstruction> instructions)
+		{
+			var hookMethod = Method(typeof(Math), nameof(Math.Min), new Type[] { typeof(int), typeof(int) });
+			var fixMethod = Method(typeof(WorkshopSetterPatch), nameof(WorkshopSkinDataSetter_SetOrder_FixRearOrder));
+			foreach (var instruction in instructions)
+			{
+				if (instruction.Calls(hookMethod))
+				{
+					yield return new CodeInstruction(Call, fixMethod);
+				}
+				yield return instruction;
+			}
+		}
+
+		static int WorkshopSkinDataSetter_SetOrder_FixRearOrder(int order)
+		{
+			return Math.Max(order, 4);
+		}
+
+		[HarmonyPatch(typeof(WorkshopSkinDataSetter), nameof(WorkshopSkinDataSetter.SetOrder))]
 		[HarmonyPostfix]
 		static void WorkshopSkinDataSetter_SetOrder_Postfix(CustomizedAppearance ca, WorkshopSkinDataSetter __instance)
 		{
@@ -379,7 +433,7 @@ namespace ExtendedLoader
 				{
 					int aboveRearHair = ca.GetRendererOrder(CharacterAppearanceType.RearHair, keyValuePair.Key);
 					int belowRearHair = aboveRearHair;
-					aboveRearHair++;
+					aboveRearHair = Math.Max(aboveRearHair, 3) + 1;
 					belowRearHair--;
 					int aboveFrontHair = ca.GetRendererOrder(CharacterAppearanceType.FrontHair, keyValuePair.Key) + 100;
 					int belowHead = ca.GetRendererOrder(CharacterAppearanceType.Head, keyValuePair.Key);

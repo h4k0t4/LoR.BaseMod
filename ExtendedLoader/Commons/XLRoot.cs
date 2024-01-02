@@ -325,30 +325,27 @@ namespace ExtendedLoader
 		static void AddSkinRenderers(CharacterMotion motion, Transform transform)
 		{
 			motion.motionSpriteSet.Clear();
-			motion.motionSpriteSet.Add(new SpriteSet(motion.transform.Find("Customize_Renderer").gameObject.GetComponent<SpriteRenderer>(), CharacterAppearanceType.Body));
+			SpriteRenderer midRenderer = motion.transform.Find("Customize_Renderer").gameObject.GetComponent<SpriteRenderer>();
+			midRenderer.sortingOrder = 4;
+			motion.motionSpriteSet.Add(new SpriteSet(midRenderer, CharacterAppearanceType.Body));
 			motion.motionSpriteSet.Add(new SpriteSet(motion.transform.Find("CustomizePivot").Find("DummyHead").gameObject.GetComponent<SpriteRenderer>(), CharacterAppearanceType.Head));
 			motion.motionSpriteSet.Add(new SpriteSet(motion.transform.Find("Customize_Renderer_Front").gameObject.GetComponent<SpriteRenderer>(), CharacterAppearanceType.Body));
+			SpriteRenderer baseRenderer = transform.GetComponent<SpriteRenderer>();
 
-			Transform transform1 = Instantiate(transform, transform.parent);
-			transform1.gameObject.name = "Customize_Renderer_Back";
-			transform1.gameObject.SetActive(false);
-			motion.motionSpriteSet.Add(new SpriteSet(transform1.GetComponent<SpriteRenderer>(), CharacterAppearanceType.Body));
-			transform1 = Instantiate(transform, transform.parent);
-			transform1.gameObject.name = "Customize_Renderer_Back_Skin";
-			transform1.gameObject.SetActive(false);
-			motion.motionSpriteSet.Add(new SpriteSet(transform1.GetComponent<SpriteRenderer>(), CharacterAppearanceType.Skin));
-			transform1 = Instantiate(transform, transform.parent);
-			transform1.gameObject.name = "Customize_Renderer_Skin";
-			transform1.gameObject.SetActive(false);
-			motion.motionSpriteSet.Add(new SpriteSet(transform1.GetComponent<SpriteRenderer>(), CharacterAppearanceType.Skin));
-			transform1 = Instantiate(transform, transform.parent);
-			transform1.gameObject.name = "Customize_Renderer_Front_Skin";
-			transform1.gameObject.SetActive(false);
-			motion.motionSpriteSet.Add(new SpriteSet(transform1.GetComponent<SpriteRenderer>(), CharacterAppearanceType.Skin));
-			transform1 = Instantiate(transform, transform.parent);
-			transform1.gameObject.name = "Customize_Renderer_Effect";
-			transform1.gameObject.SetActive(false);
-			motion.motionSpriteSet.Add(new SpriteSet(transform1.GetComponent<SpriteRenderer>(), CharacterAppearanceType.Effect));
+			void CreateSkinRenderer(string name, CharacterAppearanceType type, int sortingOrder)
+			{
+				SpriteRenderer newRenderer = Instantiate(baseRenderer, transform.parent);
+				newRenderer.gameObject.name = name;
+				newRenderer.sortingOrder = sortingOrder;
+				newRenderer.gameObject.SetActive(false);
+				motion.motionSpriteSet.Add(new SpriteSet(newRenderer, type));
+			}
+
+			CreateSkinRenderer("Customize_Renderer_Back", CharacterAppearanceType.Body, -5);
+			CreateSkinRenderer("Customize_Renderer_Back_Skin", CharacterAppearanceType.Skin, -4);
+			CreateSkinRenderer("Customize_Renderer_Skin", CharacterAppearanceType.Skin, 5);
+			CreateSkinRenderer("Customize_Renderer_Front_Skin", CharacterAppearanceType.Skin, 21);
+			CreateSkinRenderer("Customize_Renderer_Effect", CharacterAppearanceType.Effect, 50);
 		}
 
 

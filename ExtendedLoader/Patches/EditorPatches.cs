@@ -1,6 +1,7 @@
 ﻿using System;
 using HarmonyLib;
 using UnityEngine;
+using UnityEngine.UI;
 
 namespace ExtendedLoader
 {
@@ -13,15 +14,22 @@ namespace ExtendedLoader
 		{
 			try
 			{
-				(__instance.face.gameObject.transform as RectTransform).sizeDelta = __instance.face.sprite.pivot;
-				(__instance.frontHair.gameObject.transform as RectTransform).sizeDelta = __instance.frontHair.sprite.pivot;
-				(__instance.backHair.gameObject.transform as RectTransform).sizeDelta = __instance.backHair.sprite.pivot;
-				(__instance.mouth.gameObject.transform as RectTransform).sizeDelta = __instance.mouth.sprite.pivot;
-				(__instance.brow.gameObject.transform as RectTransform).sizeDelta = __instance.brow.sprite.pivot;
-			}
+				foreach (var image in new Image[] {__instance.face, __instance.frontHair, __instance.backHair, __instance.mouth, __instance.brow})
+				{
+					FixPivot(image);
+				}
+			}	
 			catch (Exception ex)
 			{
 				Debug.LogException(ex);
+			}
+		}
+
+		static void FixPivot(Image image)
+		{
+			if (image && image.sprite && image.gameObject.transform is RectTransform rect)
+			{
+				rect.sizeDelta = image.sprite.pivot;
 			}
 		}
 	}

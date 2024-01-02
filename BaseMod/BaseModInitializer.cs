@@ -28,7 +28,6 @@ namespace BaseMod
 				List<string> names = new List<string>();
 				List<ModContentInfo> originList = ModContentManager.Instance._allMods;
 				List<ModContentInfo> uexList = new List<ModContentInfo>();
-				List<ModContentInfo> xlList = new List<ModContentInfo>();
 				List<ModContentInfo> bmList = new List<ModContentInfo>();
 				DirectoryInfo thisModDirectory = new FileInfo(Uri.UnescapeDataString(new UriBuilder(Assembly.GetExecutingAssembly().CodeBase).Path)).Directory.Parent;
 				originList.RemoveAll(modContentInfo =>
@@ -56,29 +55,16 @@ namespace BaseMod
 								uexList.Add(modContentInfo);
 							}
 							return true;
-						case "ExtendedLoaderStandalone":
-							if (modContentInfo.activated)
-							{
-								xlList.Insert(0, modContentInfo);
-							}
-							else
-							{
-								xlList.Add(modContentInfo);
-							}
-							return true;
 						default: return false;
 					}
 				});
-				uexList.AddRange(xlList);
 				uexList.AddRange(bmList);
 				originList.InsertRange(0, uexList);
 				int uexCount = 1;
-				int xlCount = 1;
 				int bmCount = 1;
-				names.RemoveAll(name => (name == "BaseMod" && ++bmCount > 0) || (name == "UnityExplorer" && ++uexCount > 0) || (name == "ExtendedLoaderStandalone" && ++xlCount > 0));
-				List<string> priorityNames = new List<string>(bmCount + uexCount + xlCount);
+				names.RemoveAll(name => (name == "BaseMod" && ++bmCount > 0) || (name == "UnityExplorer" && ++uexCount > 0));
+				List<string> priorityNames = new List<string>(bmCount + uexCount + names.Count);
 				priorityNames.AddRange(Enumerable.Repeat("UnityExplorer", uexCount));
-				priorityNames.AddRange(Enumerable.Repeat("ExtendedLoaderStandalone", xlCount));
 				priorityNames.AddRange(Enumerable.Repeat("BaseMod", bmCount));
 				priorityNames.AddRange(names);
 				names = priorityNames;
@@ -88,13 +74,13 @@ namespace BaseMod
 				{
 					modOrderData.AddToList(new SaveData(name));
 				}
-				modSettingData.AddData("orders", modOrderData);
+				modSettingData.AddData(ModContentManager.save_orders, modOrderData);
 				SaveData oldData = SaveManager.Instance.LoadData(ModContentManager.Instance.savePath);
-				if (oldData != null && oldData.GetData("lastActivated") != null)
+				if (oldData != null && oldData.GetData(ModContentManager.save_lastActivated) != null)
 				{
-					modSettingData.AddData("lastActivated", oldData.GetData("lastActivated"));
+					modSettingData.AddData(ModContentManager.save_lastActivated, oldData.GetData(ModContentManager.save_lastActivated));
 				}
-				SaveManager.Instance.SaveData(Path.Combine(SaveManager.savePath, "ModSetting.save"), modSettingData);
+				SaveManager.Instance.SaveData(ModContentManager.Instance.savePath, modSettingData);
 			}
 			catch { }
 		}

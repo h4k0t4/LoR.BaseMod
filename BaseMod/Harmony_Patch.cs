@@ -1360,8 +1360,11 @@ namespace BaseMod
 			}
 			return true;
 		}*/
-		//If has script of the same type, return _script; if has script of a different type, replace _script
-		//If has script,create a playingcard for cardModel in hand
+		//as it turns out, unconditionally persisting the original script causes issues with more than one thing
+		//(pinocchio playing cards as wrong owner, wolf ego stacking without resetting, and probably others)
+		//to not completely ruin compatibility going forwards, persisting must be disabled
+		//however, type-checking is okay, and so is creating fake cards for scripts to not null-reference, so this is still done
+		//if anything still needs persistent data, the "main" script can now be accessed as "card.card._script"
 		[HarmonyPatch(typeof(BattleDiceCardModel), nameof(BattleDiceCardModel.CreateDiceCardSelfAbilityScript))]
 		[HarmonyPostfix]
 		static void BattleDiceCardModel_CreateDiceCardSelfAbilityScript_Post(BattleDiceCardModel __instance, ref DiceCardSelfAbilityBase __result)
@@ -1379,66 +1382,37 @@ namespace BaseMod
 				}
 				else
 				{
-					__result = __instance._script;
+					FixScriptCard(__instance, __instance._script);
 				}
-				if (__result.card == null)
-				{
-					BattlePlayingCardDataInUnitModel card = new BattlePlayingCardDataInUnitModel
-					{
-						owner = __instance.owner,
-						card = __instance,
-						cardAbility = __result
-					};
-					__result.card = card;
-				}
-				else
-				{
-					if (!__result.card.isKeepedCard)
-					{
-						__result.card.cardAbility = __result;
-					}
-					if (__result.card.owner == null)
-					{
-						__result.card.owner = __instance.owner;
-					}
-				}
+				FixScriptCard(__instance, __result);
 			}
 			catch (Exception ex)
 			{
 				File.WriteAllText(Application.dataPath + "/Mods/ScriptFixPosterror.txt", ex.Message + Environment.NewLine + ex.StackTrace);
 			}
 		}
-
-		//Apparently the script/owner fixes above break (non-realization) Pinocchio because it's coded REALLY DUMBLY
-		[HarmonyPatch(typeof(PassiveAbility_1003011), nameof(PassiveAbility_1003011.OnWaveStart))]
-		[HarmonyPatch(typeof(PassiveAbility_1003021), nameof(PassiveAbility_1003021.OnWaveStart))]
-		[HarmonyPatch(typeof(PassiveAbility_1003031), nameof(PassiveAbility_1003031.OnWaveStart))]
-		[HarmonyTranspiler]
-		[HarmonyPriority(Priority.VeryLow)]
-		static IEnumerable<CodeInstruction> PassiveAbility_10030x1_OnWaveStart_In(IEnumerable<CodeInstruction> instructions)
+		static void FixScriptCard(BattleDiceCardModel card, DiceCardSelfAbilityBase script)
 		{
-			var original = Method(typeof(BattleAllyCardDetail), nameof(BattleAllyCardDetail.GetAllDeck));
-			var replacement = Method(typeof(Harmony_Patch), nameof(GetAllDeckCopy));
-			foreach (var instruction in instructions)
+			if (script.card == null)
 			{
-				if (instruction.Calls(original))
+				script.card = new BattlePlayingCardDataInUnitModel
 				{
-					yield return new CodeInstruction(Call, replacement);
+					owner = card.owner,
+					card = card,
+					cardAbility = script
+				};
+			}
+			else
+			{
+				if (!script.card.isKeepedCard)
+				{
+					script.card.cardAbility = script;
 				}
-				else
+				if (script.card.owner == null)
 				{
-					yield return instruction;
+					script.card.owner = card.owner;
 				}
 			}
-		}
-		static List<BattleDiceCardModel> GetAllDeckCopy(BattleAllyCardDetail allyCardDetail)
-		{
-			var list = allyCardDetail.GetAllDeck();
-			for (int i = 0; i < list.Count; i++)
-			{
-				list[i] = BattleDiceCardModel.CreatePlayingCard(list[i].XmlData.Copy(true));
-			}
-			return list;
 		}
 
 		//Apply owner for personal card
@@ -5190,37 +5164,53 @@ namespace BaseMod
 		[HarmonyPrefix]
 		static void GiftInventory_LoadFromSaveData_Pre(SaveData data)
 		{
-			FixGiftSaveList(data, "equipList");
+			var equipIds = new HashSet<int>();
+			FixGiftSaveList(data, "equipList", returnIds: equipIds);
 			FixGiftSaveList(data, "unequipList");
-			FixGiftSaveList(data, "offList");
+			FixGiftSaveList(data, "offList", checkIds: equipIds);
 		}
-		static void FixGiftSaveList(SaveData data, string giftListName)
+		static void FixGiftSaveList(SaveData data, string giftListName, HashSet<int> returnIds = null, HashSet<int> checkIds = null)
 		{
 			var saveData = data.GetData(giftListName);
-			if (saveData._list == null)
+			if (saveData == null)
+			{
+				saveData = new SaveData(new List<int>());
+				data.AddData(giftListName, saveData);
+			}
+			else if (saveData._list == null)
 			{
 				saveData._list = new List<SaveData>();
 			}
-			var saveList = saveData._list;
-			int i = 0;
-			int j = 0;
-			GiftXmlInfo info;
 			GiftXmlList giftXmlList = GiftXmlList.Instance;
-			for (; i < saveList.Count; i++)
+			if (checkIds == null)
 			{
-				info = null;
-				try
+				saveData._list.RemoveAll(x =>
 				{
-					info = giftXmlList.GetData(saveData.GetIntSelf());
-				}
-				catch { }
-				if (info != null)
-				{
-					saveList[j] = saveList[i];
-					j++;
-				}
+					try
+					{
+						return giftXmlList.GetData(x.GetIntSelf()) == null;
+					}
+					catch
+					{
+						return true;
+					}
+				});
 			}
-			saveList.RemoveRange(j, i - j);
+			else
+			{
+				saveData._list.RemoveAll(x =>
+				{
+					try
+					{
+						return !checkIds.Contains(x.GetIntSelf());
+					}
+					catch
+					{
+						return true;
+					}
+				});
+			}
+			returnIds?.UnionWith(saveData._list.ConvertAll(x => x.GetIntSelf()));
 		}
 		[HarmonyPatch(typeof(GiftInventory), nameof(GiftInventory.LoadFromSaveData))]
 		[HarmonyPostfix]

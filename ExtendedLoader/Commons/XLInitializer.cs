@@ -31,7 +31,6 @@ namespace ExtendedLoader
 		{
 			try
 			{
-				RaisePriority();
 				var harmony = new Harmony("Cyaminthe.ExtendedLoader");
 				harmony.PatchAll(Assembly.GetExecutingAssembly());
 				LoadCoreThumbs();
@@ -44,55 +43,6 @@ namespace ExtendedLoader
 			{
 				Debug.LogException(ex);
 			}
-		}
-
-		static void RaisePriority()
-		{
-			List<ModContentInfo> originList = ModContentManager.Instance._allMods;
-			List<ModContentInfo> uexList = new List<ModContentInfo>();
-			List<ModContentInfo> xlList = new List<ModContentInfo>();
-			List<ModContentInfo> bmList = new List<ModContentInfo>();
-			originList.RemoveAll(modContentInfo =>
-			{
-				switch (modContentInfo.invInfo.workshopInfo.uniqueId)
-				{
-					case "BaseMod":
-						if (modContentInfo.activated)
-						{
-							bmList.Insert(0, modContentInfo);
-						}
-						else
-						{
-							bmList.Add(modContentInfo);
-						}
-						return true;
-					case "UnityExplorer":
-					case "HarmonyLoadOrderFix":
-						if (modContentInfo.activated)
-						{
-							uexList.Insert(0, modContentInfo);
-						}
-						else
-						{
-							uexList.Add(modContentInfo);
-						}
-						return true;
-					case "ExtendedLoaderStandalone":
-						if (modContentInfo.activated)
-						{
-							xlList.Insert(0, modContentInfo);
-						}
-						else
-						{
-							xlList.Add(modContentInfo);
-						}
-						return true;
-					default: return false;
-				}
-			});
-			uexList.AddRange(xlList);
-			uexList.AddRange(bmList);
-			originList.InsertRange(0, uexList);
 		}
 
 		static void DoReversePatches(Scene scene, LoadSceneMode _)
