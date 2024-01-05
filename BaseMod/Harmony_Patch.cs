@@ -2002,6 +2002,7 @@ namespace BaseMod
 		*/
 
 		[HarmonyPatch(typeof(BattleEmotionCardModel), MethodType.Constructor, new Type[] { typeof(EmotionCardXmlInfo), typeof(BattleUnitModel) })]
+		[HarmonyPriority(Priority.Low)]
 		[HarmonyTranspiler]
 		static IEnumerable<CodeInstruction> BattleEmotionCardModel_ctor_In(IEnumerable<CodeInstruction> instructions, ILGenerator ilgen)
 		{
@@ -4692,6 +4693,7 @@ namespace BaseMod
 		}
 		*/
 		[HarmonyPatch(typeof(GiftModel), nameof(GiftModel.CreateScripts))]
+		[HarmonyPriority(Priority.Low)]
 		[HarmonyTranspiler]
 		static IEnumerable<CodeInstruction> GiftModel_CreateScripts_In(IEnumerable<CodeInstruction> instructions)
 		{
