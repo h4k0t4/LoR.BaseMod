@@ -28,7 +28,7 @@ namespace SummonLiberation
 				}
 				else
 				{
-					AddFormationPosition(__instance._formation, 100);
+					AddFormationPosition(__instance._formation, 99);
 				}
 			}
 			catch (Exception ex)

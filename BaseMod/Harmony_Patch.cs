@@ -664,7 +664,7 @@ namespace BaseMod
 				if (customPostfix != null)
 				{
 					var customPostfixId = LorId.LoadFromSaveData(customPostfix);
-					if (OrcTools.CustomPrefixes.TryGetValue(customPostfixId, out var postfix))
+					if (OrcTools.CustomPostfixes.TryGetValue(customPostfixId, out var postfix))
 					{
 						__instance.postfixID = postfix.ID;
 					}
