@@ -36,6 +36,8 @@ namespace ExtendedLoader
 				LoadCoreThumbs();
 				LoadCoreSounds();
 				FixLocalize(harmony);
+				CustomBookUIPatch.IntegrateSearcher();
+
 				SceneManager.sceneLoaded += DoReversePatches;
 				XLRoot.EnsureInit();
 			}

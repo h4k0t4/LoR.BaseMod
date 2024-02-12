@@ -94,6 +94,7 @@ namespace ExtendedLoader
 		}
 		[HarmonyPatch(typeof(UIEquipPageCustomizePanel), nameof(UIEquipPageCustomizePanel.ApplyFilterAll))]
 		[HarmonyPrefix]
+		[HarmonyAfter("calmmagma_keypagesearcher")]
 		static bool UIEquipPageCustomizePanel_ApplyFilterAll_Prefix(UIEquipPageCustomizePanel __instance)
 		{
 			try
@@ -188,20 +189,20 @@ namespace ExtendedLoader
 					{
 						foreach (Grade g in storyGradeFilter)
 						{
-							__instance.filteredBookIdList.AddRange(__instance.originBookIdList.FindAll((int x) => GetModWorkshopBookData(x).Chapter == (int)g));
+							__instance.filteredBookIdList.AddRange(__instance.originBookIdList.FindAll((int x) => GetModWorkshopBookData(x)?.Chapter == (int)g));
 						}
 					}
-					Predicate<EquipRangeType> match = x => true;
+					Predicate<BookXmlInfo> match = x => x != null;
 					switch (__instance.panel.Parent.SelectedUnit.bookItem.ClassInfo.RangeType)
 					{
 						case EquipRangeType.Melee:
-							match = x => x != EquipRangeType.Range;
+							match = x => x != null && x.RangeType != EquipRangeType.Range;
 							break;
 						case EquipRangeType.Range:
-							match = x => x != EquipRangeType.Melee;
+							match = x => x != null && x.RangeType != EquipRangeType.Melee;
 							break;
 						case EquipRangeType.Hybrid:
-							match = x => x == EquipRangeType.Hybrid;
+							match = x => x != null && x.RangeType == EquipRangeType.Hybrid;
 							break;
 					}
 					__instance.filteredBookIdList.Sort((int a, int b) => CompareBooksMod(a, b, match));
@@ -219,10 +220,10 @@ namespace ExtendedLoader
 				__instance.ApplyFilterAll();
 			}
 		}
-		static int CompareBooksMod(int a, int b, Predicate<EquipRangeType> match)
+		static int CompareBooksMod(int a, int b, Predicate<BookXmlInfo> match)
 		{
-			var ar = GetModWorkshopBookData(a).RangeType;
-			var br = GetModWorkshopBookData(b).RangeType;
+			var ar = GetModWorkshopBookData(a);
+			var br = GetModWorkshopBookData(b);
 			if (match(ar))
 			{
 				if (!match(br))
@@ -269,15 +270,15 @@ namespace ExtendedLoader
 			{
 				return bookXmlInfo;
 			}
-			return GetModWorkshopBookData(i);
+			return GetModWorkshopBookData(i) ?? bookXmlInfo;
 		}
 		static BookXmlInfo GetModWorkshopBookData(int i)
 		{
-			if (modWorkshopBookIndex.TryGetValue(i, out var id))
+			if (modWorkshopBookIndex.TryGetValue(i, out var id) && BookXmlList.Instance.GetData(id) is BookXmlInfo info && !info.isError)
 			{
-				return BookXmlList.Instance.GetData(id);
+				return info;
 			}
-			return BookXmlList.Instance.GetData(12);
+			return null;
 		}
 
 		internal static bool isModWorkshopSkin;
@@ -285,5 +286,38 @@ namespace ExtendedLoader
 		internal static UICustomizeClothsPanel clothsPanel;
 		internal static Dictionary<int, LorId> modWorkshopBookIndex = new Dictionary<int, LorId>();
 		internal static List<int> modWorkshopBookList = new List<int>();
+
+
+
+		internal static void IntegrateSearcher()
+		{
+			try
+			{
+				var searcherAssembly = (from a in AppDomain.CurrentDomain.GetAssemblies()
+										where a.GetName().Name == "KeypageSearcher"
+										select a into v
+										orderby v.GetName().Version descending
+										select v).FirstOrDefault();
+				var registerListMethod = searcherAssembly?.GetType("KeypageSearcher.KeypageSearchPatches")?.GetMethod("AddCustomProjectionList", new Type[] { typeof(Func<bool>), typeof(Func<List<int>>), typeof(Func<int, string>) });
+				registerListMethod?.Invoke(null, new object[] { 
+					new Func<bool>(() => 
+					{ 
+						return isModWorkshopSkin; 
+					}),
+					new Func<List<int>>(() =>
+					{
+						return modWorkshopBookList;
+					}),
+					new Func<int,string>(x =>
+					{
+						return GetModWorkshopBookData(x)?.Name;
+					})
+				});
+			}
+			catch (Exception ex)
+			{
+				Debug.LogException(ex);
+			}
+		}
 	}
 }
