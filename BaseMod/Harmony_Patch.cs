@@ -22,6 +22,7 @@ using ExtendedLoader;
 using static System.Reflection.Emit.OpCodes;
 using static HarmonyLib.AccessTools;
 using EnumExtenderV2;
+using System.Xml.Linq;
 
 namespace BaseMod
 {
@@ -489,29 +490,29 @@ namespace BaseMod
 			characterMotion.transform.name = "Custom_" + detail.ToString();
 			characterMotion.actionDetail = detail;
 			characterMotion.motionSpriteSet.Clear();
-			characterMotion.motionSpriteSet.Add(new SpriteSet(characterMotion.transform.Find("Customize_Renderer").gameObject.GetComponent<SpriteRenderer>(), CharacterAppearanceType.Body));
-			characterMotion.motionSpriteSet.Add(new SpriteSet(characterMotion.transform.Find("CustomizePivot").Find("DummyHead").gameObject.GetComponent<SpriteRenderer>(), CharacterAppearanceType.Head));
-			characterMotion.motionSpriteSet.Add(new SpriteSet(characterMotion.transform.Find("Customize_Renderer_Back").gameObject.GetComponent<SpriteRenderer>(), CharacterAppearanceType.Body));
-			if (characterMotion.transform.Find("Customize_Renderer")?.gameObject.GetComponent<SpriteRenderer>() is SpriteRenderer rendererBack)
+
+			void TryAddMotionSpriteSet(string name, CharacterAppearanceType type)
 			{
-				characterMotion.motionSpriteSet.Add(new SpriteSet(rendererBack, CharacterAppearanceType.Body));
+				Transform transform = characterMotion.transform.Find(name);
+				if (transform != null)
+				{
+					SpriteRenderer spriteRenderer = transform.GetComponent<SpriteRenderer>();
+					if (spriteRenderer != null)
+					{
+						characterMotion.motionSpriteSet.Add(new SpriteSet(spriteRenderer, type));
+					}
+				}
 			}
-			if (characterMotion.transform.Find("Customize_Renderer_Back_Skin")?.gameObject.GetComponent<SpriteRenderer>() is SpriteRenderer rendererBackSkin)
-			{
-				characterMotion.motionSpriteSet.Add(new SpriteSet(rendererBackSkin, CharacterAppearanceType.Skin));
-			}
-			if (characterMotion.transform.Find("Customize_Renderer_Skin")?.gameObject.GetComponent<SpriteRenderer>() is SpriteRenderer rendererSkin)
-			{
-				characterMotion.motionSpriteSet.Add(new SpriteSet(rendererSkin, CharacterAppearanceType.Skin));
-			}
-			if (characterMotion.transform.Find("Customize_Renderer")?.gameObject.GetComponent<SpriteRenderer>() is SpriteRenderer rendererFrontSkin)
-			{
-				characterMotion.motionSpriteSet.Add(new SpriteSet(rendererFrontSkin, CharacterAppearanceType.Skin));
-			}
-			if (characterMotion.transform.Find("Customize_Renderer_Effect")?.gameObject.GetComponent<SpriteRenderer>() is SpriteRenderer rendererEffect)
-			{
-				characterMotion.motionSpriteSet.Add(new SpriteSet(rendererEffect, CharacterAppearanceType.Effect));
-			}
+
+			TryAddMotionSpriteSet("Customize_Renderer", CharacterAppearanceType.Body);
+			TryAddMotionSpriteSet("CustomizePivot/DummyHead", CharacterAppearanceType.Head);
+			TryAddMotionSpriteSet("Customize_Renderer_Front", CharacterAppearanceType.Body);
+			TryAddMotionSpriteSet("Customize_Renderer_Back", CharacterAppearanceType.Body);
+			TryAddMotionSpriteSet("Customize_Renderer_Back_Skin", CharacterAppearanceType.Skin);
+			TryAddMotionSpriteSet("Customize_Renderer_Skin", CharacterAppearanceType.Skin);
+			TryAddMotionSpriteSet("Customize_Renderer_Front_Skin", CharacterAppearanceType.Skin);
+			TryAddMotionSpriteSet("Customize_Renderer_Effect", CharacterAppearanceType.Effect);
+
 			return characterMotion;
 		}
 		//CharacterSound

@@ -328,7 +328,7 @@ namespace ExtendedLoader
 			SpriteRenderer midRenderer = motion.transform.Find("Customize_Renderer").gameObject.GetComponent<SpriteRenderer>();
 			midRenderer.sortingOrder = 4;
 			motion.motionSpriteSet.Add(new SpriteSet(midRenderer, CharacterAppearanceType.Body));
-			motion.motionSpriteSet.Add(new SpriteSet(motion.transform.Find("CustomizePivot").Find("DummyHead").gameObject.GetComponent<SpriteRenderer>(), CharacterAppearanceType.Head));
+			motion.motionSpriteSet.Add(new SpriteSet(motion.transform.Find("CustomizePivot/DummyHead").gameObject.GetComponent<SpriteRenderer>(), CharacterAppearanceType.Head));
 			motion.motionSpriteSet.Add(new SpriteSet(motion.transform.Find("Customize_Renderer_Front").gameObject.GetComponent<SpriteRenderer>(), CharacterAppearanceType.Body));
 			SpriteRenderer baseRenderer = transform.GetComponent<SpriteRenderer>();
 
