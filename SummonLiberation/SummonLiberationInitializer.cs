@@ -73,7 +73,7 @@ namespace SummonLiberation
 			List<int> sortedIndexes = new List<int>(indexes);
 			sortedIndexes.Sort();
 			int i = 0;
-			for (int j = 0; indexes.Count < targetCount;)
+			for (int j = 0; indexes.Count < targetCount; j++)
 			{
 				if (i < sortedIndexes.Count && j == sortedIndexes[i])
 				{
@@ -82,7 +82,6 @@ namespace SummonLiberation
 				else
 				{
 					indexes.Add(j);
-					j++;
 				}
 			}
 		}
