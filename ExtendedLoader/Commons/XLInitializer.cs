@@ -8,6 +8,7 @@ using System.IO;
 using Workshop;
 using UnityEngine.SceneManagement;
 using Mod;
+using System.Xml.Serialization;
 
 namespace ExtendedLoader
 {
@@ -17,7 +18,8 @@ namespace ExtendedLoader
 		{
 			try
 			{
-				new Harmony("Cyaminthe.ExtendedLoader.HighPriority").PatchAll(typeof(EarlyPatches));
+				var harmony = new Harmony("Cyaminthe.ExtendedLoader.HighPriority");
+				harmony.PatchAll(typeof(EarlyPatches));
 				XLRoot.LoadModFolders();
 				ReLoadWorkshopCustomAppearance();
 			}
@@ -37,9 +39,12 @@ namespace ExtendedLoader
 				LoadCoreSounds();
 				FixLocalize(harmony);
 				CustomBookUIPatch.IntegrateSearcher();
+				
 
 				SceneManager.sceneLoaded += DoReversePatches;
 				XLRoot.EnsureInit();
+				LegacyCompatibilityPatch.PrepareLegacy(harmony);
+				XLConfig.Load();
 			}
 			catch (Exception ex)
 			{

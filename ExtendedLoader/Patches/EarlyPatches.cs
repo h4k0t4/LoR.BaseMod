@@ -135,7 +135,7 @@ namespace ExtendedLoader
 
 		[HarmonyPatch(typeof(Workshop.WorkshopAppearanceItemLoader), nameof(WorkshopAppearanceItemLoader.LoadCustomAppearanceInfo))]
 		[HarmonyTranspiler]
-		static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
+		static IEnumerable<CodeInstruction> WorkshopAppearanceItemLoader_LoadCustomAppearanceInfo_Transpiler(IEnumerable<CodeInstruction> instructions)
 		{
 			List<CodeInstruction> list = new List<CodeInstruction>(instructions);
 			int num = 0;
@@ -186,7 +186,7 @@ namespace ExtendedLoader
 
 		[HarmonyPatch(typeof(Workshop.WorkshopAppearanceItemLoader), nameof(WorkshopAppearanceItemLoader.LoadCustomAppearanceInfo))]
 		[HarmonyPostfix]
-		static void LoadCustomAppearanceInfo(string rootPath, string xml, WorkshopAppearanceInfo __result)
+		static void WorkshopAppearanceItemLoader_LoadCustomAppearanceInfo_Postfix(string rootPath, string xml, WorkshopAppearanceInfo __result)
 		{
 			if (__result == null)
 			{

@@ -33,12 +33,13 @@ namespace ExtendedLoader
 		{
 
 		}
-
+		/*
 		[HarmonyReversePatch(HarmonyReversePatchType.Snapshot)]
 		[HarmonyPatch(typeof(BattleUnitView), nameof(BattleUnitView.ChangeCreatureSkin))]
 		public static void BattleUnitView_ChangeCreatureSkin_Snapshot(BattleUnitView __instance, string creatureName)
 		{
 
 		}
+		*/
 	}
 }

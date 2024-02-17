@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
+using System.Xml.Serialization;
 using UI;
 using UnityEngine;
 using Workshop;
@@ -253,7 +254,7 @@ namespace ExtendedLoader
 		[HarmonyFinalizer]
 		static Exception UICharacterRenderer_SetCharacter_Finalizer(Exception __exception, UICharacterRenderer __instance, UnitDataModel __state, UnitDataModel unit, int index, bool forcelyReload, bool renderRealtime)
 		{
-			if (__exception != null)
+			if (__exception != null && XLConfig.Instance.logRenderErrors)
 			{
 				Debug.LogException(__exception);
 			}
@@ -373,7 +374,7 @@ namespace ExtendedLoader
 		[HarmonyFinalizer]
 		static Exception SdCharacterUtil_CreateSkin_Finalizer(Exception __exception, ref CharacterAppearance __result, UnitDataModel unit, Faction faction, Transform characterRoot)
 		{
-			if (__exception != null)
+			if (__exception != null && XLConfig.Instance.logRenderErrors)
 			{
 				Debug.LogException(__exception);
 			}
@@ -444,7 +445,7 @@ namespace ExtendedLoader
 		[HarmonyFinalizer]
 		static Exception BattleUnitView_ChangeSkin_Finalizer(Exception __exception, BattleUnitView __instance, string charName)
 		{
-			if (__exception != null)
+			if (__exception != null && XLConfig.Instance.logRenderErrors)
 			{
 				Debug.LogException(__exception);
 			}
@@ -477,7 +478,7 @@ namespace ExtendedLoader
 		[HarmonyPatch(typeof(BattleUnitView), nameof(BattleUnitView.ChangeEgoSkin))]
 		[HarmonyTranspiler]
 		[HarmonyPriority(Priority.Low)]
-		static IEnumerable<CodeInstruction> BattleUnitView_ChangEgoeSkin_Transpiler(IEnumerable<CodeInstruction> instructions)
+		static IEnumerable<CodeInstruction> BattleUnitView_ChangeEgoSkin_Transpiler(IEnumerable<CodeInstruction> instructions)
 		{
 			var componentMethod = Method(typeof(GameObject), nameof(GameObject.GetComponent), Array.Empty<Type>(), new Type[] { typeof(CharacterAppearance) });
 			var codes = instructions.ToList();
@@ -496,9 +497,9 @@ namespace ExtendedLoader
 		}
 		[HarmonyPatch(typeof(BattleUnitView), nameof(BattleUnitView.ChangeEgoSkin))]
 		[HarmonyFinalizer]
-		static Exception BattleUnitView_ChangeEgoSkin_Finalizer(Exception __exception, BattleUnitView __instance, string egoName)
+		static Exception BattleUnitView_ChangeEgoSkin_Finalizer(Exception __exception, BattleUnitView __instance, string egoName, bool bookNameChange)
 		{
-			if (__exception != null)
+			if (__exception != null && XLConfig.Instance.logRenderErrors)
 			{
 				Debug.LogException(__exception);
 			}
@@ -506,7 +507,7 @@ namespace ExtendedLoader
 			{
 				if (IsBrokenSkin(__instance.model.UnitData.unitData, egoName, __instance.charAppearance))
 				{
-					ReversePatches.BattleUnitView_ChangeSkin_Snapshot(__instance, egoName);
+					ReversePatches.BattleUnitView_ChangeEgoSkin_Snapshot(__instance, egoName, bookNameChange);
 				}
 			}
 			catch (Exception ex)
@@ -517,7 +518,7 @@ namespace ExtendedLoader
 			{
 				if (IsBrokenSkin(__instance.model.UnitData.unitData, egoName, __instance.charAppearance) && LorName.IsCompressed(egoName))
 				{
-					ReversePatches.BattleUnitView_ChangeSkin_Snapshot(__instance, new LorName(egoName).name);
+					ReversePatches.BattleUnitView_ChangeEgoSkin_Snapshot(__instance, new LorName(egoName).name, bookNameChange);
 				}
 			}
 			catch (Exception ex)
@@ -527,7 +528,7 @@ namespace ExtendedLoader
 			return null;
 		}
 
-		[HarmonyPatch(typeof(Workshop.WorkshopSkinDataSetter), nameof(WorkshopSkinDataSetter.LateInit))]
+		[HarmonyPatch(typeof(WorkshopSkinDataSetter), nameof(WorkshopSkinDataSetter.LateInit))]
 		[HarmonyFinalizer]
 		static Exception WorkshopSkinDataSetter_LateInit_Finalizer(Exception __exception)
 		{

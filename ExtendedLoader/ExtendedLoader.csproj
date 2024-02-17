@@ -62,6 +62,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Commons\XLConfig.cs" />
     <Compile Include="Patches\AbCardSelectorSizePatch.cs" />
     <Compile Include="Patches\CustomBookUIPatch.cs" />
     <Compile Include="Patches\CustomizingLorNameRecognitionPatch.cs" />
@@ -75,6 +76,7 @@
     <Compile Include="Patches\FrontRearHairColorPatch.cs" />
     <Compile Include="Patches\GenderVariantCheckPatch.cs" />
     <Compile Include="Patches\GiftOrderPatch.cs" />
+    <Compile Include="Patches\LegacyCompatibilityPatch.cs" />
     <Compile Include="Patches\ReversePatches.cs" />
     <Compile Include="Tools\SkinExtensions.cs" />
     <Compile Include="Tools\SpriteUtilExtension.cs" />
