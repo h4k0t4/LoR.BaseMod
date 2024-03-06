@@ -105,6 +105,7 @@ namespace SummonLiberation
 		//BattleUnitProfileArray Up to 9
 		[HarmonyPatch(typeof(BattleUnitInfoManagerUI), nameof(BattleUnitInfoManagerUI.Initialize))]
 		[HarmonyPrefix]
+		[HarmonyPriority(Priority.High)]
 		static void BattleUnitInfoManagerUI_Initialize_Pre(BattleUnitInfoManagerUI __instance)
 		{
 			try
@@ -116,6 +117,7 @@ namespace SummonLiberation
 					for (int i = lastAlly + 1; i < MIN_EMOTION_SLOTS; i++)
 					{
 						allyProfileArray2.Add(UnityEngine.Object.Instantiate(allyProfileArray2[lastAlly], allyProfileArray2[lastAlly].transform.parent));
+						allyProfileArray2[i].gameObject.SetActive(false);
 						allyProfileArray2[i].transform.localPosition = allyProfileArray2[lastAlly].transform.localPosition + new Vector3(0f, (i - lastAlly) * Y_SHIFT, 0f);
 					}
 					__instance.allyProfileArray = allyProfileArray2.ToArray();
@@ -127,6 +129,7 @@ namespace SummonLiberation
 					for (int i = lastEnemy + 1; i < MIN_EMOTION_SLOTS; i++)
 					{
 						enemyProfileArray2.Add(UnityEngine.Object.Instantiate(enemyProfileArray2[lastEnemy], enemyProfileArray2[lastEnemy].transform.parent));
+						enemyProfileArray2[i].gameObject.SetActive(false);
 						enemyProfileArray2[i].transform.localPosition = enemyProfileArray2[lastEnemy].transform.localPosition + new Vector3(0f, (i - lastEnemy) * Y_SHIFT, 0f);
 					}
 					__instance.enemyProfileArray = enemyProfileArray2.ToArray();
