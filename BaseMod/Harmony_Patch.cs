@@ -3011,7 +3011,7 @@ namespace BaseMod
 		}
 		static bool UIInvitationRightMainPanel_SendInvitation_CheckCustomCondition(StageClassInfo bookRecipe)
 		{
-			return bookRecipe.extraCondition == null || bookRecipe.extraCondition.IsUnlocked();
+			return bookRecipe.currentState != StoryState.Close;
 		}
 		//custom floor level stage
 		[HarmonyPatch(typeof(DebugConsoleScript), nameof(DebugConsoleScript.EnterCreatureBattle))]
