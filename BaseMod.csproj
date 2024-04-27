@@ -17,7 +17,7 @@
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
     <DebugType>full</DebugType>
-    <Optimize>false</Optimize>
+    <Optimize>true</Optimize>
     <OutputPath>bin\Debug\</OutputPath>
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
@@ -44,11 +44,14 @@
     <Reference Include="0Harmony, Version=2.5.3.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\..\..\..\Program Files\Steam\steamapps\common\Library Of Ruina\LibraryOfRuina_Data\Mods\BaseMod\Assemblies\0Harmony.dll</HintPath>
-      <SpecificVersion>False</SpecificVersion>
+    </Reference>
+    <Reference Include="10EnumExtender">
+      <HintPath>..\..\..\..\Program Files\Steam\steamapps\common\Library Of Ruina\LibraryOfRuina_Data\Mods\BaseMod\Assemblies\10EnumExtender.dll</HintPath>
     </Reference>
     <Reference Include="Assembly-CSharp, Version=0.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\..\..\..\Program Files\Steam\steamapps\common\Library Of Ruina\LibraryOfRuina_Data\Managed\Assembly-CSharp.dll</HintPath>
+      <Private>False</Private>
     </Reference>
     <Reference Include="MyJsonTool">
       <HintPath>..\..\..\..\Program Files\Steam\steamapps\common\Library Of Ruina\LibraryOfRuina_Data\Mods\BaseMod\Assemblies\MyJsonTool.dll</HintPath>
@@ -59,6 +62,7 @@
     <Reference Include="spine-unity, Version=0.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\..\..\..\Program Files\Steam\steamapps\common\Library Of Ruina\LibraryOfRuina_Data\Managed\spine-unity.dll</HintPath>
+      <Private>False</Private>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
@@ -70,87 +74,113 @@
     <Reference Include="System.Xml" />
     <Reference Include="Unity.TextMeshPro">
       <HintPath>..\..\..\..\Program Files\Steam\steamapps\common\Library Of Ruina\LibraryOfRuina_Data\Managed\Unity.TextMeshPro.dll</HintPath>
+      <Private>False</Private>
     </Reference>
     <Reference Include="UnityEngine.AnimationModule, Version=0.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\..\..\..\Program Files\Steam\steamapps\common\Library Of Ruina\LibraryOfRuina_Data\Managed\UnityEngine.AnimationModule.dll</HintPath>
+      <Private>False</Private>
     </Reference>
     <Reference Include="UnityEngine.AudioModule">
       <HintPath>..\..\..\..\Program Files\Steam\steamapps\common\Library Of Ruina\LibraryOfRuina_Data\Managed\UnityEngine.AudioModule.dll</HintPath>
+      <Private>False</Private>
     </Reference>
     <Reference Include="UnityEngine.CoreModule">
       <HintPath>..\..\..\..\Program Files\Steam\steamapps\common\Library Of Ruina\LibraryOfRuina_Data\Managed\UnityEngine.CoreModule.dll</HintPath>
+      <Private>False</Private>
     </Reference>
     <Reference Include="UnityEngine.ImageConversionModule">
       <HintPath>..\..\..\..\Program Files\Steam\steamapps\common\Library Of Ruina\LibraryOfRuina_Data\Managed\UnityEngine.ImageConversionModule.dll</HintPath>
+      <Private>False</Private>
     </Reference>
     <Reference Include="UnityEngine.InputLegacyModule">
       <HintPath>..\..\..\..\Program Files\Steam\steamapps\common\Library Of Ruina\LibraryOfRuina_Data\Managed\UnityEngine.InputLegacyModule.dll</HintPath>
+      <Private>False</Private>
     </Reference>
     <Reference Include="UnityEngine.InputModule">
       <HintPath>..\..\..\..\Program Files\Steam\steamapps\common\Library Of Ruina\LibraryOfRuina_Data\Managed\UnityEngine.InputModule.dll</HintPath>
+      <Private>False</Private>
     </Reference>
     <Reference Include="UnityEngine.TextCoreModule">
       <HintPath>..\..\..\..\Program Files\Steam\steamapps\common\Library Of Ruina\LibraryOfRuina_Data\Managed\UnityEngine.TextCoreModule.dll</HintPath>
+      <Private>False</Private>
     </Reference>
     <Reference Include="UnityEngine.TextRenderingModule, Version=0.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\..\..\..\Program Files\Steam\steamapps\common\Library Of Ruina\LibraryOfRuina_Data\Managed\UnityEngine.TextRenderingModule.dll</HintPath>
+      <Private>False</Private>
     </Reference>
     <Reference Include="UnityEngine.TLSModule">
       <HintPath>..\..\..\..\Program Files\Steam\steamapps\common\Library Of Ruina\LibraryOfRuina_Data\Managed\UnityEngine.TLSModule.dll</HintPath>
+      <Private>False</Private>
     </Reference>
     <Reference Include="UnityEngine.UI, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\..\..\..\Program Files\Steam\steamapps\common\Library Of Ruina\LibraryOfRuina_Data\Managed\UnityEngine.UI.dll</HintPath>
+      <Private>False</Private>
     </Reference>
     <Reference Include="UnityEngine.UIElementsModule">
       <HintPath>..\..\..\..\Program Files\Steam\steamapps\common\Library Of Ruina\LibraryOfRuina_Data\Managed\UnityEngine.UIElementsModule.dll</HintPath>
+      <Private>False</Private>
     </Reference>
     <Reference Include="UnityEngine.UIModule, Version=0.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\..\..\..\Program Files\Steam\steamapps\common\Library Of Ruina\LibraryOfRuina_Data\Managed\UnityEngine.UIModule.dll</HintPath>
+      <Private>False</Private>
     </Reference>
     <Reference Include="UnityEngine.UmbraModule">
       <HintPath>..\..\..\..\Program Files\Steam\steamapps\common\Library Of Ruina\LibraryOfRuina_Data\Managed\UnityEngine.UmbraModule.dll</HintPath>
+      <Private>False</Private>
     </Reference>
     <Reference Include="UnityEngine.UnityAnalyticsModule">
       <HintPath>..\..\..\..\Program Files\Steam\steamapps\common\Library Of Ruina\LibraryOfRuina_Data\Managed\UnityEngine.UnityAnalyticsModule.dll</HintPath>
+      <Private>False</Private>
     </Reference>
     <Reference Include="UnityEngine.UnityConnectModule">
       <HintPath>..\..\..\..\Program Files\Steam\steamapps\common\Library Of Ruina\LibraryOfRuina_Data\Managed\UnityEngine.UnityConnectModule.dll</HintPath>
+      <Private>False</Private>
     </Reference>
     <Reference Include="UnityEngine.UnityTestProtocolModule">
       <HintPath>..\..\..\..\Program Files\Steam\steamapps\common\Library Of Ruina\LibraryOfRuina_Data\Managed\UnityEngine.UnityTestProtocolModule.dll</HintPath>
+      <Private>False</Private>
     </Reference>
     <Reference Include="UnityEngine.UnityWebRequestAudioModule">
       <HintPath>..\..\..\..\Program Files\Steam\steamapps\common\Library Of Ruina\LibraryOfRuina_Data\Managed\UnityEngine.UnityWebRequestAudioModule.dll</HintPath>
+      <Private>False</Private>
     </Reference>
     <Reference Include="UnityEngine.UnityWebRequestModule">
       <HintPath>..\..\..\..\Program Files\Steam\steamapps\common\Library Of Ruina\LibraryOfRuina_Data\Managed\UnityEngine.UnityWebRequestModule.dll</HintPath>
+      <Private>False</Private>
     </Reference>
     <Reference Include="UnityEngine.VehiclesModule">
       <HintPath>..\..\..\..\Program Files\Steam\steamapps\common\Library Of Ruina\LibraryOfRuina_Data\Managed\UnityEngine.VehiclesModule.dll</HintPath>
+      <Private>False</Private>
     </Reference>
     <Reference Include="UnityEngine.VFXModule">
       <HintPath>..\..\..\..\Program Files\Steam\steamapps\common\Library Of Ruina\LibraryOfRuina_Data\Managed\UnityEngine.VFXModule.dll</HintPath>
+      <Private>False</Private>
     </Reference>
     <Reference Include="UnityEngine.VideoModule">
       <HintPath>..\..\..\..\Program Files\Steam\steamapps\common\Library Of Ruina\LibraryOfRuina_Data\Managed\UnityEngine.VideoModule.dll</HintPath>
+      <Private>False</Private>
     </Reference>
     <Reference Include="UnityEngine.VRModule">
       <HintPath>..\..\..\..\Program Files\Steam\steamapps\common\Library Of Ruina\LibraryOfRuina_Data\Managed\UnityEngine.VRModule.dll</HintPath>
+      <Private>False</Private>
     </Reference>
     <Reference Include="UnityEngine.WindModule">
       <HintPath>..\..\..\..\Program Files\Steam\steamapps\common\Library Of Ruina\LibraryOfRuina_Data\Managed\UnityEngine.WindModule.dll</HintPath>
+      <Private>False</Private>
     </Reference>
     <Reference Include="UnityEngine.XR.LegacyInputHelpers">
       <HintPath>..\..\..\..\Program Files\Steam\steamapps\common\Library Of Ruina\LibraryOfRuina_Data\Managed\UnityEngine.XR.LegacyInputHelpers.dll</HintPath>
+      <Private>False</Private>
     </Reference>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="BaseMod\BaseModInitializerHP.cs" />
     <Compile Include="BaseMod\BaseModInitializer.cs" />
+    <Compile Include="BaseMod\LoadingUtils.cs" />
     <Compile Include="BaseMod\Shortcut.cs" />
     <Compile Include="BaseMod\CustomGiftAppearance.cs" />
     <Compile Include="BaseMod\CustomMapManager.cs" />
@@ -163,29 +193,18 @@
     <Compile Include="BaseMod\UIPanelTool.cs" />
     <Compile Include="BaseMod\UtilTools.cs" />
     <Compile Include="BaseMod\Tools.cs" />
-    <Compile Include="ExtendedLoader\FaceOverridePatch.cs" />
-    <Compile Include="ExtendedLoader\GenderInjector.cs" />
-    <Compile Include="ExtendedLoader\GiftOrderPatch.cs" />
-    <Compile Include="ExtendedLoader\CustomProjectionLoadPatch.cs" />
-    <Compile Include="ExtendedLoader\CharacterNameInputInjector.cs" />
-    <Compile Include="ExtendedLoader\CustomAppearancePrefabPatch.cs" />
-    <Compile Include="ExtendedLoader\WorkshopSetterPatch.cs" />
-    <Compile Include="ExtendedLoader\VanillaSkinCopyPatch.cs" />
-    <Compile Include="ExtendedLoader\AbCardSelectorSizePatch.cs" />
-    <Compile Include="ExtendedLoader\XLRoot.cs" />
-    <Compile Include="ExtendedLoader\CharacterNameOutputInjector.cs" />
-    <Compile Include="ExtendedLoader\ThumbPatch.cs" />
-    <Compile Include="ExtendedLoader\ExtendedType.cs" />
-    <Compile Include="ExtendedLoader\ExtendedClothCustomizeData.cs" />
-    <Compile Include="ExtendedLoader\SpriteUtilExtension.cs" />
-    <Compile Include="ExtendedLoader\LorName.cs" />
-    <Compile Include="ExtendedLoader\SkinChangeExtensions.cs" />
+    <Compile Include="GTMDProjectMoon\BasemodConfig.cs" />
+    <Compile Include="GTMDProjectMoon\Character_New.cs" />
     <Compile Include="GTMDProjectMoon\DeckXml_New.cs" />
     <Compile Include="GTMDProjectMoon\DropBookXml_New.cs" />
+    <Compile Include="GTMDProjectMoon\FloorLevelXml_New.cs" />
     <Compile Include="GTMDProjectMoon\GiftXml_New.cs" />
     <Compile Include="GTMDProjectMoon\EmotionCardXml_New.cs" />
     <Compile Include="GTMDProjectMoon\FormationXml_New.cs" />
-    <Compile Include="GTMDProjectMoon\Xml_New - 复制 - 复制.cs" />
+    <Compile Include="GTMDProjectMoon\IIdInjectable.cs" />
+    <Compile Include="GTMDProjectMoon\QuestXml_New.cs" />
+    <Compile Include="GTMDProjectMoon\TitleXml_New.cs" />
+    <Compile Include="GTMDProjectMoon\ToolTipXml_New.cs" />
     <Compile Include="GTMDProjectMoon\Xml_New - 复制.cs" />
     <Compile Include="GTMDProjectMoon\PassiveXml_New.cs" />
     <Compile Include="GTMDProjectMoon\BookXml_New.cs" />
@@ -202,6 +221,17 @@
     <Compile Include="GTMDProjectMoon\Inject.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="SummonLiberation\SummonLiberationInitializer.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="ExtendedLoader\ExtendedLoader.csproj">
+      <Project>{3fc0c757-8dee-4a4a-bcb4-20a46806b196}</Project>
+      <Name>ExtendedLoader</Name>
+    </ProjectReference>
+    <ProjectReference Include="LorIdExtensions\LorIdExtensions.csproj">
+      <Project>{8fe72e92-19a8-409c-bdec-8955c0919924}</Project>
+      <Name>LorIdExtensions</Name>
+      <Private>True</Private>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

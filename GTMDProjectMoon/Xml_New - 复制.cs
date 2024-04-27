@@ -1,8 +1,11 @@
-﻿using LOR_XML;
-using System.Collections.Generic;
-using System.Xml.Serialization;
+﻿using System.Xml.Serialization;
 
 //NewXml
 namespace GTMDProjectMoon
 {
+	public class XmlRoot
+	{
+		[XmlAttribute("Pid")]
+		public string customPid = string.Empty;
+	}
 }
