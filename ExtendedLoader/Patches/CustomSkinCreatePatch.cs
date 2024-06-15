@@ -5,7 +5,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
-using System.Xml.Serialization;
 using UI;
 using UnityEngine;
 using Workshop;
@@ -155,8 +154,8 @@ namespace ExtendedLoader
 						{
 							codes.InsertRange(i + 1, new CodeInstruction[]
 							{
-							new CodeInstruction(Ldc_I4_1),
-							new CodeInstruction(Stloc_S, local)
+								new CodeInstruction(Ldc_I4_1),
+								new CodeInstruction(Stloc_S, local)
 							});
 							i += 2;
 						}
@@ -178,8 +177,8 @@ namespace ExtendedLoader
 					{
 						codes.InsertRange(i + 1, new CodeInstruction[]
 						{
-						new CodeInstruction(Ldloca, 3),
-						new CodeInstruction(Call, fixGenderMethods[genderInjectCounter])
+							new CodeInstruction(Ldloca, 3),
+							new CodeInstruction(Call, fixGenderMethods[genderInjectCounter])
 						});
 						i += 2;
 						genderInjectCounter++;
@@ -187,20 +186,6 @@ namespace ExtendedLoader
 				}
 			}
 			return codes;
-		}
-		static Gender TryInjectAbnormalGender(Gender original, ref string characterName)
-		{
-			if (characterName.StartsWith("EGO:"))
-			{
-				characterName = characterName.Substring("EGO:".Length);
-				return Gender.EGO;
-			}
-			if (characterName.StartsWith("Creature:"))
-			{
-				characterName = characterName.Substring("Creature:".Length);
-				return Gender.Creature;
-			}
-			return original;
 		}
 		static Gender TryInjectEgoGender(Gender original, ref string characterName)
 		{
@@ -224,18 +209,14 @@ namespace ExtendedLoader
 		{
 			return isWorkshop || CustomizingBookSkinLoader.Instance.GetWorkshopBookSkinData("") != null;
 		}
-		static bool CheckSkinCustomType(bool isWorkshop, BookModel book)
-		{
-			return isWorkshop && book.ClassInfo.skinType == "Custom";
-		}
 		static int UICharacterRenderer_SetCharacter_GetMaxWithoutSkip(UICharacterRenderer renderer)
 		{
-			int num = renderer.characterList.Count;
-			if (num > 11 && SkipCustomizationIndex())
+			int count = renderer.characterList.Count;
+			if (count >= 11 && SkipCustomizationIndex())
 			{
-				num--;
+				count--;
 			}
-			return num;
+			return count;
 		}
 		static int UICharacterRenderer_SetCharacter_GetIndexWithSkip(int index)
 		{
@@ -249,6 +230,7 @@ namespace ExtendedLoader
 		{
 			return Singleton<StageController>.Instance.State == StageController.StageState.Battle && GameSceneManager.Instance.battleScene.gameObject.activeSelf;
 		}
+
 		//catch other mods breaking things
 		[HarmonyPatch(typeof(UICharacterRenderer), nameof(UICharacterRenderer.SetCharacter))]
 		[HarmonyFinalizer]
@@ -258,11 +240,11 @@ namespace ExtendedLoader
 			{
 				Debug.LogException(__exception);
 			}
-			if (index >= UICharacterRenderer_SetCharacter_GetMaxWithoutSkip(__instance))
+			int fixedIndex = UICharacterRenderer_SetCharacter_GetIndexWithSkip(index);
+			if (fixedIndex >= UICharacterRenderer.Instance.characterList.Count)
 			{
 				return null;
 			}
-			int fixedIndex = UICharacterRenderer_SetCharacter_GetIndexWithSkip(index);
 			var uichar = __instance.characterList[fixedIndex];
 			if (IsBrokenSkin(unit, null, uichar.unitAppearance))
 			{
@@ -292,6 +274,7 @@ namespace ExtendedLoader
 			}
 			return null;
 		}
+
 		//CreateSkin
 		[HarmonyPatch(typeof(SdCharacterUtil), nameof(SdCharacterUtil.CreateSkin))]
 		[HarmonyTranspiler]
@@ -370,6 +353,12 @@ namespace ExtendedLoader
 			}
 			return codes;
 		}
+		static bool CheckSkinCustomType(bool isWorkshop, BookModel book)
+		{
+			return isWorkshop && book.ClassInfo.skinType == "Custom";
+		}
+
+		//catch other mods breaking things
 		[HarmonyPatch(typeof(SdCharacterUtil), nameof(SdCharacterUtil.CreateSkin))]
 		[HarmonyFinalizer]
 		static Exception SdCharacterUtil_CreateSkin_Finalizer(Exception __exception, ref CharacterAppearance __result, UnitDataModel unit, Faction faction, Transform characterRoot)
@@ -441,6 +430,8 @@ namespace ExtendedLoader
 				}
 			}
 		}
+
+		//catch other mods breaking things
 		[HarmonyPatch(typeof(BattleUnitView), nameof(BattleUnitView.ChangeSkin))]
 		[HarmonyFinalizer]
 		static Exception BattleUnitView_ChangeSkin_Finalizer(Exception __exception, BattleUnitView __instance, string charName)
@@ -495,6 +486,8 @@ namespace ExtendedLoader
 			}
 			return codes;
 		}
+
+		//catch other mods breaking things
 		[HarmonyPatch(typeof(BattleUnitView), nameof(BattleUnitView.ChangeEgoSkin))]
 		[HarmonyFinalizer]
 		static Exception BattleUnitView_ChangeEgoSkin_Finalizer(Exception __exception, BattleUnitView __instance, string egoName, bool bookNameChange)
@@ -571,6 +564,20 @@ namespace ExtendedLoader
 					yield return codes[i];
 				}
 			}
+		}
+		static Gender TryInjectAbnormalGender(Gender original, ref string characterName)
+		{
+			if (characterName.StartsWith("EGO:"))
+			{
+				characterName = characterName.Substring("EGO:".Length);
+				return Gender.EGO;
+			}
+			if (characterName.StartsWith("Creature:"))
+			{
+				characterName = characterName.Substring("Creature:".Length);
+				return Gender.Creature;
+			}
+			return original;
 		}
 
 		[HarmonyPatch(typeof(AssetBundleManagerRemake), nameof(AssetBundleManagerRemake.LoadCharacterPrefab_DefaultMotion))]

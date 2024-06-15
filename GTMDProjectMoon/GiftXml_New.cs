@@ -59,7 +59,18 @@ namespace GTMDProjectMoon
 		[XmlElement("Passive")]
 		public List<string> CustomScriptList = new List<string>();
 
+		[XmlElement("PriorityOrder")]
+		public GiftPriorityOrder priority = GiftPriorityOrder.Guest;
+
 		[XmlIgnore]
 		internal bool dontRemove;
+	}
+
+	public enum GiftPriorityOrder
+	{
+		Sephirah,
+		Librarian,
+		Guest,
+		Creature
 	}
 }

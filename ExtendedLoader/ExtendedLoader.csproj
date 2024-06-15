@@ -32,6 +32,10 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <ItemGroup>
+    <PackageReference Include="Krafs.Publicizer" Version="1.0.2" />
+    <Publicize Include="0Harmony" />
+  </ItemGroup>
+  <ItemGroup>
     <Reference Include="0Harmony">
       <HintPath>..\..\..\..\..\Program Files\Steam\steamapps\common\Library Of Ruina\LibraryOfRuina_Data\Mods\BaseMod\Assemblies\0Harmony.dll</HintPath>
       <Private>True</Private>
@@ -78,6 +82,7 @@
     <Compile Include="Patches\GiftOrderPatch.cs" />
     <Compile Include="Patches\LegacyCompatibilityPatch.cs" />
     <Compile Include="Patches\ReversePatches.cs" />
+    <Compile Include="Tools\InternalExtensions.cs" />
     <Compile Include="Tools\SkinExtensions.cs" />
     <Compile Include="Tools\SpriteUtilExtension.cs" />
     <Compile Include="Patches\ThumbPatch.cs" />

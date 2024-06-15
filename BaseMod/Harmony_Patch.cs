@@ -22,7 +22,6 @@ using ExtendedLoader;
 using static System.Reflection.Emit.OpCodes;
 using static HarmonyLib.AccessTools;
 using EnumExtenderV2;
-using System.Xml.Linq;
 
 namespace BaseMod
 {
@@ -1366,6 +1365,8 @@ namespace BaseMod
 		//to not completely ruin compatibility going forwards, persisting must be disabled
 		//however, type-checking is okay, and so is creating fake cards for scripts to not null-reference, so this is still done
 		//if anything still needs persistent data, the "main" script can now be accessed as "card.card._script"
+		// PATCH REMOVED FOR OPTIMIZATION DUE TO BEING DUPLICATED IN ASSORTEDFIXES
+		/*
 		[HarmonyPatch(typeof(BattleDiceCardModel), nameof(BattleDiceCardModel.CreateDiceCardSelfAbilityScript))]
 		[HarmonyPostfix]
 		static void BattleDiceCardModel_CreateDiceCardSelfAbilityScript_Post(BattleDiceCardModel __instance, ref DiceCardSelfAbilityBase __result)
@@ -1415,6 +1416,7 @@ namespace BaseMod
 				}
 			}
 		}
+		*/
 
 		//Apply owner for personal card
 		/*
@@ -1455,6 +1457,7 @@ namespace BaseMod
 			return true;
 		}
 		*/
+		/*
 		[HarmonyPatch(typeof(BattlePersonalEgoCardDetail), nameof(BattlePersonalEgoCardDetail.AddCard), new Type[] { typeof(LorId) })]
 		[HarmonyTranspiler]
 		static IEnumerable<CodeInstruction> BattlePersonalEgoCardDetail_AddCard_In(IEnumerable<CodeInstruction> instructions)
@@ -1507,8 +1510,10 @@ namespace BaseMod
 				__instance._dictionaryKeywordCache[scriptName] = new List<string>();
 			}
 		}
+		*/
 
-		//RangeSpecial
+		//RangeSpecial - DISABLED; SpecialRangeUX used instead
+		/*
 		[HarmonyPatch(typeof(UISpriteDataManager), nameof(UISpriteDataManager.GetRangeIconSprite))]
 		[HarmonyPrefix]
 		static bool UISpriteDataManager_GetRangeIconSprite_Pre(ref Sprite __result, CardRange range)
@@ -1531,6 +1536,7 @@ namespace BaseMod
 			}
 			return true;
 		}
+		*/
 		//CardBufIcon
 		[HarmonyPatch(typeof(BattleDiceCardBuf), nameof(BattleDiceCardBuf.GetBufIcon))]
 		[HarmonyPrefix]
@@ -1607,6 +1613,8 @@ namespace BaseMod
 			return true;
 		}
 		*/
+		/*
+		 * REMOVED FOR OPTIMIZATION DUE TO BEING DUPLICATED IN ASSORTEDFIXES
 		//costtozero real
 		//also apply script GetCostAdder and GetCostLast for personal/ego
 		[HarmonyPatch(typeof(BattleDiceCardModel), nameof(BattleDiceCardModel.GetCost))]
@@ -1690,6 +1698,7 @@ namespace BaseMod
 			return owner ?? card?._script?.card?.owner;
 		}
 
+
 		//set script owner for floor ego and other unusual cards (so that cost scripts can work for them too)
 		[HarmonyPatch(typeof(BattleUnitCardsInHandUI), nameof(BattleUnitCardsInHandUI.UpdateCardList))]
 		[HarmonyPostfix]
@@ -1736,6 +1745,7 @@ namespace BaseMod
 		{
 			__instance._diceFinalResultValue = Math.Max(1, __instance._diceResultValue);
 		}
+		*/
 
 		//Passive
 		//PassiveName
@@ -4592,7 +4602,7 @@ namespace BaseMod
 		[HarmonyTranspiler]
 		static IEnumerable<CodeInstruction> CharacterAppearance_CreateGiftData_In(IEnumerable<CodeInstruction> instructions)
 		{
-			MethodInfo loadMethod = GenericMethod(typeof(Resources), nameof(Resources.Load), new Type[] { typeof(GameObject) });
+			var loadMethod = GenericMethod(typeof(Resources), nameof(Resources.Load), new Type[] { typeof(GameObject) });
 			foreach (var instruction in instructions)
 			{
 				yield return instruction;
@@ -5162,7 +5172,160 @@ namespace BaseMod
 				}
 			}
 		}
+		//GiftOrder (Patron -> Librarian -> General -> Abnomality)
+		[HarmonyPatch(typeof(GiftInventory), nameof(GiftInventory.GetAllGiftsListForTitle))]
+		[HarmonyPostfix]
+		static void GiftInventory_GetAllGiftsListForTitle_Post(List<GiftModel> __result)
+		{
+			try
+			{
+				List<GiftModel> sephirahGifts = null;
+				List<GiftModel> librarianGifts = null;
+				List<GiftModel> guestGifts = null;
+				__result.RemoveAll(x =>
+				{
+					if (x.ClassInfo is GiftXmlInfo_V2 customGift && customGift.priority != GiftPriorityOrder.Creature)
+					{
+						switch (customGift.priority)
+						{
+							case GiftPriorityOrder.Sephirah:
+								(sephirahGifts = sephirahGifts ?? new List<GiftModel>()).Add(x);
+								break;
+							case GiftPriorityOrder.Librarian:
+								(librarianGifts = librarianGifts ?? new List<GiftModel>()).Add(x);
+								break;
+							case GiftPriorityOrder.Guest:
+								(guestGifts = guestGifts ?? new List<GiftModel>()).Add(x);
+								break;
+
+						}
+						return true;
+					}
+					return false;
+				});
+				for (int i = 0; i < __result.Count; i++)
+				{
+					int id = __result[i].GetGiftClassInfoId();
+					switch (id)
+					{
+						case 6:
+							if (sephirahGifts != null)
+							{
+								__result.InsertRange(i, sephirahGifts);
+								i += sephirahGifts.Count;
+								sephirahGifts = null;
+							}
+							break;
+						case 12:
+							if (librarianGifts != null)
+							{
+								__result.InsertRange(i, librarianGifts);
+								i += librarianGifts.Count;
+								librarianGifts = null;
+							}
+							break;
+						case 140:
+							if (guestGifts != null)
+							{
+								__result.InsertRange(i, guestGifts);
+								i += guestGifts.Count;
+								guestGifts = null;
+							}
+							break;
+					}
+				}
+			}
+			catch (Exception ex)
+			{
+				File.WriteAllText(Application.dataPath + "/Mods/GiftListForTitleSorterror.log", ex.Message + Environment.NewLine + ex.StackTrace);
+			}
+		}
+
+		[HarmonyPatch(typeof(UIGiftInventory), nameof(UIGiftInventory.SetGiftData), new Type[] { typeof(GiftPosition) })]
+		[HarmonyTranspiler]
+		static IEnumerable<CodeInstruction> UIGiftInventory_SetGiftData_In(IEnumerable<CodeInstruction> instructions)
+		{
+			var sortMethod = Method(typeof(List<GiftModel>), nameof(List<GiftModel>.Sort), new Type[] { typeof(Comparison<GiftModel>) });
+			var helperMain = Method(typeof(Harmony_Patch), nameof(Harmony_Patch.UIGiftInventory_SetGiftData_Helper));
+			foreach (var instruction in instructions)
+			{
+				yield return instruction;
+				if (instruction.Calls(sortMethod))
+				{
+					yield return new CodeInstruction(Ldarg_0);
+					yield return new CodeInstruction(Call, helperMain);
+				}
+			}
+		}
+		static void UIGiftInventory_SetGiftData_Helper(UIGiftInventory inventory)
+		{
+			try
+			{
+				List<GiftModel> sephirahGifts = null;
+				List<GiftModel> librarianGifts = null;
+				List<GiftModel> guestGifts = null;
+				inventory.giftListData.RemoveAll(x =>
+				{
+					if (x.ClassInfo is GiftXmlInfo_V2 customGift && customGift.priority != GiftPriorityOrder.Creature)
+					{
+						switch (customGift.priority)
+						{
+							case GiftPriorityOrder.Sephirah:
+								(sephirahGifts = sephirahGifts ?? new List<GiftModel>()).Add(x);
+								break;
+							case GiftPriorityOrder.Librarian:
+								(librarianGifts = librarianGifts ?? new List<GiftModel>()).Add(x);
+								break;
+							case GiftPriorityOrder.Guest:
+								(guestGifts = guestGifts ?? new List<GiftModel>()).Add(x);
+								break;
+
+						}
+						return true;
+					}
+					return false;
+				});
+				for (int i = 0; i < inventory.giftListData.Count; i++)
+				{
+					int id = inventory.giftListData[i].GetGiftClassInfoId();
+					switch (id)
+					{
+						case 6:
+							if (sephirahGifts != null)
+							{
+								inventory.giftListData.InsertRange(i, sephirahGifts);
+								i += sephirahGifts.Count;
+								sephirahGifts = null;
+							}
+							break;
+						case 12:
+							if (librarianGifts != null)
+							{
+								inventory.giftListData.InsertRange(i, librarianGifts);
+								i += librarianGifts.Count;
+								librarianGifts = null;
+							}
+							break;
+						case 140:
+							if (guestGifts != null)
+							{
+								inventory.giftListData.InsertRange(i, guestGifts);
+								i += guestGifts.Count;
+								guestGifts = null;
+							}
+							break;
+					}
+				}
+			}
+			catch (Exception ex)
+			{
+				File.WriteAllText(Application.dataPath + "/Mods/GiftInventorySorterror.log", ex.Message + Environment.NewLine + ex.StackTrace);
+			}
+		}
+
 		//LoadGift
+		//SAFETY PATCH REMOVED DUE TO DUPLICATION WITH ASSORTEDFIXES
+		/*
 		[HarmonyPatch(typeof(GiftInventory), nameof(GiftInventory.LoadFromSaveData))]
 		[HarmonyPrefix]
 		static void GiftInventory_LoadFromSaveData_Pre(SaveData data)
@@ -5215,6 +5378,7 @@ namespace BaseMod
 			}
 			returnIds?.UnionWith(saveData._list.ConvertAll(x => x.GetIntSelf()));
 		}
+		*/
 		[HarmonyPatch(typeof(GiftInventory), nameof(GiftInventory.LoadFromSaveData))]
 		[HarmonyPostfix]
 		static void GiftInventory_LoadFromSaveData_Post(GiftInventory __instance)

@@ -7,8 +7,6 @@ using System.Reflection;
 using System.IO;
 using Workshop;
 using UnityEngine.SceneManagement;
-using Mod;
-using System.Xml.Serialization;
 
 namespace ExtendedLoader
 {

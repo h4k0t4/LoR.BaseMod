@@ -391,7 +391,7 @@ namespace SummonLiberation
 		static int UICharacterRenderer_SetCharacter_GetMaxWithoutSkip(UICharacterRenderer renderer)
 		{
 			int count = renderer.characterList.Count;
-			if (count > 11 && SkipCustomizationIndex())
+			if (count >= 11 && SkipCustomizationIndex())
 			{
 				count--;
 			}

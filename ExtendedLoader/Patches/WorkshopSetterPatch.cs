@@ -8,8 +8,6 @@ using UnityEngine;
 using Workshop;
 using static System.Reflection.Emit.OpCodes;
 using static HarmonyLib.AccessTools;
-using SaveTest;
-using static Workshop.WorkshopSkinDataSetter;
 
 namespace ExtendedLoader
 {
@@ -89,7 +87,8 @@ namespace ExtendedLoader
 					string motionSoundPath = Path.Combine(skinRootPath.FullName, "MotionSound");
 					if (!Directory.Exists(motionSoundPath))
 					{
-						motionSoundPath = Path.Combine(skinRootPath.Parent.Parent.FullName, "/Resource/MotionSound");
+						DirectoryInfo charFolderParent = skinRootPath.Parent.Parent;
+						motionSoundPath = charFolderParent.Name == "Resource" ? Path.Combine(charFolderParent.FullName, "MotionSound") : Path.Combine(charFolderParent.FullName, "Resource", "MotionSound");
 					}
 					characterAppearance.GetComponent<CharacterSound>()?.SetMotionSounds(extendedData.motionSoundList, motionSoundPath);
 				}
