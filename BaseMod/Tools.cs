@@ -13,6 +13,7 @@ using UnityEngine;
 using UnityEngine.Networking;
 using System.Globalization;
 using EnumExtenderV2;
+using LorIdExtensions;
 
 namespace BaseMod
 {
@@ -24,35 +25,47 @@ namespace BaseMod
 		public static LorId MakeLorId(int id)
 		{
 			Assembly callingAssembly = Assembly.GetCallingAssembly();
-			if (!Harmony_Patch.ModWorkShopId.TryGetValue(callingAssembly, out string WorkShopId))
+			return new LorId(FindModId(callingAssembly), id);
+		}
+		/// <summary>
+		/// 生成LorName
+		/// </summary>
+		public static LorName MakeLorName(string name)
+		{
+			Assembly callingAssembly = Assembly.GetCallingAssembly();
+			return new LorName(FindModId(callingAssembly), name);
+		}
+		static string FindModId(Assembly callingAssembly)
+		{
+			if (!Harmony_Patch.ModWorkShopId.TryGetValue(callingAssembly, out string modId))
 			{
 				string path = Path.GetDirectoryName(Uri.UnescapeDataString(new UriBuilder(callingAssembly.CodeBase).Path));
 				DirectoryInfo dir = new DirectoryInfo(path);
-				if (File.Exists(path + "/StageModInfo.xml"))
+				if (File.Exists(Path.Combine(path, "StageModInfo.xml")))
 				{
 					using (StringReader stringReader = new StringReader(File.ReadAllText(path + "/StageModInfo.xml")))
 					{
-						WorkShopId = ((Workshop.NormalInvitation)new XmlSerializer(typeof(Workshop.NormalInvitation)).Deserialize(stringReader)).workshopInfo.uniqueId;
+						modId = ((Workshop.NormalInvitation)new XmlSerializer(typeof(Workshop.NormalInvitation)).Deserialize(stringReader)).workshopInfo.uniqueId;
 					}
 				}
-				else if (File.Exists(dir.Parent.FullName + "/StageModInfo.xml"))
+				else if (File.Exists(Path.Combine(dir.Parent.FullName, "StageModInfo.xml")))
 				{
 					using (StringReader stringReader = new StringReader(File.ReadAllText(dir.Parent.FullName + "/StageModInfo.xml")))
 					{
-						WorkShopId = ((Workshop.NormalInvitation)new XmlSerializer(typeof(Workshop.NormalInvitation)).Deserialize(stringReader)).workshopInfo.uniqueId;
+						modId = ((Workshop.NormalInvitation)new XmlSerializer(typeof(Workshop.NormalInvitation)).Deserialize(stringReader)).workshopInfo.uniqueId;
 					}
 				}
 				else
 				{
-					WorkShopId = "";
+					modId = "";
 				}
-				if (WorkShopId.ToLower().EndsWith("@origin"))
+				if (modId.ToLower().EndsWith("@origin"))
 				{
-					WorkShopId = "";
+					modId = "";
 				}
-				Harmony_Patch.ModWorkShopId[callingAssembly] = WorkShopId;
+				Harmony_Patch.ModWorkShopId[callingAssembly] = modId;
 			}
-			return new LorId(Harmony_Patch.ModWorkShopId[callingAssembly], id);
+			return modId;
 		}
 		public static void ExhaustCardAnyWhere(this BattleAllyCardDetail cardDetail, BattleDiceCardModel card)
 		{
@@ -471,7 +484,7 @@ namespace BaseMod
 	{
 		public static T FindPassive<T>(this BattleUnitPassiveDetail passiveDetail) where T : PassiveAbilityBase
 		{
-			return (T)passiveDetail.PassiveList.Find(x => (x as T) != null);
+			return (T)passiveDetail.PassiveList.Find(x => x is T);
 		}
 		public static List<T> FindPassives<T>(this BattleUnitPassiveDetail passiveDetail) where T : PassiveAbilityBase
 		{
@@ -480,6 +493,23 @@ namespace BaseMod
 			for (int i = 0; i < sourcer.Count; i++)
 			{
 				if (list[i] is T x)
+				{
+					list.Add(x);
+				}
+			}
+			return list;
+		}
+		public static T FindActivatedPassive<T>(this BattleUnitPassiveDetail passiveDetail) where T : PassiveAbilityBase
+		{
+			return (T)passiveDetail.PassiveList.Find(x => x is T && x.isActiavted);
+		}
+		public static List<T> FindActivatedPassives<T>(this BattleUnitPassiveDetail passiveDetail) where T : PassiveAbilityBase
+		{
+			List<T> list = new List<T>();
+			List<PassiveAbilityBase> sourcer = passiveDetail.PassiveList;
+			for (int i = 0; i < sourcer.Count; i++)
+			{
+				if (list[i] is T x && x.isActiavted)
 				{
 					list.Add(x);
 				}
