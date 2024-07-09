@@ -2556,7 +2556,7 @@ namespace BaseMod
 				StageClassInfoList stageClassInfoList = StageClassInfoList.Instance;
 				foreach (BookXmlInfo bookXmlInfo in __instance.panel.panel.GetEpisodeBooksDataAll())
 				{
-					if (OrcTools.EpisodeDic.TryGetValue(bookXmlInfo.id, out var epId) && stageClassInfoList.GetData(epId).chapter == __instance.chapter && (!EnumExtender.IsValidEnumName(bookXmlInfo.BookIcon) || !EnumExtender.IsOriginalName<UIStoryLine>(bookXmlInfo.BookIcon)))
+					if (OrcTools.EpisodeDic.TryGetValue(bookXmlInfo.id, out var epId) && stageClassInfoList.GetData(epId) is StageClassInfo stage && stage.chapter == __instance.chapter && (!EnumExtender.IsValidEnumName(bookXmlInfo.BookIcon) || !EnumExtender.IsOriginalName<UIStoryLine>(bookXmlInfo.BookIcon)))
 					{
 						if (!dictionary.TryGetValue(epId, out var episodeBookList))
 						{

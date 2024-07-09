@@ -57,7 +57,7 @@
       <HintPath>..\..\..\..\Program Files\Steam\steamapps\common\Library Of Ruina\LibraryOfRuina_Data\Mods\BaseMod\Assemblies\MyJsonTool.dll</HintPath>
     </Reference>
     <Reference Include="NAudio">
-      <HintPath>..\..\..\..\Program Files\Steam\steamapps\common\Library Of Ruina\LibraryOfRuina_Data\Mods\BaseMod\Assemblies\NAudio.dll</HintPath>
+      <HintPath>..\..\..\..\Program Files\Steam\steamapps\common\Library Of Ruina\LibraryOfRuina_Data\Mods\BaseMod\Assemblies\1FrameworkAssemblies\NAudio.dll</HintPath>
     </Reference>
     <Reference Include="spine-unity, Version=0.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
