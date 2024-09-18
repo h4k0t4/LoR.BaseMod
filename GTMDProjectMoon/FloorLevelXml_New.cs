@@ -11,24 +11,25 @@ namespace GTMDProjectMoon
 		public List<FloorLevelXmlInfo_V2> list;
 
 		[XmlIgnore]
-		public static XmlAttributeOverrides Overrides
+		public static XmlSerializer Serializer
 		{
 			get
 			{
-				if (_overrides == null)
+				if (_serializer == null)
 				{
 					var ignore = new XmlAttributes
 					{
 						XmlIgnore = true
 					};
-					_overrides = new XmlAttributeOverrides();
-					_overrides.Add(typeof(FloorLevelXmlInfo), nameof(FloorLevelXmlInfo.sephirahType), ignore);
-					_overrides.Add(typeof(FloorLevelXmlInfo), nameof(FloorLevelXmlInfo.stageId), ignore);
+					var overrides = new XmlAttributeOverrides();
+					overrides.Add(typeof(FloorLevelXmlInfo), nameof(FloorLevelXmlInfo.sephirahType), ignore);
+					overrides.Add(typeof(FloorLevelXmlInfo), nameof(FloorLevelXmlInfo.stageId), ignore);
+					_serializer = new XmlSerializer(typeof(FloorLevelXmlRoot_V2), overrides);
 				}
-				return _overrides;
+				return _serializer;
 			}
 		}
-		static XmlAttributeOverrides _overrides;
+		static XmlSerializer _serializer;
 	}
 	public class FloorLevelXmlInfo_V2 : FloorLevelXmlInfo
 	{

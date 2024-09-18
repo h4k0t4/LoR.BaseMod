@@ -13,25 +13,26 @@ namespace GTMDProjectMoon
 		public List<EmotionEgoXmlInfo_V2> egoXmlList;
 
 		[XmlIgnore]
-		public static XmlAttributeOverrides Overrides
+		public static XmlSerializer Serializer
 		{
 			get
 			{
-				if (_overrides == null)
+				if (_serializer == null)
 				{
 					var ignore = new XmlAttributes
 					{
 						XmlIgnore = true
 					};
-					_overrides = new XmlAttributeOverrides();
-					_overrides.Add(typeof(EmotionEgoXmlInfo), nameof(EmotionEgoXmlInfo.Sephirah), ignore);
-					_overrides.Add(typeof(EmotionEgoXmlInfo), nameof(EmotionEgoXmlInfo._CardId), ignore);
-					_overrides.Add(typeof(EmotionEgoXmlInfo), nameof(EmotionEgoXmlInfo.id), ignore);
+					var overrides = new XmlAttributeOverrides();
+					overrides.Add(typeof(EmotionEgoXmlInfo), nameof(EmotionEgoXmlInfo.Sephirah), ignore);
+					overrides.Add(typeof(EmotionEgoXmlInfo), nameof(EmotionEgoXmlInfo._CardId), ignore);
+					overrides.Add(typeof(EmotionEgoXmlInfo), nameof(EmotionEgoXmlInfo.id), ignore);
+					_serializer = new XmlSerializer(typeof(EmotionEgoXmlRoot_V2), overrides);
 				}
-				return _overrides;
+				return _serializer;
 			}
 		}
-		static XmlAttributeOverrides _overrides;
+		static XmlSerializer _serializer;
 	}
 	public class EmotionEgoXmlInfo_V2 : EmotionEgoXmlInfo, IIdInjectable
 	{

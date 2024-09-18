@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using CustomInvitation;
+using System.Collections.Generic;
 using System.Xml.Serialization;
 
 //NewXml
@@ -11,19 +12,20 @@ namespace GTMDProjectMoon
 		public List<CardDropTableXmlInfo> dropTableXmlList;
 
 		[XmlIgnore]
-		public static XmlAttributeOverrides Overrides
+		public static XmlSerializer Serializer
 		{
 			get
 			{
-				if (_overrides == null)
+				if (_serializer == null)
 				{
-					_overrides = new XmlAttributeOverrides();
-					_overrides.Add(typeof(CardDropTableXmlInfo), nameof(CardDropTableXmlInfo.workshopId), new XmlAttributes { XmlIgnore = false, XmlAttribute = new XmlAttributeAttribute("Pid") });
+					var overrides = new XmlAttributeOverrides();
+					overrides.Add(typeof(CardDropTableXmlInfo), nameof(CardDropTableXmlInfo.workshopId), new XmlAttributes { XmlIgnore = false, XmlAttribute = new XmlAttributeAttribute("Pid") });
+					_serializer = new XmlSerializer(typeof(CardDropTableXmlRoot_V2), overrides);
 				}
-				return _overrides;
+				return _serializer;
 			}
 		}
-		static XmlAttributeOverrides _overrides;
+		static XmlSerializer _serializer;
 	}
 
 	[XmlType("BookUseXmlRoot")]
@@ -33,18 +35,19 @@ namespace GTMDProjectMoon
 		public List<DropBookXmlInfo> bookXmlList;
 
 		[XmlIgnore]
-		public static XmlAttributeOverrides Overrides
+		public static XmlSerializer Serializer
 		{
 			get
 			{
-				if (_overrides == null)
+				if (_serializer == null)
 				{
-					_overrides = new XmlAttributeOverrides();
-					_overrides.Add(typeof(DropBookXmlInfo), nameof(DropBookXmlInfo.workshopID), new XmlAttributes { XmlIgnore = false, XmlAttribute = new XmlAttributeAttribute("Pid") });
+					var overrides = new XmlAttributeOverrides();
+					overrides.Add(typeof(DropBookXmlInfo), nameof(DropBookXmlInfo.workshopID), new XmlAttributes { XmlIgnore = false, XmlAttribute = new XmlAttributeAttribute("Pid") });
+					_serializer = new XmlSerializer(typeof(BookUseXmlRoot_V2), overrides);
 				}
-				return _overrides;
+				return _serializer;
 			}
 		}
-		static XmlAttributeOverrides _overrides;
+		static XmlSerializer _serializer;
 	}
 }

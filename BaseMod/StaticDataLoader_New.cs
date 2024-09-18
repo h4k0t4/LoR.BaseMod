@@ -7,7 +7,9 @@ using System.IO;
 using System.Linq;
 using System.Xml.Serialization;
 using UnityEngine;
+using BaseBridge;
 using static BaseMod.OptimizedReplacer;
+using HarmonyLib;
 
 namespace BaseMod
 {
@@ -345,6 +347,7 @@ namespace BaseMod
 				LoadAllEnemyUnit_MOD(loadableMods);
 				LoadAllStage_MOD(loadableMods);
 				LoadAllFloorInfo_MOD(loadableMods);
+				BridgeManager.Instance.bridgeLoadHandler.MarkBridgeReady("BaseMod");
 			}
 			catch (Exception ex)
 			{
@@ -414,10 +417,10 @@ namespace BaseMod
 		}
 		static void LoadNewPassive(string str, string uniqueId, TrackerDict<PassiveXmlInfo_V2> dict)
 		{
-			GTMDProjectMoon.PassiveXmlRoot_V2 xmlRoot;
+			PassiveXmlRoot_V2 xmlRoot;
 			using (StringReader stringReader = new StringReader(str))
 			{
-				xmlRoot = (GTMDProjectMoon.PassiveXmlRoot_V2)new XmlSerializer(typeof(GTMDProjectMoon.PassiveXmlRoot_V2), GTMDProjectMoon.PassiveXmlRoot_V2.Overrides).Deserialize(stringReader);
+				xmlRoot = (PassiveXmlRoot_V2)PassiveXmlRoot_V2.Serializer.Deserialize(stringReader);
 			}
 			foreach (var passive in xmlRoot.list)
 			{
@@ -434,80 +437,6 @@ namespace BaseMod
 		static void AddPassiveByMod(TrackerDict<PassiveXmlInfo_V2> dict)
 		{
 			AddOrReplace(dict, PassiveXmlList.Instance._list, p => p.id);
-			var dictAll = new Dictionary<LorId, PassiveXmlInfo>();
-			foreach (var passive in PassiveXmlList.Instance._list)
-			{
-				dictAll[passive.id] = passive;
-			}
-			HashSet<int> usedInnerTypes = new HashSet<int>();
-			int minCheckedId = MinInjectedId - 1;
-			foreach (var passive in PassiveXmlList.Instance._list)
-			{
-				if (passive.InnerTypeId != -1)
-				{
-					if (passive is PassiveXmlInfo_V2 passiveNew && !string.IsNullOrWhiteSpace(passiveNew.CustomInnerType))
-					{
-						OrcTools.CustomInnerTypeDic[passiveNew.CustomInnerType] = passive.InnerTypeId;
-					}
-					else
-					{
-						usedInnerTypes.Add(passive.InnerTypeId);
-					}
-				}
-			}
-			foreach (var kvp in dict)
-			{
-				var passive = kvp.Value.element;
-				if (passive.InnerTypeId == -1 && passive.CopyInnerType != LorId.None)
-				{
-					if (dictAll.TryGetValue(passive.CopyInnerType, out var oldPassive))
-					{
-						if (oldPassive.InnerTypeId != -1)
-						{
-							passive.InnerTypeId = oldPassive.InnerTypeId;
-						}
-						else
-						{
-							minCheckedId++;
-							while (usedInnerTypes.Contains(minCheckedId))
-							{
-								minCheckedId++;
-							}
-							passive.InnerTypeId = minCheckedId;
-							oldPassive.InnerTypeId = minCheckedId;
-							if (!string.IsNullOrWhiteSpace(passive.CustomInnerType))
-							{
-								OrcTools.CustomInnerTypeDic[passive.CustomInnerType] = minCheckedId;
-							}
-							if (oldPassive is PassiveXmlInfo_V2 oldPassiveNew && !string.IsNullOrWhiteSpace(oldPassiveNew.CustomInnerType))
-							{
-								OrcTools.CustomInnerTypeDic[oldPassiveNew.CustomInnerType] = minCheckedId;
-							}
-						}
-					}
-				}
-			}
-			foreach (var kvp in dict)
-			{
-				var passive = kvp.Value.element;
-				if (passive.InnerTypeId == -1 && !string.IsNullOrWhiteSpace(passive.CustomInnerType))
-				{
-					if (OrcTools.CustomInnerTypeDic.TryGetValue(passive.CustomInnerType, out var innerType))
-					{
-						passive.InnerTypeId = innerType;
-					}
-					else
-					{
-						minCheckedId++;
-						while (usedInnerTypes.Contains(minCheckedId))
-						{
-							minCheckedId++;
-						}
-						passive.InnerTypeId = minCheckedId;
-						OrcTools.CustomInnerTypeDic[passive.CustomInnerType] = minCheckedId;
-					}
-				}
-			}
 		}
 
 
@@ -575,7 +504,7 @@ namespace BaseMod
 			DiceCardXmlRoot_V2 xmlRoot;
 			using (StringReader stringReader = new StringReader(str))
 			{
-				xmlRoot = (DiceCardXmlRoot_V2)new XmlSerializer(typeof(DiceCardXmlRoot_V2), DiceCardXmlRoot_V2.Overrides).Deserialize(stringReader);
+				xmlRoot = (DiceCardXmlRoot_V2)DiceCardXmlRoot_V2.Serializer.Deserialize(stringReader);
 			}
 			if (!splitDict.TryGetValue(uniqueId, out var subDict))
 			{
@@ -681,7 +610,7 @@ namespace BaseMod
 			DeckXmlRoot_V2 xmlRoot;
 			using (StringReader stringReader = new StringReader(str))
 			{
-				xmlRoot = (DeckXmlRoot_V2)new XmlSerializer(typeof(DeckXmlRoot_V2), DeckXmlRoot_V2.Overrides).Deserialize(stringReader);
+				xmlRoot = (DeckXmlRoot_V2)DeckXmlRoot_V2.Serializer.Deserialize(stringReader);
 			}
 			foreach (var deck in xmlRoot.deckXmlList)
 			{
@@ -757,7 +686,7 @@ namespace BaseMod
 			BookXmlRoot_V2 xmlRoot;
 			using (StringReader stringReader = new StringReader(str))
 			{
-				xmlRoot = (BookXmlRoot_V2)new XmlSerializer(typeof(BookXmlRoot_V2), BookXmlRoot_V2.Overrides).Deserialize(stringReader);
+				xmlRoot = (BookXmlRoot_V2)BookXmlRoot_V2.Serializer.Deserialize(stringReader);
 			}
 			if (!splitDict.TryGetValue(uniqueId, out var subDict))
 			{
@@ -850,7 +779,7 @@ namespace BaseMod
 			CardDropTableXmlRoot_V2 xmlRoot;
 			using (StringReader stringReader = new StringReader(str))
 			{
-				xmlRoot = (CardDropTableXmlRoot_V2)new XmlSerializer(typeof(CardDropTableXmlRoot_V2), CardDropTableXmlRoot_V2.Overrides).Deserialize(stringReader);
+				xmlRoot = (CardDropTableXmlRoot_V2)CardDropTableXmlRoot_V2.Serializer.Deserialize(stringReader);
 			}
 			if (!splitDict.TryGetValue(uniqueId, out var subDict))
 			{
@@ -940,7 +869,7 @@ namespace BaseMod
 			BookUseXmlRoot_V2 xmlRoot;
 			using (StringReader stringReader = new StringReader(str))
 			{
-				xmlRoot = (BookUseXmlRoot_V2)new XmlSerializer(typeof(BookUseXmlRoot_V2), BookUseXmlRoot_V2.Overrides).Deserialize(stringReader);
+				xmlRoot = (BookUseXmlRoot_V2)BookUseXmlRoot_V2.Serializer.Deserialize(stringReader);
 			}
 			if (!splitDict.TryGetValue(uniqueId, out var subDict))
 			{
@@ -1056,7 +985,7 @@ namespace BaseMod
 			GiftXmlRoot_V2 xmlRoot;
 			using (StringReader stringReader = new StringReader(str))
 			{
-				xmlRoot = (GiftXmlRoot_V2)new XmlSerializer(typeof(GiftXmlRoot_V2), GiftXmlRoot_V2.Overrides).Deserialize(stringReader);
+				xmlRoot = (GiftXmlRoot_V2)GiftXmlRoot_V2.Serializer.Deserialize(stringReader);
 			}
 			foreach (GiftXmlInfo_V2 newGift in xmlRoot.giftXmlList)
 			{
@@ -1244,7 +1173,7 @@ namespace BaseMod
 			EmotionCardXmlRoot_V2 xmlRoot;
 			using (StringReader stringReader = new StringReader(str))
 			{
-				xmlRoot = (EmotionCardXmlRoot_V2)new XmlSerializer(typeof(EmotionCardXmlRoot_V2), EmotionCardXmlRoot_V2.Overrides).Deserialize(stringReader);
+				xmlRoot = (EmotionCardXmlRoot_V2)EmotionCardXmlRoot_V2.Serializer.Deserialize(stringReader);
 			}
 			foreach (var card in xmlRoot.emotionCardXmlList)
 			{
@@ -1361,7 +1290,7 @@ namespace BaseMod
 			EmotionEgoXmlRoot_V2 xmlRoot;
 			using (StringReader stringReader = new StringReader(str))
 			{
-				xmlRoot = (EmotionEgoXmlRoot_V2)new XmlSerializer(typeof(EmotionEgoXmlRoot_V2), EmotionEgoXmlRoot_V2.Overrides).Deserialize(stringReader);
+				xmlRoot = (EmotionEgoXmlRoot_V2)EmotionEgoXmlRoot_V2.Serializer.Deserialize(stringReader);
 			}
 			foreach (var emotionEgo in xmlRoot.egoXmlList)
 			{
@@ -1491,7 +1420,7 @@ namespace BaseMod
 			ToolTipXmlRoot_V2 xmlRoot;
 			using (StringReader stringReader = new StringReader(str))
 			{
-				xmlRoot = (ToolTipXmlRoot_V2)new XmlSerializer(typeof(ToolTipXmlRoot_V2), ToolTipXmlRoot_V2.Overrides).Deserialize(stringReader);
+				xmlRoot = (ToolTipXmlRoot_V2)ToolTipXmlRoot_V2.Serializer.Deserialize(stringReader);
 			}
 			foreach (var toolTip in xmlRoot.toolTipXmlList)
 			{
@@ -1670,7 +1599,7 @@ namespace BaseMod
 			QuestXmlRoot_V2 xmlRoot;
 			using (StringReader stringReader = new StringReader(str))
 			{
-				xmlRoot = (QuestXmlRoot_V2)new XmlSerializer(typeof(QuestXmlRoot_V2), QuestXmlRoot_V2.Overrides).Deserialize(stringReader);
+				xmlRoot = (QuestXmlRoot_V2)QuestXmlRoot_V2.Serializer.Deserialize(stringReader);
 			}
 			foreach (var quest in xmlRoot.list)
 			{
@@ -1752,7 +1681,7 @@ namespace BaseMod
 			EnemyUnitClassRoot_V2 xmlRoot;
 			using (StringReader stringReader = new StringReader(str))
 			{
-				xmlRoot = (EnemyUnitClassRoot_V2)new XmlSerializer(typeof(EnemyUnitClassRoot_V2), EnemyUnitClassRoot_V2.Overrides).Deserialize(stringReader);
+				xmlRoot = (EnemyUnitClassRoot_V2)EnemyUnitClassRoot_V2.Serializer.Deserialize(stringReader);
 			}
 			if (!splitDict.TryGetValue(uniqueId, out var subDict))
 			{
@@ -1929,7 +1858,7 @@ namespace BaseMod
 			StageXmlRoot_V2 xmlRoot;
 			using (StringReader stringReader = new StringReader(str))
 			{
-				xmlRoot = (StageXmlRoot_V2)new XmlSerializer(typeof(StageXmlRoot_V2), StageXmlRoot_V2.Overrides).Deserialize(stringReader);
+				xmlRoot = (StageXmlRoot_V2)StageXmlRoot_V2.Serializer.Deserialize(stringReader);
 			}
 			foreach (var stage in xmlRoot.list)
 			{
@@ -2016,7 +1945,7 @@ namespace BaseMod
 			FloorLevelXmlRoot_V2 xmlRoot;
 			using (StringReader stringReader = new StringReader(str))
 			{
-				xmlRoot = (FloorLevelXmlRoot_V2)new XmlSerializer(typeof(FloorLevelXmlRoot_V2), FloorLevelXmlRoot_V2.Overrides).Deserialize(stringReader);
+				xmlRoot = (FloorLevelXmlRoot_V2)FloorLevelXmlRoot_V2.Serializer.Deserialize(stringReader);
 			}
 			foreach (var floorLevel in xmlRoot.list)
 			{
@@ -2032,6 +1961,45 @@ namespace BaseMod
 		static void AddFloorInfoByMod(SplitTrackerDict<SephirahType, FloorLevelXmlInfo_V2> dict)
 		{
 			AddOrReplace(dict, FloorLevelXmlList.Instance._list, fl => fl.level, fl => fl.sephirahType);
+		}
+
+		internal static void PrepareBridges()
+		{
+			BridgeManager.Instance.bridgeLoadHandler.RegisterBridge("BaseMod", CompleteInjection, Tools.CallOnInjectIds);
+			BridgeManager.Instance.giftBridge.AddBridge(gift => gift is GiftXmlInfo_V2 giftNew && !giftNew.dontRemove ? giftNew.lorId : null, id => OrcTools.CustomGifts.GetValueSafe(id));
+			BridgeManager.Instance.formationBridge.AddBridge(formation => formation is FormationXmlInfo_V2 formationNew ? formationNew.lorId : null, id => OrcTools.CustomFormations.GetValueSafe(id));
+			BridgeManager.Instance.passiveToInnerTypeName.AddGenerator(passive => passive is PassiveXmlInfo_V2 passiveNew && !string.IsNullOrWhiteSpace(passiveNew.CustomInnerType) ? passiveNew.CustomInnerType.Trim() : null);
+			BridgeManager.Instance.passiveToInnerTypeSource.AddGenerator(passive => passive is PassiveXmlInfo_V2 passiveNew && passiveNew.CopyInnerType != LorId.None ? passiveNew.CopyInnerType : null);
+			BridgeManager.Instance.emotionCardBridge.AddBridge(card => card is EmotionCardXmlInfo_V2 cardNew ? cardNew.lorId : null, (id, sephirah) => OrcTools.CustomEmotionCards.GetValueSafe(sephirah)?.GetValueSafe(id));
+			BridgeManager.Instance.emotionEgoBridge.AddBridge(card => card is EmotionEgoXmlInfo_V2 cardNew ? cardNew.lorId : null, (id, sephirah) => OrcTools.CustomEmotionEgo.GetValueSafe(sephirah)?.GetValueSafe(id));
+		}
+
+		static void CompleteInjection()
+		{
+			CompleteEnemyInjection();
+			CompleteStageInjection();
+		}
+
+		static void CompleteEnemyInjection()
+		{
+			foreach (var enemyUnit in EnemyUnitClassInfoList.Instance._list)
+			{
+				if (enemyUnit is EnemyUnitClassInfo_V2 enemyUnitNew)
+				{
+					enemyUnitNew.InitInjectedFields();
+				}
+			}
+		}
+
+		static void CompleteStageInjection()
+		{
+			foreach (var stage in StageClassInfoList.Instance._list)
+			{
+				if (stage is StageClassInfo_V2 stageNew)
+				{
+					stageNew.InitInjectedFields();
+				}
+			}
 		}
 
 		static readonly int MinInjectedId = 1000000000;

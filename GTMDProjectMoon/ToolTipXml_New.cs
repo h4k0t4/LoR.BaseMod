@@ -10,23 +10,24 @@ namespace GTMDProjectMoon
 		public List<ToolTipXmlInfo_V2> toolTipXmlList;
 
 		[XmlIgnore]
-		public static XmlAttributeOverrides Overrides
+		public static XmlSerializer Serializer
 		{
 			get
 			{
-				if (_overrides == null)
+				if (_serializer == null)
 				{
 					var ignore = new XmlAttributes
 					{
 						XmlIgnore = true
 					};
-					_overrides = new XmlAttributeOverrides();
-					_overrides.Add(typeof(ToolTipXmlInfo), nameof(ToolTipXmlInfo.ID), ignore);
+					var overrides = new XmlAttributeOverrides();
+					overrides.Add(typeof(ToolTipXmlInfo), nameof(ToolTipXmlInfo.ID), ignore);
+					_serializer = new XmlSerializer(typeof(ToolTipXmlRoot_V2), overrides);
 				}
-				return _overrides;
+				return _serializer;
 			}
 		}
-		static XmlAttributeOverrides _overrides;
+		static XmlSerializer _serializer;
 	}
 
 	public class ToolTipXmlInfo_V2 : ToolTipXmlInfo

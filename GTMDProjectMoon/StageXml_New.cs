@@ -1,9 +1,11 @@
-﻿using BaseMod;
+﻿using BaseBridge;
+using BaseMod;
 using LorIdExtensions;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Xml.Serialization;
+using UnityEngine;
 
 //StageXml_New for condition and invivation
 namespace GTMDProjectMoon
@@ -15,39 +17,39 @@ namespace GTMDProjectMoon
 		public List<StageClassInfo_V2> list;
 
 		[XmlIgnore]
-		public static XmlAttributeOverrides Overrides
+		public static XmlSerializer Serializer
 		{
 			get
 			{
-				if (_overrides == null)
+				if (_serializer == null)
 				{
 					var ignore = new XmlAttributes
 					{
 						XmlIgnore = true
 					};
-					_overrides = new XmlAttributeOverrides();
-					_overrides.Add(typeof(StageClassInfo), nameof(StageClassInfo.floorOnlyList), ignore);
-					_overrides.Add(typeof(StageClassInfo), nameof(StageClassInfo.exceptFloorList), ignore);
-					_overrides.Add(typeof(StageClassInfo), nameof(StageClassInfo.workshopID), new XmlAttributes { XmlIgnore = false, XmlAttribute = new XmlAttributeAttribute("Pid") });
+					var overrides = new XmlAttributeOverrides();
+					overrides.Add(typeof(StageClassInfo), nameof(StageClassInfo.floorOnlyList), ignore);
+					overrides.Add(typeof(StageClassInfo), nameof(StageClassInfo.exceptFloorList), ignore);
+					overrides.Add(typeof(StageClassInfo), nameof(StageClassInfo.workshopID), new XmlAttributes { XmlIgnore = false, XmlAttribute = new XmlAttributeAttribute("Pid") });
 					var waveOverride = new XmlAttributes();
 					waveOverride.XmlElements.Add(new XmlElementAttribute("Wave", typeof(StageWaveInfo_V2)));
-					_overrides.Add(typeof(StageClassInfo), nameof(StageClassInfo.waveList), waveOverride);
+					overrides.Add(typeof(StageClassInfo), nameof(StageClassInfo.waveList), waveOverride);
 					var condOverride = new XmlAttributes();
 					condOverride.XmlElements.Add(new XmlElementAttribute("Condition", typeof(StageExtraCondition_V2)));
-					_overrides.Add(typeof(StageClassInfo), nameof(StageClassInfo.extraCondition), condOverride);
-					_overrides.Add(typeof(StageWaveInfo), nameof(StageWaveInfo.formationId), ignore);
-					_overrides.Add(typeof(StageWaveInfo), nameof(StageWaveInfo.emotionCardList), ignore);
-					_overrides.Add(typeof(StageExtraCondition), nameof(StageExtraCondition.needClearStageList), ignore);
-					_overrides.Add(typeof(StageStoryInfo), nameof(StageStoryInfo.packageId), new XmlAttributes { XmlIgnore = false, XmlAttribute = new XmlAttributeAttribute("Pid") });
-					_overrides.Add(typeof(StageStoryInfo), nameof(StageStoryInfo.chapter), new XmlAttributes { XmlIgnore = false, XmlAttribute = new XmlAttributeAttribute("Chapter") });
-					_overrides.Add(typeof(StageStoryInfo), nameof(StageStoryInfo.group), new XmlAttributes { XmlIgnore = false, XmlAttribute = new XmlAttributeAttribute("Group") });
-					_overrides.Add(typeof(StageStoryInfo), nameof(StageStoryInfo.episode), new XmlAttributes { XmlIgnore = false, XmlAttribute = new XmlAttributeAttribute("Episode") });
-
+					overrides.Add(typeof(StageClassInfo), nameof(StageClassInfo.extraCondition), condOverride);
+					overrides.Add(typeof(StageWaveInfo), nameof(StageWaveInfo.formationId), ignore);
+					overrides.Add(typeof(StageWaveInfo), nameof(StageWaveInfo.emotionCardList), ignore);
+					overrides.Add(typeof(StageExtraCondition), nameof(StageExtraCondition.needClearStageList), ignore);
+					overrides.Add(typeof(StageStoryInfo), nameof(StageStoryInfo.packageId), new XmlAttributes { XmlIgnore = false, XmlAttribute = new XmlAttributeAttribute("Pid") });
+					overrides.Add(typeof(StageStoryInfo), nameof(StageStoryInfo.chapter), new XmlAttributes { XmlIgnore = false, XmlAttribute = new XmlAttributeAttribute("Chapter") });
+					overrides.Add(typeof(StageStoryInfo), nameof(StageStoryInfo.group), new XmlAttributes { XmlIgnore = false, XmlAttribute = new XmlAttributeAttribute("Group") });
+					overrides.Add(typeof(StageStoryInfo), nameof(StageStoryInfo.episode), new XmlAttributes { XmlIgnore = false, XmlAttribute = new XmlAttributeAttribute("Episode") });
+					_serializer = new XmlSerializer(typeof(StageXmlRoot_V2), overrides);
 				}
-				return _overrides;
+				return _serializer;
 			}
 		}
-		static XmlAttributeOverrides _overrides;
+		static XmlSerializer _serializer;
 	}
 	public class StageClassInfo_V2 : StageClassInfo
 	{
@@ -88,6 +90,14 @@ namespace GTMDProjectMoon
 				invitationInfo.needsBooks.Reverse();
 			}
 		}
+
+		public void InitInjectedFields()
+		{
+			foreach (var wave in waveList)
+			{
+				(wave as StageWaveInfo_V2)?.InitInjectedFields();
+			}
+		}
 	}
 	public class StageExtraCondition_V2 : StageExtraCondition
 	{
@@ -115,7 +125,8 @@ namespace GTMDProjectMoon
 		[XmlElement("Formation")]
 		public LorIdXml formationLorIdXml = new LorIdXml("", 1);
 
-		[XmlElement("emotionCardList")]
+		[XmlArray("emotionCardList")]
+		[XmlArrayItem("int")]
 		public List<LorIdXml> emotionCardListXml = new List<LorIdXml>();
 
 		[XmlIgnore]
@@ -124,14 +135,21 @@ namespace GTMDProjectMoon
 		[XmlIgnore]
 		public List<LorId> emotionCardListNew = new List<LorId>();
 
+		public string uniqueId = "";
+
 		public void InitOldFields(string uniqueId)
+		{
+			this.uniqueId = uniqueId;
+		}
+
+		public void InitInjectedFields()
 		{
 			formationLorId = LorIdLegacy.MakeLorIdLegacy(formationLorIdXml, uniqueId);
 			if (formationLorId.IsBasic())
 			{
 				formationId = formationLorId.id;
 			}
-			else if (OrcTools.CustomFormations.TryGetValue(formationLorId, out var formation))
+			else if (BridgeManager.Instance.formationBridge.GetEntityByKey(formationLorId) is FormationXmlInfo formation)
 			{
 				formationId = formation.id;
 			}
@@ -142,9 +160,9 @@ namespace GTMDProjectMoon
 				{
 					emotionCardList.Add(emotionNew.id);
 				}
-				else if (OrcTools.CustomEmotionCards.TryGetValue(SephirahType.None, out var dict) && dict.TryGetValue(emotionNew, out var emotionCard))
+				else if (BridgeManager.Instance.emotionCardBridge.GetEntityByKey(emotionNew, SephirahType.None) is EmotionCardXmlInfo injectedCard)
 				{
-					emotionCardList.Add(emotionCard.id);
+					emotionCardList.Add(injectedCard.id);
 				}
 			}
 		}

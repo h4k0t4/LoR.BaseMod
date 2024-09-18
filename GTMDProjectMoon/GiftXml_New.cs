@@ -11,23 +11,24 @@ namespace GTMDProjectMoon
 		public List<GiftXmlInfo_V2> giftXmlList;
 
 		[XmlIgnore]
-		public static XmlAttributeOverrides Overrides
+		public static XmlSerializer Serializer
 		{
 			get
 			{
-				if (_overrides == null)
+				if (_serializer == null)
 				{
 					var ignore = new XmlAttributes
 					{
 						XmlIgnore = true
 					};
-					_overrides = new XmlAttributeOverrides();
-					_overrides.Add(typeof(GiftXmlInfo), nameof(GiftXmlInfo.ScriptList), ignore);
+					var overrides = new XmlAttributeOverrides();
+					overrides.Add(typeof(GiftXmlInfo), nameof(GiftXmlInfo.ScriptList), ignore);
+					_serializer = new XmlSerializer(typeof(GiftXmlRoot_V2), overrides);
 				}
-				return _overrides;
+				return _serializer;
 			}
 		}
-		static XmlAttributeOverrides _overrides;
+		static XmlSerializer _serializer;
 	}
 	public class GiftXmlInfo_V2 : GiftXmlInfo
 	{

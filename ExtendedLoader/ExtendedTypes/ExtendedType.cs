@@ -6,6 +6,7 @@ using System.Runtime.CompilerServices;
 
 namespace ExtendedLoader
 {
+#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 	public class SkinData
 	{
 		public SkinData(Dictionary<ActionDetail, ClothCustomizeData> original)
@@ -149,4 +150,5 @@ namespace ExtendedLoader
 		Attack = 4,
 		Hit = 6
 	}
+#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
 }

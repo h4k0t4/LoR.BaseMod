@@ -8,12 +8,11 @@ using UnityEngine;
 
 namespace LorIdExtensions
 {
+	/// <summary>
+	/// An equivalent of <see cref="LorId"/> for string names instead of int ids.
+	/// </summary>
 	public class LorName : IEquatable<LorName>, IComparable<LorName>
 	{
-		public LorName(string name) : this(GetRealPackageId(name, "", out var innerName), innerName)
-		{
-		}
-
 		static string GetRealPackageId(string name, string packageId, out string innerName)
 		{
 			if (name == null || !name.Contains(NAME_SEPARATOR))
@@ -28,11 +27,30 @@ namespace LorIdExtensions
 				return name.Substring(0, pos);
 			}
 		}
+		/// <summary>
+		/// Creates a LorName given either a simple name (in which case the package id will be empty), or a compressed form of a LorName (in which case the package id will be recovered).
+		/// </summary>
+		/// <param name="name">The name to construct a LorName by.</param>
+		public LorName(string name) : this(GetRealPackageId(name, "", out var innerName), innerName)
+		{
+		}
 
+		/// <summary>
+		/// Creates a "generic custom" LorName for addressing modded entities that nevertheless do not belong to any mod that has a package id.
+		/// (most notably, standalone external skins)
+		/// </summary>
+		/// <param name="name">The name to construct a LorName by.</param>
+		/// <param name="isGenericCustom"><see langword="true"/> to construct a "generic custom" LorName (if <see langword="false"/>, the default constructor is used).</param>
 		public LorName(string name, bool isGenericCustom): this(GetRealPackageId(name, isGenericCustom ? WORKSHOP_ID : "", out var innerName), innerName)
 		{
 		}
 
+		/// <summary>
+		/// Creates a LorName given a package id and an internal name.
+		/// NOTE: if the given name is already a compressed form of a LorName, its package id will be recovered and used instead!
+		/// </summary>
+		/// <param name="packageId">The package id.</param>
+		/// <param name="name">The internal name.</param>
 		public LorName(string packageId, string name)
 		{
 			if (name == null || !name.Contains(NAME_SEPARATOR))
@@ -58,6 +76,10 @@ namespace LorIdExtensions
 #pragma warning restore CS0618 // Type or member is obsolete
 		}
 
+		/// <summary>
+		/// Compresses a LorName into a single string of the form "packageId:internalName", or just the internal name if package id is empty.
+		/// </summary>
+		/// <returns>The compressed form of the LorName.</returns>
 		public string Compress()
 		{
 			if (string.IsNullOrWhiteSpace(packageId))
@@ -70,9 +92,30 @@ namespace LorIdExtensions
 			}
 		}
 
+		/// <summary>
+		/// Checks whether a given string is a valid compressed form of a LorName.
+		/// That is, whether it is not <see langword="null"/> and contains the separator character ":".
+		/// </summary>
+		/// <param name="name">The name to be checked.</param>
+		/// <returns><see langword="true"/> if the given name is a valid compressed form of a LorName, otherwise <see langword="false"/>.</returns>
 		public static bool IsCompressed(string name)
 		{
 			return (name != null && name.Contains(NAME_SEPARATOR));
+		}
+
+		/// <summary>
+		/// Tests whether the LorName is a "generic custom" identifier (see <see cref="LorName(string, bool)"/>).
+		/// </summary>
+		/// <returns><see langword="true"/> if this LorName is a "generic custom" LorName, otherwise <see langword="false"/>.</returns>
+		public bool IsWorkshopGeneric()
+		{
+			return IsWorkshopGenericId(packageId);
+		}
+
+#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
+		public bool IsNone()
+		{
+			return string.IsNullOrWhiteSpace(name);
 		}
 
 		public bool IsBasic()
@@ -83,16 +126,6 @@ namespace LorIdExtensions
 		public bool IsWorkshop()
 		{
 			return !IsBasicId(packageId);
-		}
-
-		public bool IsWorkshopGeneric()
-		{
-			return IsWorkshopGenericId(packageId);
-		}
-
-		public bool IsNone()
-		{
-			return string.IsNullOrWhiteSpace(name);
 		}
 
 		public override bool Equals(object obj)
@@ -192,6 +225,16 @@ namespace LorIdExtensions
 			return !IsBasicId(packageId);
 		}
 
+		public static bool IsBasicId(string packageId)
+		{
+			return string.IsNullOrWhiteSpace(packageId);
+		}
+#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
+
+		/// <summary>
+		/// Tests whether the given package id corresponds to a "generic custom" identifier (see <see cref="LorName(string, bool)"/>).
+		/// </summary>
+		/// <returns><see langword="true"/> if the given package id corresponds to a "generic custom" identifier, otherwise <see langword="false"/>.</returns>
 		public static bool IsWorkshopGenericId(string packageId)
 		{
 #pragma warning disable CS0618 // Type or member is obsolete
@@ -199,11 +242,7 @@ namespace LorIdExtensions
 #pragma warning restore CS0618 // Type or member is obsolete
 		}
 
-		public static bool IsBasicId(string packageId)
-		{
-			return string.IsNullOrWhiteSpace(packageId);
-		}
-
+#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 		public static LorName MakeLorName(LorNameXml src, string defaultPid)
 		{
 			if (string.IsNullOrWhiteSpace(src.pid))
@@ -216,7 +255,25 @@ namespace LorIdExtensions
 			}
 			return new LorName(src.pid, src.xmlName);
 		}
+		public static void InitializeLorNames(List<LorNameXml> src, List<LorName> dst, string defaultPid)
+		{
+			dst.Clear();
+			foreach (LorNameXml t in src)
+			{
+				dst.Add(MakeLorName(t, defaultPid));
+			}
+		}
+#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
 
+		/// <summary>
+		/// Creates a LorName for "legacy" applications that need to default to empty package id on empty (instead of using the default id in that case).
+		/// Thus, instead of substituting the default package id for empty/missing xml package id (as <see cref="LorId.MakeLorId(ILorIdXml, string)"/>/<see cref="LorName.MakeLorName(LorNameXml, string)"/> do),
+		/// it is only substituted if the xml package id is "@this".
+		/// (see also: <seealso cref="LorIdLegacy.MakeLorIdLegacy(ILorIdXml, string)"/>)
+		/// </summary>
+		/// <param name="src">The LorName xml from which to create a legacy LorName.</param>
+		/// <param name="defaultPid">The "default" package id.</param>
+		/// <returns>The created LorName.</returns>
 		public static LorName MakeLorNameLegacy(LorNameXml src, string defaultPid)
 		{
 			if (string.IsNullOrWhiteSpace(src.pid) || src.pid == "@origin")
@@ -229,15 +286,15 @@ namespace LorIdExtensions
 			}
 			return new LorName(src.pid, src.xmlName);
 		}
-
-		public static void InitializeLorNames(List<LorNameXml> src, List<LorName> dst, string defaultPid)
-		{
-			dst.Clear();
-			foreach (LorNameXml t in src)
-			{
-				dst.Add(MakeLorName(t, defaultPid));
-			}
-		}
+		/// <summary>
+		/// Initializes a list of LorName for "legacy" applications that need to default to empty package id on empty (instead of using the default id in that case).
+		/// Thus, instead of substituting the default package id for empty/missing xml package id (as <see cref="LorId.MakeLorId(ILorIdXml, string)"/>/<see cref="LorName.MakeLorName(LorNameXml, string)"/> do),
+		/// it is only substituted if the xml package id is "@this".
+		/// (see also: <seealso cref="LorIdLegacy.InitializeLorIdsLegacy{T}(List{T}, List{LorId}, string)"/>)
+		/// </summary>
+		/// <param name="src">The list of LorName xmls from which to create legacy LorName values.</param>
+		/// <param name="dst">The list of LorName into which the results should be placed.</param>
+		/// <param name="defaultPid">The "default" package id.</param>
 		public static void InitializeLorNamesLegacy(List<LorNameXml> src, List<LorName> dst, string defaultPid)
 		{
 			dst.Clear();
@@ -247,6 +304,7 @@ namespace LorIdExtensions
 			}
 		}
 
+#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 		public override string ToString()
 		{
 			return string.Concat(new string[]
@@ -266,6 +324,7 @@ namespace LorIdExtensions
 		public static readonly LorName None = new LorName("");
 
 		public const char NAME_SEPARATOR = ':';
+#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
 
 		[Obsolete("Only kept for backwards compatibility with old BMfW versions; please use WORKSHOP_ID instead", false)]
 		static readonly string BASEMOD_ID = "BaseMod";
@@ -273,6 +332,7 @@ namespace LorIdExtensions
 		static readonly string WORKSHOP_ID = "Workshop";
 	}
 
+#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 	public class LorNameXml
 	{
 		[XmlAttribute("Pid")]
@@ -297,9 +357,21 @@ namespace LorIdExtensions
 			xmlName = name;
 		}
 	}
+#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
 
+	/// <summary>
+	/// The class for handling "legacy" LorId xml fields that preserve empty package id.
+	/// </summary>
 	public static class LorIdLegacy
 	{
+		/// <summary>
+		/// Creates a LorId for "legacy" applications that need to default to empty package id on empty (instead of using the default id in that case).
+		/// Thus, instead of substituting the default package id for empty/missing xml package id (as <see cref="LorId.MakeLorId(ILorIdXml, string)"/> does),
+		/// it is only substituted if the xml package id is "@this".
+		/// </summary>
+		/// <param name="src">The LorId xml from which to create a legacy LorId.</param>
+		/// <param name="defaultPid">The "default" package id.</param>
+		/// <returns>The created LorId.</returns>
 		public static LorId MakeLorIdLegacy(ILorIdXml src, string defaultPid)
 		{
 			if (string.IsNullOrEmpty(src.pid) || src.pid == "@origin")
@@ -313,6 +385,14 @@ namespace LorIdExtensions
 			return new LorId(src.pid, src.xmlId);
 		}
 
+		/// <summary>
+		/// Initializes a list of LorId for "legacy" applications that need to default to empty package id on empty (instead of using the default id in that case).
+		/// Thus, instead of substituting the default package id for empty/missing xml package id (as <see cref="LorId.MakeLorId(ILorIdXml, string)"/> does),
+		/// it is only substituted if the xml package id is "@this".
+		/// </summary>
+		/// <param name="src">The list of LorId xmls from which to create legacy LorId values.</param>
+		/// <param name="dst">The list of LorId into which the results should be placed.</param>
+		/// <param name="defaultPid">The "default" package id.</param>
 		public static void InitializeLorIdsLegacy<T>(List<T> src, List<LorId> dst, string defaultPid) where T : ILorIdXml
 		{
 			dst.Clear();

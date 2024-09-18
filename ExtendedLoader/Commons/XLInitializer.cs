@@ -10,7 +10,7 @@ using UnityEngine.SceneManagement;
 
 namespace ExtendedLoader
 {
-	public class XLInitializer : ModInitializer
+	class XLInitializer : ModInitializer
 	{
 		public XLInitializer()
 		{

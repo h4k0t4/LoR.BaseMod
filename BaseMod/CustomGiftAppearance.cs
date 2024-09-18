@@ -30,17 +30,7 @@ namespace BaseMod
 				GiftAppearance original = Harmony_Patch.CustomGiftAppearancePrefabObject;
 				GiftAppearance giftAppearance = Instantiate(original, XLRoot.persistentRoot.transform).GetComponent<GiftAppearance>();
 
-				giftAppearance._frontSpriteRenderer.enabled = GiftArtWork.TryGetValue(array2[2] + "_front", out var frontSprite);
-				giftAppearance._frontSpriteRenderer.sprite = frontSprite;
-
-				giftAppearance._sideSpriteRenderer.enabled = GiftArtWork.TryGetValue(array2[2] + "_side", out var sideSprite);
-				giftAppearance._sideSpriteRenderer.sprite = sideSprite;
-
-				giftAppearance._frontBackSpriteRenderer.enabled = GiftArtWork.TryGetValue(array2[2] + "_frontBack", out var frontBackSprite);
-				giftAppearance._frontBackSpriteRenderer.sprite = frontBackSprite;
-
-				giftAppearance._sideBackSpriteRenderer.enabled = GiftArtWork.TryGetValue(array2[2] + "_sideBack", out var sideBackSprite);
-				giftAppearance._sideBackSpriteRenderer.sprite = sideBackSprite;
+				SetGiftArtWork(giftAppearance, array2[2]);
 
 				CreatedGifts[array2[2]] = giftAppearance;
 				result = giftAppearance;
@@ -56,11 +46,11 @@ namespace BaseMod
 			GiftArtWork = new Dictionary<string, Sprite>();
 			foreach (ModContent modContent in Harmony_Patch.LoadedModContents)
 			{
-				DirectoryInfo _dirInfo = modContent._dirInfo;
-				if (Directory.Exists(_dirInfo.FullName + "/GiftArtWork"))
+				string giftPath = Path.Combine(modContent._dirInfo.FullName, "GiftArtWork");
+				if (Directory.Exists(giftPath))
 				{
-					DirectoryInfo directoryInfo2 = new DirectoryInfo(_dirInfo.FullName + "/GiftArtWork");
-					foreach (FileInfo fileInfo in directoryInfo2.GetFiles())
+					DirectoryInfo directory = new DirectoryInfo(giftPath);
+					foreach (FileInfo fileInfo in directory.GetFiles())
 					{
 						Texture2D texture2D = new Texture2D(2, 2);
 						texture2D.LoadImage(File.ReadAllBytes(fileInfo.FullName));
@@ -141,20 +131,29 @@ namespace BaseMod
 			_sideBackSpriteRenderer.enabled = GiftArtWork.TryGetValue(name + "_sideBack", out var sideBackSprite);
 			_sideBackSpriteRenderer.sprite = sideBackSprite;
 		}
-		public CustomGiftAppearance()
+
+		internal static void SetGiftArtWork(GiftAppearance giftAppearance, string name)
 		{
-			inited = false;
-		}
-		static CustomGiftAppearance()
-		{
-			CreatedGifts = new Dictionary<string, GiftAppearance>();
+			GetGiftArtWork();
+
+			giftAppearance._frontSpriteRenderer.enabled = GiftArtWork.TryGetValue(name + "_front", out var frontSprite);
+			giftAppearance._frontSpriteRenderer.sprite = frontSprite;
+
+			giftAppearance._sideSpriteRenderer.enabled = GiftArtWork.TryGetValue(name + "_side", out var sideSprite);
+			giftAppearance._sideSpriteRenderer.sprite = sideSprite;
+
+			giftAppearance._frontBackSpriteRenderer.enabled = GiftArtWork.TryGetValue(name + "_frontBack", out var frontBackSprite);
+			giftAppearance._frontBackSpriteRenderer.sprite = frontBackSprite;
+
+			giftAppearance._sideBackSpriteRenderer.enabled = GiftArtWork.TryGetValue(name + "_sideBack", out var sideBackSprite);
+			giftAppearance._sideBackSpriteRenderer.sprite = sideBackSprite;
 		}
 
-		public static Dictionary<string, GiftAppearance> CreatedGifts;
+		public static Dictionary<string, GiftAppearance> CreatedGifts = new Dictionary<string, GiftAppearance>();
 
 		public static Dictionary<string, Sprite> GiftArtWork;
 
-		public bool inited;
+		public bool inited = false;
 
 		public static bool GiftArtWorkLoaded;
 	}

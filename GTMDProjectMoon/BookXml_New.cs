@@ -1,5 +1,4 @@
 ﻿using BaseMod;
-using CustomInvitation;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -15,38 +14,39 @@ namespace GTMDProjectMoon
 		public List<BookXmlInfo_V2> bookXmlList = new List<BookXmlInfo_V2>();
 
 		[XmlIgnore]
-		public static XmlAttributeOverrides Overrides
+		public static XmlSerializer Serializer
 		{
 			get
 			{
-				if (_overrides == null)
+				if (_serializer == null)
 				{
 					var ignore = new XmlAttributes
 					{
 						XmlIgnore = true
 					};
-					_overrides = new XmlAttributeOverrides();
-					_overrides.Add(typeof(BookEquipEffect), nameof(BookEquipEffect.OnlyCard), ignore);
-					_overrides.Add(typeof(BookEquipEffect), nameof(BookEquipEffect.CardList), ignore);
-					_overrides.Add(typeof(BookXmlInfo), nameof(BookXmlInfo.optionList), ignore);
-					_overrides.Add(typeof(BookXmlInfo), nameof(BookXmlInfo.categoryList), ignore);
-					_overrides.Add(typeof(BookXmlInfo), nameof(BookXmlInfo.EquipEffect), ignore);
-					_overrides.Add(typeof(BookXmlInfo), nameof(BookXmlInfo.episode), ignore);
-					_overrides.Add(typeof(BookXmlInfo), nameof(BookXmlInfo.skinType), ignore);
-					_overrides.Add(typeof(BookXmlInfo), nameof(BookXmlInfo.workshopID), new XmlAttributes { XmlIgnore = false, XmlAttribute = new XmlAttributeAttribute("Pid") });
+					var overrides = new XmlAttributeOverrides();
+					overrides.Add(typeof(BookEquipEffect), nameof(BookEquipEffect.OnlyCard), ignore);
+					overrides.Add(typeof(BookEquipEffect), nameof(BookEquipEffect.CardList), ignore);
+					overrides.Add(typeof(BookXmlInfo), nameof(BookXmlInfo.optionList), ignore);
+					overrides.Add(typeof(BookXmlInfo), nameof(BookXmlInfo.categoryList), ignore);
+					overrides.Add(typeof(BookXmlInfo), nameof(BookXmlInfo.EquipEffect), ignore);
+					overrides.Add(typeof(BookXmlInfo), nameof(BookXmlInfo.episode), ignore);
+					overrides.Add(typeof(BookXmlInfo), nameof(BookXmlInfo.skinType), ignore);
+					overrides.Add(typeof(BookXmlInfo), nameof(BookXmlInfo.workshopID), new XmlAttributes { XmlIgnore = false, XmlAttribute = new XmlAttributeAttribute("Pid") });
 #pragma warning disable CS0618 // Type or member is obsolete
 					var unignore = new XmlAttributes
 					{
 						XmlIgnore = false
 					};
 					unignore.XmlElements.Add(new XmlElementAttribute("CustomCategory"));
-					_overrides.Add(typeof(BookXmlInfo_V2), nameof(BookXmlInfo_V2.customCategoryListFallback), unignore);
+					overrides.Add(typeof(BookXmlInfo_V2), nameof(BookXmlInfo_V2.customCategoryListFallback), unignore);
 #pragma warning restore CS0618 // Type or member is obsolete
+					_serializer = new XmlSerializer(typeof(BookXmlRoot_V2), overrides);
 				}
-				return _overrides;
+				return _serializer;
 			}
 		}
-		static XmlAttributeOverrides _overrides;
+		static XmlSerializer _serializer;
 	}
 	public class BookXmlInfo_V2 : BookXmlInfo
 	{
@@ -276,7 +276,7 @@ namespace GTMDProjectMoon
 		public int SuccessionPossibleNumber = 9;
 
 		[XmlElement("SoundInfo")]
-		public List<BookSoundInfo> motionSoundList;
+		public List<CustomInvitation.BookSoundInfo> motionSoundList;
 
 		[XmlIgnore]
 		public int remainRewardValue;

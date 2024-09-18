@@ -14,6 +14,7 @@ using UnityEngine.Networking;
 using System.Globalization;
 using EnumExtenderV2;
 using LorIdExtensions;
+using BaseBridge;
 
 namespace BaseMod
 {
@@ -454,6 +455,50 @@ namespace BaseMod
 				return customId;
 			}
 		}
+
+		public static void AddOnLocalizeAction(Action<string> action)
+		{
+			OnLoadLocalize += x =>
+			{
+				try
+				{
+					action(x);
+				}
+				catch (Exception ex)
+				{
+					File.WriteAllText(Application.dataPath + "/Mods/OnLocalizeError.log", ex.Message + Environment.NewLine + ex.StackTrace);
+				}
+			};
+		}
+
+		static event Action<string> OnLoadLocalize;
+
+		internal static void CallOnLoadLocalize(string language)
+		{
+			OnLoadLocalize?.Invoke(language);
+		}
+
+		public static void AddOnInjectIdsAction(Action action)
+		{
+			OnInjectIds += () =>
+			{
+				try
+				{
+					action();
+				}
+				catch (Exception ex)
+				{
+					File.WriteAllText(Application.dataPath + "/Mods/OnInjectError.log", ex.Message + Environment.NewLine + ex.StackTrace);
+				}
+			};
+		}
+
+		static event Action OnInjectIds;
+
+		internal static void CallOnInjectIds()
+		{
+			OnInjectIds?.Invoke();
+		}
 	}
 	public class EffectTypoData_New : EffectTypoData
 	{
@@ -515,25 +560,6 @@ namespace BaseMod
 				}
 			}
 			return list;
-		}
-	}
-}
-
-namespace BaseMod
-{
-	public static class EmotionCardExtension
-	{
-		public static EmotionCardXmlInfo GetData(this EmotionCardXmlList list, LorId id, SephirahType sephirah)
-		{
-			if (id.IsBasic())
-			{
-				return list.GetData(id.id, sephirah);
-			}
-			if (OrcTools.CustomEmotionCards.TryGetValue(sephirah, out var subdict) && subdict.TryGetValue(id, out var card))
-			{
-				return card;
-			}
-			return null;
 		}
 	}
 }

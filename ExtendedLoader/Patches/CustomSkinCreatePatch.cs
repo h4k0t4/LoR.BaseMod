@@ -99,7 +99,7 @@ namespace ExtendedLoader
 
 		[HarmonyPatch(typeof(UICharacterRenderer), nameof(UICharacterRenderer.SetCharacter))]
 		[HarmonyTranspiler]
-		static IEnumerable<CodeInstruction> UICharacterRenderer_SetCharacter_Transpiler(IEnumerable<CodeInstruction> instructions, ILGenerator ilgen)
+		static IEnumerable<CodeInstruction> UICharacterRenderer_SetCharacter_Transpiler(IEnumerable<CodeInstruction> instructions)
 		{
 			var bookGetter = PropertyGetter(typeof(UnitDataModel), nameof(UnitDataModel.bookItem));
 			var customBookGetter = PropertyGetter(typeof(UnitDataModel), nameof(UnitDataModel.CustomBookItem));

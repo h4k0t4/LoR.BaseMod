@@ -36,14 +36,25 @@ namespace ExtendedLoader
 		[HarmonyPrefix]
 		static bool BookXmlInfo_GetThumbSprite_Prefix(BookXmlInfo __instance, ref Sprite __result)
 		{
+			if (__result != null)
+			{
+				return true; 
+			}
 			try
 			{
 				WorkshopSkinData workshopBookSkinData = SkinTools.GetWorkshopBookSkinData(__instance.id.packageId, __instance.GetCharacterSkin(), "_" + __instance.gender);
 				string thumbPath = null;
 				if (workshopBookSkinData != null)
 				{
-					var spritePath = workshopBookSkinData.dic[ActionDetail.Default].spritePath;
-					DirectoryInfo spriteDir = new DirectoryInfo(spritePath);
+					if (!workshopBookSkinData.dic.TryGetValue(ActionDetail.Default, out var defaultData))
+					{
+						return true;
+					}
+					if (!File.Exists(defaultData.spritePath))
+					{
+						return true;
+					}
+					DirectoryInfo spriteDir = new DirectoryInfo(defaultData.spritePath);
 					thumbPath = Path.Combine(spriteDir.Parent.Parent.FullName, "Thumb.png");
 				}
 				Sprite bookThumb = GetBookThumb(__instance, thumbPath);

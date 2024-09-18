@@ -12,23 +12,24 @@ namespace GTMDProjectMoon
 		public List<EmotionCardXmlInfo_V2> emotionCardXmlList;
 
 		[XmlIgnore]
-		public static XmlAttributeOverrides Overrides
+		public static XmlSerializer Serializer
 		{
 			get
 			{
-				if (_overrides == null)
+				if (_serializer == null)
 				{
 					var ignore = new XmlAttributes
 					{
 						XmlIgnore = true
 					};
-					_overrides = new XmlAttributeOverrides();
-					_overrides.Add(typeof(EmotionCardXmlInfo), nameof(EmotionCardXmlInfo.Sephirah), ignore);
+					var overrides = new XmlAttributeOverrides();
+					overrides.Add(typeof(EmotionCardXmlInfo), nameof(EmotionCardXmlInfo.Sephirah), ignore);
+					_serializer = new XmlSerializer(typeof(EmotionCardXmlRoot_V2), overrides);
 				}
-				return _overrides;
+				return _serializer;
 			}
 		}
-		static XmlAttributeOverrides _overrides;
+		static XmlSerializer _serializer;
 	}
 
 	public class EmotionCardXmlInfo_V2 : EmotionCardXmlInfo, IIdInjectable
@@ -73,23 +74,24 @@ namespace GTMDProjectMoon
 		public List<Sephirah_V2> sephirahList;
 
 		[XmlIgnore]
-		public static XmlAttributeOverrides Overrides
+		public static XmlSerializer Serializer
 		{
 			get
 			{
-				if (_overrides == null)
+				if (_serializer == null)
 				{
 					var ignore = new XmlAttributes
 					{
 						XmlIgnore = true
 					};
-					_overrides = new XmlAttributeOverrides();
-					_overrides.Add(typeof(Sephirah), nameof(Sephirah.sephirahType), ignore);
+					var overrides = new XmlAttributeOverrides();
+					overrides.Add(typeof(Sephirah), nameof(Sephirah.sephirahType), ignore);
+					_serializer = new XmlSerializer(typeof(AbnormalityCardsRoot_V2), overrides);
 				}
-				return _overrides;
+				return _serializer;
 			}
 		}
-		static XmlAttributeOverrides _overrides;
+		static XmlSerializer _serializer;
 	}
 
 	public class Sephirah_V2 : Sephirah

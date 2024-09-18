@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Xml.Serialization;
+using BaseBridge;
 
 //EnemyUnitXml_New for other mods' drop
 namespace GTMDProjectMoon
@@ -13,27 +14,28 @@ namespace GTMDProjectMoon
 		public List<EnemyUnitClassInfo_V2> list;
 
 		[XmlIgnore]
-		public static XmlAttributeOverrides Overrides
+		public static XmlSerializer Serializer
 		{
 			get
 			{
-				if (_overrides == null)
+				if (_serializer == null)
 				{
 					var ignore = new XmlAttributes
 					{
 						XmlIgnore = true
 					};
-					_overrides = new XmlAttributeOverrides();
-					_overrides.Add(typeof(EnemyUnitClassInfo), nameof(EnemyUnitClassInfo.bookId), ignore);
-					_overrides.Add(typeof(EnemyUnitClassInfo), nameof(EnemyUnitClassInfo.dropTableList), ignore);
-					_overrides.Add(typeof(EnemyUnitClassInfo), nameof(EnemyUnitClassInfo.emotionCardList), ignore);
-					_overrides.Add(typeof(EnemyDropItemTable), nameof(EnemyDropItemTable.dropItemList), ignore);
-					_overrides.Add(typeof(EnemyUnitClassInfo), nameof(EnemyUnitClassInfo.workshopID), new XmlAttributes { XmlIgnore = false, XmlAttribute = new XmlAttributeAttribute("Pid") });
+					var overrides = new XmlAttributeOverrides();
+					overrides.Add(typeof(EnemyUnitClassInfo), nameof(EnemyUnitClassInfo.bookId), ignore);
+					overrides.Add(typeof(EnemyUnitClassInfo), nameof(EnemyUnitClassInfo.dropTableList), ignore);
+					overrides.Add(typeof(EnemyUnitClassInfo), nameof(EnemyUnitClassInfo.emotionCardList), ignore);
+					overrides.Add(typeof(EnemyDropItemTable), nameof(EnemyDropItemTable.dropItemList), ignore);
+					overrides.Add(typeof(EnemyUnitClassInfo), nameof(EnemyUnitClassInfo.workshopID), new XmlAttributes { XmlIgnore = false, XmlAttribute = new XmlAttributeAttribute("Pid") });
+					_serializer = new XmlSerializer(typeof(EnemyUnitClassRoot_V2), overrides);
 				}
-				return _overrides;
+				return _serializer;
 			}
 		}
-		static XmlAttributeOverrides _overrides;
+		static XmlSerializer _serializer;
 	}
 	public class EnemyUnitClassInfo_V2 : EnemyUnitClassInfo
 	{
@@ -63,18 +65,25 @@ namespace GTMDProjectMoon
 			foreach (var emotion in emotionCardListNew)
 			{
 				emotion.WorkshopId = Tools.ClarifyWorkshopIdLegacy("", emotion.WorkshopId, uniqueId);
+			}
+			LorId.InitializeLorIds(bookLorIdXml, bookLorId, uniqueId);
+			bookId = new List<int>();
+		}
+
+		public void InitInjectedFields()
+		{
+			foreach (var emotion in emotionCardListNew)
+			{
 				if (emotion.lorId.IsBasic())
 				{
 					emotionCardList.Add(emotion);
 				}
-				else if (OrcTools.CustomEmotionCards.TryGetValue(SephirahType.None, out var subdic) && subdic.TryGetValue(emotion.lorId, out var customCard))
+				else if (BridgeManager.Instance.emotionCardBridge.GetEntityByKey(emotion.lorId, SephirahType.None) is EmotionCardXmlInfo injectedCard)
 				{
-					emotion.InjectId(customCard.id);
+					emotion.InjectId(injectedCard.id);
 					emotionCardList.Add(emotion);
 				}
 			}
-			LorId.InitializeLorIds(bookLorIdXml, bookLorId, uniqueId);
-			bookId = new List<int>();
 		}
 	}
 	public class EnemyDropItemTable_V2 : EnemyDropItemTable

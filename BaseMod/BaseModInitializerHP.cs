@@ -31,9 +31,12 @@ namespace BaseMod
 			baseMod.PatchAll(typeof(Harmony_Patch));
 			//Add BaseMod ver
 			GlobalGameManager.Instance.ver = string.Join(Environment.NewLine,
-				GlobalGameManager.Instance.ver,
-				"BaseMod for workshop 2.2 ver",
-				"(featuring Cya from the Toolbox series)"
+				new string[] {
+					GlobalGameManager.Instance.ver,
+					"BaseMod for workshop 2.3 ver",
+					//"(NIGHTLY BUILD)",
+					//"(featuring Cya from the Toolbox series)",
+				}
 			);
 			//Load OtherMod
 			Harmony_Patch.LoadModFiles();

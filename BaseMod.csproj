@@ -59,6 +59,9 @@
     <Reference Include="NAudio">
       <HintPath>..\..\..\..\Program Files\Steam\steamapps\common\Library Of Ruina\LibraryOfRuina_Data\Mods\BaseMod\Assemblies\1FrameworkAssemblies\NAudio.dll</HintPath>
     </Reference>
+    <Reference Include="BaseBridge">
+      <HintPath>..\..\..\..\Program Files\Steam\steamapps\common\Library Of Ruina\LibraryOfRuina_Data\Mods\BaseMod\Assemblies\1FrameworkAssemblies\BaseBridge.dll</HintPath>
+    </Reference>
     <Reference Include="spine-unity, Version=0.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\..\..\..\Program Files\Steam\steamapps\common\Library Of Ruina\LibraryOfRuina_Data\Managed\spine-unity.dll</HintPath>
@@ -234,4 +237,7 @@
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <PropertyGroup>
+    <PathMap>$(MSBuildProjectDirectory)\$(IntermediateOutputPath)=.</PathMap>
+  </PropertyGroup>
 </Project>

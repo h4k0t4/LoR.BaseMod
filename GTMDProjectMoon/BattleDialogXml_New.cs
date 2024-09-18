@@ -16,19 +16,20 @@ namespace GTMDProjectMoon
 		public List<BattleDialogCharacter_V2> characterList = new List<BattleDialogCharacter_V2>();
 
 		[XmlIgnore]
-		public static XmlAttributeOverrides Overrides
+		public static XmlSerializer Serializer
 		{
 			get
 			{
-				if (_overrides == null)
+				if (_serializer == null)
 				{
-					_overrides = new XmlAttributeOverrides();
-					_overrides.Add(typeof(BattleDialogCharacter), nameof(BattleDialogCharacter.workshopId), new XmlAttributes { XmlIgnore = false, XmlAttribute = new XmlAttributeAttribute("Pid") });
+					var overrides = new XmlAttributeOverrides();
+					overrides.Add(typeof(BattleDialogCharacter), nameof(BattleDialogCharacter.workshopId), new XmlAttributes { XmlIgnore = false, XmlAttribute = new XmlAttributeAttribute("Pid") });
+					_serializer = new XmlSerializer(typeof(BattleDialogRoot_V2), overrides);
 				}
-				return _overrides;
+				return _serializer;
 			}
 		}
-		static XmlAttributeOverrides _overrides;
+		static XmlSerializer _serializer;
 	}
 	public class BattleDialogCharacter_V2 : BattleDialogCharacter
 	{

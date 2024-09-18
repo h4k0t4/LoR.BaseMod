@@ -493,6 +493,7 @@ namespace GTMDProjectMoon
 		public static readonly Dictionary<LorId, string> CharacterNameDic = new Dictionary<LorId, string>();
 
 		public static readonly Dictionary<EmotionEgoXmlInfo, LorId> EgoDic = new Dictionary<EmotionEgoXmlInfo, LorId>();
+		/*
 		//the following mechanism improves performance by not having patches iterate through all values of EgoDic every time
 		//at the same time it preserves backwards compatibility with possible modifications of EgoDic by other mods
 		static int egoDicCheckedVersion = 0;
@@ -513,6 +514,7 @@ namespace GTMDProjectMoon
 			}
 		}
 		internal static Dictionary<LorId, EmotionEgoXmlInfo> ReverseEgoDic = new Dictionary<LorId, EmotionEgoXmlInfo>();
+		*/
 
 		[Obsolete]
 		public static readonly Dictionary<LorId, List<EnemyDropItemTable_New>> DropItemDic = new Dictionary<LorId, List<EnemyDropItemTable_New>>();
@@ -533,8 +535,6 @@ namespace GTMDProjectMoon
 		public static readonly Dictionary<FloorLevelXmlInfo, LorId> FloorLevelStageDic = new Dictionary<FloorLevelXmlInfo, LorId>();
 
 		public static readonly Dictionary<LorId, FormationXmlInfo> CustomFormations = new Dictionary<LorId, FormationXmlInfo>();
-
-		public static readonly Dictionary<string, int> CustomInnerTypeDic = new Dictionary<string, int>();
 
 		public static readonly Dictionary<LorId, LorId> EpisodeDic = new Dictionary<LorId, LorId>();
 	}

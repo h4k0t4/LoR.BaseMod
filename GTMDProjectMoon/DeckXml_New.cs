@@ -11,18 +11,19 @@ namespace GTMDProjectMoon
 		public List<DeckXmlInfo> deckXmlList = new List<DeckXmlInfo>();
 
 		[XmlIgnore]
-		public static XmlAttributeOverrides Overrides
+		public static XmlSerializer Serializer
 		{
 			get
 			{
-				if (_overrides == null)
+				if (_serializer == null)
 				{
-					_overrides = new XmlAttributeOverrides();
-					_overrides.Add(typeof(DeckXmlInfo), nameof(DeckXmlInfo.workshopId), new XmlAttributes { XmlIgnore = false, XmlAttribute = new XmlAttributeAttribute("Pid") });
+					var overrides = new XmlAttributeOverrides();
+					overrides.Add(typeof(DeckXmlInfo), nameof(DeckXmlInfo.workshopId), new XmlAttributes { XmlIgnore = false, XmlAttribute = new XmlAttributeAttribute("Pid") });
+					_serializer = new XmlSerializer(typeof(DeckXmlRoot_V2), overrides);
 				}
-				return _overrides;
+				return _serializer;
 			}
 		}
-		static XmlAttributeOverrides _overrides;
+		static XmlSerializer _serializer;
 	}
 }

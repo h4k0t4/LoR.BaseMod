@@ -621,6 +621,8 @@ namespace BaseMod
 			return idList;
 		}
 		//save custom title
+		//moved to BaseBridge
+		/*
 		[HarmonyPatch(typeof(UnitDataModel), nameof(UnitDataModel.GetSaveData))]
 		[HarmonyPostfix]
 		static void UnitDataModel_GetSaveData_Post(UnitDataModel __instance, SaveData __result)
@@ -630,12 +632,12 @@ namespace BaseMod
 				var saveDict = __result.GetDictionarySelf();
 				if (OrcTools.GiftAndTitleDic.TryGetValue(__instance.prefixID, out var prefixLorId) && prefixLorId != __instance.prefixID)
 				{
-					saveDict["prefixID"] = new SaveData(0);
+					saveDict[UnitDataModel.save_prefixID] = new SaveData(0);
 					saveDict.Add("BasemodPrefixID", prefixLorId.GetSaveData());
 				}
 				if (OrcTools.GiftAndTitleDic.TryGetValue(__instance.postfixID, out var postfixLorId) && postfixLorId != __instance.postfixID)
 				{
-					saveDict["postfixID"] = new SaveData(0);
+					saveDict[UnitDataModel.save_postfixID] = new SaveData(0);
 					saveDict.Add("BasemodPostfixID", postfixLorId.GetSaveData());
 				}
 			}
@@ -644,6 +646,7 @@ namespace BaseMod
 				File.WriteAllText(Application.dataPath + "/Mods/SaveCustomTitleerror.txt", ex.Message + Environment.NewLine + ex.StackTrace);
 			}
 		}
+		*/
 		//load custom title
 		[HarmonyPatch(typeof(UnitDataModel), nameof(UnitDataModel.LoadFromSaveData))]
 		[HarmonyPostfix]
@@ -655,18 +658,18 @@ namespace BaseMod
 				if (customPrefix != null)
 				{
 					var customPrefixId = LorId.LoadFromSaveData(customPrefix);
-					if (OrcTools.CustomPrefixes.TryGetValue(customPrefixId, out var prefix))
+					if (OrcTools.CustomGifts.TryGetValue(customPrefixId, out var prefix))
 					{
-						__instance.prefixID = prefix.ID;
+						__instance.prefixID = prefix.id;
 					}
 				}
 				SaveData customPostfix = data.GetData("BasemodPostfixID");
 				if (customPostfix != null)
 				{
 					var customPostfixId = LorId.LoadFromSaveData(customPostfix);
-					if (OrcTools.CustomPostfixes.TryGetValue(customPostfixId, out var postfix))
+					if (OrcTools.CustomGifts.TryGetValue(customPostfixId, out var postfix))
 					{
-						__instance.postfixID = postfix.ID;
+						__instance.postfixID = postfix.id;
 					}
 				}
 			}
@@ -2234,6 +2237,8 @@ namespace BaseMod
 			return true;
 		}
 		//EGOData
+		//moved to BaseBridge via integration
+		/*
 		[HarmonyPatch(typeof(EmotionEgoXmlList), nameof(EmotionEgoXmlList.GetData), new Type[] { typeof(LorId) })]
 		[HarmonyPrefix]
 		static bool EmotionEgoXmlList_GetData_Pre(LorId id, ref EmotionEgoXmlInfo __result)
@@ -2297,11 +2302,12 @@ namespace BaseMod
 			}
 			return true;
 		}
+		*/
 
 		//custom quest script
 		[HarmonyPatch(typeof(QuestMissionModel), MethodType.Constructor, new Type[] { typeof(QuestModel), typeof(QuestMissionXmlInfo) })]
 		[HarmonyTranspiler]
-		static IEnumerable<CodeInstruction> QuestMissionModel_ctor_In(IEnumerable<CodeInstruction> instructions, ILGenerator ilgen)
+		static IEnumerable<CodeInstruction> QuestMissionModel_ctor_In(IEnumerable<CodeInstruction> instructions)
 		{
 			var codes = instructions.ToList();
 			var concatMethod = Method(typeof(string), nameof(string.Concat), new Type[] { typeof(object[]) });
@@ -4013,32 +4019,6 @@ namespace BaseMod
 			__instance.currentSelectedNormalstage = null;
 			return false;
 		}
-		//ErrorNull for delete card from deck
-		[HarmonyPatch(typeof(ItemXmlDataList), nameof(ItemXmlDataList.GetCardItem), new Type[] { typeof(LorId), typeof(bool) })]
-		[HarmonyTranspiler]
-		static IEnumerable<CodeInstruction> ItemXmlDataList_GetCardItem_In(IEnumerable<CodeInstruction> instructions)
-		{
-			var constructor = Constructor(typeof(DiceCardXmlInfo), new Type[] { typeof(LorId) });
-			foreach (var instruction in instructions)
-			{
-				if (instruction.Is(Newobj, constructor))
-				{
-					yield return new CodeInstruction(Call, Method(typeof(Harmony_Patch), nameof(ItemXmlDataList_GetCardItem_CheckNullCard)));
-				}
-				else
-				{
-					yield return instruction;
-				}
-			}
-		}
-		static DiceCardXmlInfo ItemXmlDataList_GetCardItem_CheckNullCard(LorId id)
-		{
-			if (errNullCard == null)
-			{
-				errNullCard = new DiceCardXmlInfo(LorId.None);
-			}
-			return errNullCard;
-		}
 		//0book to "∞"
 		[HarmonyPatch(typeof(UIInvitationDropBookSlot), nameof(UIInvitationDropBookSlot.SetData_DropBook))]
 		[HarmonyPostfix]
@@ -4629,7 +4609,7 @@ namespace BaseMod
 				{
 					'_'
 				});
-				if (array2[1].ToLower() != "custom")
+				if (array2.Length < 3 || array2[1].ToLower() != "custom")
 				{
 					return originalGift;
 				}
@@ -4637,17 +4617,7 @@ namespace BaseMod
 				{
 					var giftAppearance = CustomGiftAppearancePrefabObject;
 
-					giftAppearance._frontSpriteRenderer.enabled = CustomGiftAppearance.GiftArtWork.TryGetValue(array2[2] + "_front", out var frontSprite);
-					giftAppearance._frontSpriteRenderer.sprite = frontSprite;
-
-					giftAppearance._sideSpriteRenderer.enabled = CustomGiftAppearance.GiftArtWork.TryGetValue(array2[2] + "_side", out var sideSprite);
-					giftAppearance._sideSpriteRenderer.sprite = sideSprite;
-
-					giftAppearance._frontBackSpriteRenderer.enabled = CustomGiftAppearance.GiftArtWork.TryGetValue(array2[2] + "_frontBack", out var frontBackSprite);
-					giftAppearance._frontBackSpriteRenderer.sprite = frontBackSprite;
-
-					giftAppearance._sideBackSpriteRenderer.enabled = CustomGiftAppearance.GiftArtWork.TryGetValue(array2[2] + "_sideBack", out var sideBackSprite);
-					giftAppearance._sideBackSpriteRenderer.sprite = sideBackSprite;
+					CustomGiftAppearance.SetGiftArtWork(giftAppearance, array2[2]);
 
 					return giftAppearance.gameObject;
 				}
@@ -4959,11 +4929,11 @@ namespace BaseMod
 				if (instruction.Is(Call, loadGiftMethod))
 				{
 					yield return new CodeInstruction(Ldarg_1);
-					yield return new CodeInstruction(Call, Method(typeof(Harmony_Patch), nameof(UIGiftDataSlot_SetData_CheckCustomGift)));
+					yield return new CodeInstruction(Call, Method(typeof(Harmony_Patch), nameof(UIGiftSlot_CheckCustomGift)));
 				}
 			}
 		}
-		static GiftAppearance UIGiftDataSlot_SetData_CheckCustomGift(GiftAppearance originalAppearance, GiftModel data)
+		static GiftAppearance UIGiftSlot_CheckCustomGift(GiftAppearance originalAppearance, GiftModel data)
 		{
 			try
 			{
@@ -4977,11 +4947,23 @@ namespace BaseMod
 					{
 						 '_'
 					});
-					if (array2[1].ToLower() != "custom")
+					if (array2.Length < 3 || array2[1].ToLower() != "custom")
 					{
 						return originalAppearance;
 					}
-					return CustomGiftAppearance.CreateCustomGift(array2);
+					else
+					{
+						var giftAppearance = CustomGiftAppearancePrefabObject;
+
+						CustomGiftAppearance.SetGiftArtWork(giftAppearance, array2[2]);
+
+						if (giftAppearance._frontSpriteRenderer != null && giftAppearance._frontSpriteRenderer.sprite == null)
+						{
+							giftAppearance._frontSpriteRenderer.sprite = giftAppearance._frontBackSpriteRenderer.sprite;
+						}
+
+						return giftAppearance;
+					}
 				}
 			}
 			catch (Exception ex)
@@ -5168,7 +5150,7 @@ namespace BaseMod
 				{
 					yield return new CodeInstruction(Ldarg_0);
 					yield return new CodeInstruction(Ldfld, Field(typeof(UIGiftPreviewSlot), nameof(UIGiftPreviewSlot.Gift)));
-					yield return new CodeInstruction(Call, Method(typeof(Harmony_Patch), nameof(UIGiftDataSlot_SetData_CheckCustomGift)));
+					yield return new CodeInstruction(Call, Method(typeof(Harmony_Patch), nameof(UIGiftSlot_CheckCustomGift)));
 				}
 			}
 		}
@@ -5414,9 +5396,9 @@ namespace BaseMod
 				return;
 			}
 
-			SaveData eqList = data.GetData("equipList");
-			SaveData uneqList = data.GetData("unequipList");
-			SaveData offList = data.GetData("offList");
+			SaveData eqList = data.GetData(GiftInventory.save_equipList);
+			SaveData uneqList = data.GetData(GiftInventory.save_unequipList);
+			SaveData offList = data.GetData(GiftInventory.save_offList);
 			if (eqList != null)
 			{
 				foreach (SaveData saveData in eqList)
@@ -5459,6 +5441,8 @@ namespace BaseMod
 			}
 		}
 		//SaveGift
+		//moved to BaseBridge (LoadGift kept for migration from older saves)
+		/*
 		[HarmonyPatch(typeof(GiftInventory), nameof(GiftInventory.GetSaveData))]
 		[HarmonyTranspiler]
 		static IEnumerable<CodeInstruction> GiftInventory_GetSaveData_In(IEnumerable<CodeInstruction> instructions)
@@ -5479,6 +5463,7 @@ namespace BaseMod
 		{
 			return unfiltered.FindAll(gift => !(gift.ClassInfo is GiftXmlInfo_V2 giftNew) || giftNew.dontRemove);
 		}
+
 		[HarmonyPatch(typeof(CustomSaveStorageModel), nameof(CustomSaveStorageModel.GetSaveData))]
 		[HarmonyPrefix]
 		static void CustomSaveStorageModel_GetSaveData_Pre(CustomSaveStorageModel __instance)
@@ -5503,9 +5488,9 @@ namespace BaseMod
 		{
 			var data = floorSave.GetData(index.ToString()) ?? new SaveData(SaveDataType.Dictionary);
 
-			SaveData eqSave = data.GetData("equipList");
-			SaveData uneqSave = data.GetData("unequipList");
-			SaveData offSave = data.GetData("offList");
+			SaveData eqSave = data.GetData(GiftInventory.save_equipList);
+			SaveData uneqSave = data.GetData(GiftInventory.save_unequipList);
+			SaveData offSave = data.GetData(GiftInventory.save_offList);
 			HashSet<LorId> eqIds = new HashSet<LorId>();
 			HashSet<LorId> uneqIds = new HashSet<LorId>();
 			HashSet<LorId> offIds = new HashSet<LorId>();
@@ -5572,11 +5557,18 @@ namespace BaseMod
 				offSave.AddToList(id.GetSaveData());
 			}
 
-			data.GetDictionarySelf()["equipList"] = eqSave;
-			data.GetDictionarySelf()["unequipList"] = uneqSave;
-			data.GetDictionarySelf()["offList"] = offSave;
+			data.GetDictionarySelf()[GiftInventory.save_equipList] = eqSave;
+			data.GetDictionarySelf()[GiftInventory.save_unequipList] = uneqSave;
+			data.GetDictionarySelf()[GiftInventory.save_offList] = offSave;
 
 			floorSave.GetDictionarySelf()[index.ToString()] = data;
+		}
+		*/
+		[HarmonyPatch(typeof(CustomSaveStorageModel), nameof(CustomSaveStorageModel.GetSaveData))]
+		[HarmonyPrefix]
+		static void CustomSaveStorageModel_GetSaveData_Pre(CustomSaveStorageModel __instance)
+		{
+			__instance._storage.Remove("BasemodGift");
 		}
 		//BehaviorAbilityData
 		[HarmonyPatch(typeof(BattleCardBehaviourResult), nameof(BattleCardBehaviourResult.GetAbilityDataAfterRoll))]

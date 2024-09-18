@@ -14,33 +14,34 @@ namespace GTMDProjectMoon
 		public List<DiceCardXmlInfo_V2> cardXmlList = new List<DiceCardXmlInfo_V2>();
 
 		[XmlIgnore]
-		public static XmlAttributeOverrides Overrides
+		public static XmlSerializer Serializer
 		{
 			get
 			{
-				if (_overrides == null)
+				if (_serializer == null)
 				{
 					var ignore = new XmlAttributes
 					{
 						XmlIgnore = true
 					};
-					_overrides = new XmlAttributeOverrides();
-					_overrides.Add(typeof(DiceCardXmlInfo), nameof(DiceCardXmlInfo.category), ignore);
-					_overrides.Add(typeof(DiceCardXmlInfo), nameof(DiceCardXmlInfo.optionList), ignore);
-					_overrides.Add(typeof(DiceCardXmlInfo), nameof(DiceCardXmlInfo.workshopID), new XmlAttributes { XmlIgnore = false, XmlAttribute = new XmlAttributeAttribute("Pid") });
+					var overrides = new XmlAttributeOverrides();
+					overrides.Add(typeof(DiceCardXmlInfo), nameof(DiceCardXmlInfo.category), ignore);
+					overrides.Add(typeof(DiceCardXmlInfo), nameof(DiceCardXmlInfo.optionList), ignore);
+					overrides.Add(typeof(DiceCardXmlInfo), nameof(DiceCardXmlInfo.workshopID), new XmlAttributes { XmlIgnore = false, XmlAttribute = new XmlAttributeAttribute("Pid") });
 #pragma warning disable CS0618 // Type or member is obsolete
 					var unignore = new XmlAttributes
 					{
 						XmlIgnore = false
 					};
 					unignore.XmlElements.Add(new XmlElementAttribute("CustomCategory"));
-					_overrides.Add(typeof(DiceCardXmlInfo_V2), nameof(DiceCardXmlInfo_V2.customCategoryFallback), unignore);
+					overrides.Add(typeof(DiceCardXmlInfo_V2), nameof(DiceCardXmlInfo_V2.customCategoryFallback), unignore);
 #pragma warning restore CS0618 // Type or member is obsolete
+					_serializer = new XmlSerializer(typeof(DiceCardXmlRoot_V2), overrides);
 				}
-				return _overrides;
+				return _serializer;
 			}
 		}
-		static XmlAttributeOverrides _overrides;
+		static XmlSerializer _serializer;
 	}
 
 	public class DiceCardXmlInfo_V2 : DiceCardXmlInfo

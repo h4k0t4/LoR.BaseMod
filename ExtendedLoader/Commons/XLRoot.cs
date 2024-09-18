@@ -9,6 +9,7 @@ using Mod;
 
 namespace ExtendedLoader
 {
+#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 	public class XLRoot : SingletonBehavior<XLRoot>
 	{
 		public const int THUMB_LAYER = 23;
@@ -583,4 +584,5 @@ namespace ExtendedLoader
 			return null;
 		}
 	}
+#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
 }

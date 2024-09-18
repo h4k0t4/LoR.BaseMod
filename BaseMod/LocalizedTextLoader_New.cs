@@ -361,6 +361,7 @@ namespace BaseMod
 				}
 				AddBookDescriptions_MOD(bookDict);
 				AddDialogRelations_MOD(relationDict);
+				Tools.CallOnLoadLocalize(TextDataModel.CurrentLanguage);
 			}
 			catch (Exception ex)
 			{
@@ -486,7 +487,7 @@ namespace BaseMod
 				{
 					using (StringReader stringReader = new StringReader(File.ReadAllText(fileInfo.FullName)))
 					{
-						BattleDialogRoot_V2 battleDialogRoot = (BattleDialogRoot_V2)new XmlSerializer(typeof(BattleDialogRoot_V2), BattleDialogRoot_V2.Overrides).Deserialize(stringReader);
+						BattleDialogRoot_V2 battleDialogRoot = (BattleDialogRoot_V2)BattleDialogRoot_V2.Serializer.Deserialize(stringReader);
 						if (!string.IsNullOrWhiteSpace(battleDialogRoot.groupName))
 						{
 							var rootNew = battleDialogRoot.CopyBattleDialogRootNew(uniqueId);
@@ -683,7 +684,7 @@ namespace BaseMod
 				{
 					using (StringReader stringReader = new StringReader(File.ReadAllText(fileInfo.FullName)))
 					{
-						PassiveDescRoot_V2 passiveDescRoot = (PassiveDescRoot_V2)new XmlSerializer(typeof(PassiveDescRoot_V2), PassiveDescRoot_V2.Overrides).Deserialize(stringReader);
+						PassiveDescRoot_V2 passiveDescRoot = (PassiveDescRoot_V2)PassiveDescRoot_V2.Serializer.Deserialize(stringReader);
 						foreach (var passive in passiveDescRoot.descList)
 						{
 							passive.workshopID = Tools.ClarifyWorkshopId(passive.workshopID, passiveDescRoot.customPid, uniqueId);
@@ -890,7 +891,7 @@ namespace BaseMod
 				{
 					using (StringReader stringReader = new StringReader(File.ReadAllText(fileInfo.FullName)))
 					{
-						foreach (var sephirah in ((AbnormalityCardsRoot_V2)new XmlSerializer(typeof(AbnormalityCardsRoot_V2), AbnormalityCardsRoot_V2.Overrides).Deserialize(stringReader)).sephirahList)
+						foreach (var sephirah in ((AbnormalityCardsRoot_V2)AbnormalityCardsRoot_V2.Serializer.Deserialize(stringReader)).sephirahList)
 						{
 							sephirah.InitOldFields();
 							foreach (var card in sephirah.list)

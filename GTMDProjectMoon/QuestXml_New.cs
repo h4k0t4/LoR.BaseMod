@@ -10,26 +10,27 @@ namespace GTMDProjectMoon
 		public List<QuestXmlInfo_V2> list;
 
 		[XmlIgnore]
-		public static XmlAttributeOverrides Overrides
+		public static XmlSerializer Serializer
 		{
 			get
 			{
-				if (_overrides == null)
+				if (_serializer == null)
 				{
 					var ignore = new XmlAttributes
 					{
 						XmlIgnore = true
 					};
-					_overrides = new XmlAttributeOverrides();
-					_overrides.Add(typeof(QuestXmlInfo), nameof(QuestXmlInfo.sephirah), ignore);
+					var overrides = new XmlAttributeOverrides();
+					overrides.Add(typeof(QuestXmlInfo), nameof(QuestXmlInfo.sephirah), ignore);
 					var missionOverride = new XmlAttributes();
 					missionOverride.XmlElements.Add(new XmlElementAttribute("Mission", typeof(QuestMissionXmlInfo_V2)));
-					_overrides.Add(typeof(QuestXmlInfo), nameof(QuestXmlInfo.missionList), missionOverride);
+					overrides.Add(typeof(QuestXmlInfo), nameof(QuestXmlInfo.missionList), missionOverride);
+					_serializer = new XmlSerializer(typeof(QuestXmlRoot_V2), overrides);
 				}
-				return _overrides;
+				return _serializer;
 			}
 		}
-		static XmlAttributeOverrides _overrides;
+		static XmlSerializer _serializer;
 	}
 
 	public class QuestXmlInfo_V2 : QuestXmlInfo

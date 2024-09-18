@@ -6,6 +6,7 @@ using System.IO;
 using UnityEngine;
 using System.Reflection;
 using System;
+using BaseBridge;
 
 namespace BaseMod
 {
@@ -16,6 +17,7 @@ namespace BaseMod
 			//Reference
 			SaveSelection();
 			ClearReference();
+			StaticDataLoader_New.PrepareBridges();
 		}
 		public override void OnInitializeMod()
 		{

@@ -161,7 +161,7 @@ namespace ExtendedLoader
 		}
 		[HarmonyPatch(typeof(UIEquipPageCustomizePanel), nameof(UIEquipPageCustomizePanel.Init))]
 		[HarmonyPrefix]
-		static void UIEquipPageCustomizePanel_Init_Prefix(UIEquipPageCustomizePanel __instance, List<int> data)
+		static void UIEquipPageCustomizePanel_Init_Prefix(List<int> data)
 		{
 			isModWorkshopSkin = data == modWorkshopBookList;
 		}
@@ -296,7 +296,7 @@ namespace ExtendedLoader
 			return BookXmlList.Instance.GetData(bookId).Chapter == (int)g;
 		}
 
-		static Comparison<int> bookSorter = (x, y) => CompareBooks(x, y);
+		static readonly Comparison<int> bookSorter = (x, y) => CompareBooks(x, y);
 		static int CompareBooks(int a, int b)
 		{
 			if (UICustomizePopup.Instance.clothsPanel.EquipPageCustomizePanel.isWorkshop)
