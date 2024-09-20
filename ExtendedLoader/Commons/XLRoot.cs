@@ -511,6 +511,16 @@ namespace ExtendedLoader
 			}
 		}
 
+		public static void SetStableCustomizeLocation(CustomizeType type, int index, string locationId)
+		{
+			indexesToLocations[type][index] = locationId;
+		}
+
+		public static bool TryGetStableCustomizeLocation(CustomizeType type, int index, out string locationId)
+		{
+			return indexesToLocations[type].TryGetValue(index, out locationId);
+		}
+
 		internal void OnClickWorkshopBook()
 		{
 			CustomBookUIPatch.OnClickWorkshopBook();
