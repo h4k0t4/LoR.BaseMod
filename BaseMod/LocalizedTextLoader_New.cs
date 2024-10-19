@@ -249,8 +249,8 @@ namespace BaseMod
 		{
 			try
 			{
-				SplitTrackerDict<string, BookDesc_V2> bookDict = new SplitTrackerDict<string, BookDesc_V2>();
-				SplitTrackerDict<string, LOR_XML.BattleDialogRelationWithBookID> relationDict = new SplitTrackerDict<string, LOR_XML.BattleDialogRelationWithBookID>();
+				SplitTrackerDict<string, BookDesc_V2> bookDict = new SplitTrackerDict<string, BookDesc_V2>(string.Compare);
+				SplitTrackerDict<string, LOR_XML.BattleDialogRelationWithBookID> relationDict = new SplitTrackerDict<string, LOR_XML.BattleDialogRelationWithBookID>(string.Compare);
 				foreach (ModContent modcontent in loadedContents)
 				{
 					var config = BasemodConfig.FindBasemodConfig(modcontent._itemUniqueId);

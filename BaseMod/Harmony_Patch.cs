@@ -22,6 +22,7 @@ using ExtendedLoader;
 using static System.Reflection.Emit.OpCodes;
 using static HarmonyLib.AccessTools;
 using EnumExtenderV2;
+using System.Xml.Linq;
 
 namespace BaseMod
 {
@@ -133,6 +134,9 @@ namespace BaseMod
 				UtilTools.CopyDir(baseModPath + "/Documents", Application.dataPath + "/Managed/BaseMod/Documents");
 			}
 		}
+
+		private const string QUEST_TYPE_NAME_PREFIX = "QuestMissionScript_";
+
 		public static void LoadAssemblyFiles()
 		{
 			ModSaveTool.LoadedModsWorkshopId.Add("BaseMod");
@@ -196,9 +200,9 @@ namespace BaseMod
 								{
 									CustomEmotionCardAbility[name.Substring("EmotionCardAbility_".Length).Trim()] = type;
 								}
-								if (type.IsSubclassOf(typeof(QuestMissionScriptBase)) && name.StartsWith("QuestMissionScript_"))
+								if (type.IsSubclassOf(typeof(QuestMissionScriptBase)) && name.StartsWith(QUEST_TYPE_NAME_PREFIX))
 								{
-									CustomQuest[name.Substring("QuestMissionScript_".Length).Trim()] = type;
+									CustomQuest[name.Substring(QUEST_TYPE_NAME_PREFIX.Length).Trim()] = type;
 								}
 								errorname = "LoadHarmonyPatch";
 								if (name == "Harmony_Patch" || (type != null && type.BaseType != null && type.BaseType.Name == "Harmony_Patch"))
@@ -333,7 +337,6 @@ namespace BaseMod
 		}
 		static void CopyLoaderThumbsForCompat()
 		{
-			CoreThumbDic = XLRoot.CoreThumbDic;
 			BookThumb = XLRoot.BookThumb;
 		}
 		static void LoadBookSkins(Dictionary<string, List<Workshop.WorkshopSkinData>> _bookSkinData)
@@ -1918,17 +1921,27 @@ namespace BaseMod
 		//CanAddBuf Apply owner
 		[HarmonyPatch(typeof(BattleUnitBufListDetail), nameof(BattleUnitBufListDetail.CanAddBuf))]
 		[HarmonyPrefix]
-		static void BattleUnitBufListDetail_CanAddBuf_Pre(BattleUnitBufListDetail __instance, BattleUnitBuf buf)
+		static void BattleUnitBufListDetail_CanAddBuf_Pre(BattleUnitBufListDetail __instance, BattleUnitBuf buf, ref BattleUnitModel __state)
 		{
-			try
+			if (buf == null || __instance._self == null || buf._owner == __instance._self)
 			{
-				if (buf == null || __instance._self == null)
-				{
-					return;
-				}
-				buf._owner = __instance._self;
+				return;
 			}
-			catch { }
+			if (buf._owner != null)
+			{
+				__state = buf._owner;
+			}
+			buf._owner = __instance._self;
+		}
+		[HarmonyPatch(typeof(BattleUnitBufListDetail), nameof(BattleUnitBufListDetail.CanAddBuf))]
+		[HarmonyPostfix]
+		static void BattleUnitBufListDetail_CanAddBuf_Post(BattleUnitBuf buf, BattleUnitModel __state)
+		{
+			if (buf == null || __state == null)
+			{
+				return;
+			}
+			buf._owner = __state;
 		}
 		//GetBufIcon
 		[HarmonyPatch(typeof(BattleUnitBuf), nameof(BattleUnitBuf.GetBufIcon))]
@@ -2316,16 +2329,21 @@ namespace BaseMod
 			var customQuestTypeMethod = Method(typeof(Harmony_Patch), nameof(QuestMissionModel_ctor_CheckCustomType));
 			foreach (var instruction in instructions)
 			{
-				yield return instruction;
-				if (instruction.Calls(concatMethod))
+				if (instruction.Calls(getTypeMethod))
 				{
-					yield return new CodeInstruction(Ldarg_2);
-					yield return new CodeInstruction(Call, customQuestTextMethod);
-				}
-				else if (instruction.Calls(getTypeMethod))
-				{
+					yield return new CodeInstruction(Dup);
+					yield return instruction;
 					yield return new CodeInstruction(Ldarg_2);
 					yield return new CodeInstruction(Call, customQuestTypeMethod);
+				}
+				else
+				{
+					yield return instruction;
+					if (instruction.Calls(concatMethod))
+					{
+						yield return new CodeInstruction(Ldarg_2);
+						yield return new CodeInstruction(Call, customQuestTextMethod);
+					}
 				}
 			}
 		}
@@ -2333,11 +2351,11 @@ namespace BaseMod
 		{
 			if (questInfo is QuestMissionXmlInfo_V2 questNew && !string.IsNullOrWhiteSpace(questNew.scriptName))
 			{
-				return "QuestMissionScript_" + questNew.scriptName.Trim();
+				return QUEST_TYPE_NAME_PREFIX + questNew.scriptName.Trim();
 			}
 			return oldName;
 		}
-		static Type QuestMissionModel_ctor_CheckCustomType(Type oldType, QuestMissionXmlInfo questInfo)
+		static Type QuestMissionModel_ctor_CheckCustomType(string typeName, Type oldType, QuestMissionXmlInfo questInfo)
 		{
 			if (questInfo is QuestMissionXmlInfo_V2 questNew && !string.IsNullOrWhiteSpace(questNew.scriptName))
 			{
@@ -2346,6 +2364,10 @@ namespace BaseMod
 				{
 					return type;
 				}
+			}
+			if (oldType == null && typeName.StartsWith(QUEST_TYPE_NAME_PREFIX))
+			{
+				oldType = FindCustomQuestScriptType(typeName.Substring(QUEST_TYPE_NAME_PREFIX.Length));
 			}
 			return oldType;
 		}
@@ -2381,9 +2403,9 @@ namespace BaseMod
 				var baseType = typeof(QuestMissionScriptBase);
 				foreach (Type type2 in Assembly.Load("Assembly-CSharp").GetTypes())
 				{
-					if (baseType.IsAssignableFrom(type2) && type2.Name.StartsWith("QuestMissionScript_"))
+					if (baseType.IsAssignableFrom(type2) && type2.Name.StartsWith(QUEST_TYPE_NAME_PREFIX))
 					{
-						var typeName = type2.Name.Substring("QuestMissionScript_".Length);
+						var typeName = type2.Name.Substring(QUEST_TYPE_NAME_PREFIX.Length);
 						if (!CustomQuest.ContainsKey(typeName))
 						{
 							CustomQuest[typeName] = type2;
@@ -4094,51 +4116,6 @@ namespace BaseMod
 			}
 			return true;
 		}
-		//More Waves UI
-		[HarmonyPatch(typeof(UIBattleSettingWaveList), nameof(UIBattleSettingWaveList.SetData))]
-		[HarmonyPrefix]
-		static void UIBattleSettingWaveList_SetData_Pre(UIBattleSettingWaveList __instance, StageModel stage)
-		{
-			try
-			{
-				if (__instance.transform.parent.GetComponent<ScrollRect>() == null)
-				{
-					var target = __instance.gameObject.transform as RectTransform;
-					var scrollView = new GameObject("[Rect]WaveListView");
-					var scrollTransform = scrollView.AddComponent<RectTransform>();
-					scrollTransform.SetParent(target.parent);
-					scrollTransform.localPosition = new Vector3(0, -35, 0);
-					scrollTransform.localEulerAngles = Vector3.zero;
-					scrollTransform.localScale = Vector3.one;
-					scrollTransform.sizeDelta = Vector2.one * 800;
-					scrollView.AddComponent<RectMask2D>();
-					target.SetParent(scrollTransform, true);
-					var scrollRect = scrollView.AddComponent<ScrollRect>();
-					scrollRect.content = target;
-					scrollRect.scrollSensitivity = 15f;
-					scrollRect.horizontal = false;
-					scrollRect.movementType = ScrollRect.MovementType.Elastic;
-					scrollRect.elasticity = 0.1f;
-				}
-				if (stage.waveList.Count > __instance.waveSlots.Count)
-				{
-					var newList = new List<UIBattleSettingWaveSlot>(stage.waveList.Count - __instance.waveSlots.Count);
-					for (int i = __instance.waveSlots.Count; i < stage.waveList.Count; i++)
-					{
-						UIBattleSettingWaveSlot uibattleSettingWaveSlot = UnityEngine.Object.Instantiate(__instance.waveSlots[0], __instance.waveSlots[0].transform.parent);
-						uibattleSettingWaveSlot.name = $"[Rect]WaveSlot ({i})";
-						newList.Add(uibattleSettingWaveSlot);
-					}
-					newList.Reverse();
-					__instance.waveSlots.InsertRange(0, newList);
-				}
-				InitUIBattleSettingWaveSlots(__instance.waveSlots);
-			}
-			catch (Exception ex)
-			{
-				File.WriteAllText(Application.dataPath + "/Mods/UIBSWLerror.log", ex.Message + Environment.NewLine + ex.StackTrace);
-			}
-		}
 		/* handled by SerializeField already
 		static void InitUIBattleSettingWaveSlot(UIBattleSettingWaveSlot slot, UIBattleSettingWaveList list)
 		{
@@ -4169,13 +4146,6 @@ namespace BaseMod
 			slot.gameObject.SetActive(false);
 		}
 		*/
-		static void InitUIBattleSettingWaveSlots(List<UIBattleSettingWaveSlot> slots)
-		{
-			for (int i = 0; i < slots.Count; i++)
-			{
-				slots[i].gameObject.transform.localScale = new Vector3(1f, 1f);
-			}
-		}
 		//over 999 dicevalue
 		[HarmonyPatch(typeof(BattleSimpleActionUI_Dice), nameof(BattleSimpleActionUI_Dice.SetDiceValue))]
 		[HarmonyPrefix]
@@ -6519,7 +6489,8 @@ namespace BaseMod
 
 		public static Dictionary<string, Type> CustomEmotionCardAbility = new Dictionary<string, Type>();
 
-		public static Dictionary<string, int> CoreThumbDic;
+		[Obsolete("Core thumbs are now handled by UnitRenderUtil", true)]
+		public static Dictionary<string, int> CoreThumbDic = new Dictionary<string, int>();
 
 		public static Dictionary<BattleCardBehaviourResult, List<EffectTypoData>> CustomEffectTypoData = new Dictionary<BattleCardBehaviourResult, List<EffectTypoData>>();
 
@@ -6544,8 +6515,6 @@ namespace BaseMod
 		public static Dictionary<Assembly, string> ModWorkShopId;
 
 		//static bool IsEditing = false;
-
-		static DiceCardXmlInfo errNullCard = null;
 
 		static readonly List<(string pid, string filename, ModInitializer initializer)> allInitializers = new List<(string, string, ModInitializer)>();
 

@@ -467,6 +467,19 @@ namespace ExtendedLoader
 									}
 								}
 
+								List<GiftPivot> giftPivotCoords = new List<GiftPivot>();
+								XmlNodeList giftPivotNodes = actionNode.SelectNodes("GiftPivot");
+								if (giftPivotNodes != null)
+								{
+									foreach (XmlNode giftPivot in additionalPivotNodes)
+									{
+										if (giftPivot.Attributes.GetNamedItem("pos") is XmlNode posNode && Enum.TryParse<GiftPosition>(posNode.InnerText, out var giftPos))
+										{
+											giftPivotCoords.Add(new GiftPivot { pivot = GetEffectPivot(giftPivot), giftPos = giftPos });
+										}
+									}
+								}
+
 								if (hasSpriteFile || hasFrontSprite || hasBackSprite || hasEffectSprite)
 								{
 									ClothCustomizeData value = new ExtendedClothCustomizeData
@@ -489,6 +502,7 @@ namespace ExtendedLoader
 										backSkinSpritePath = hasBackSkinSprite ? folderPath + backSkinSpritePath : "",
 										effectSpritePath = hasEffectSprite ? folderPath + effectSpritePath : "",
 										additionalPivots = additionalPivotCoords,
+										giftPivots = giftPivotCoords,
 										headPivot = headPivot,
 										faceOverride = faceOverride
 									};

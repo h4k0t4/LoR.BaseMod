@@ -86,7 +86,6 @@ namespace BaseMod
 			GameObject gameObject = new GameObject("Image");
 			Image image = gameObject.AddComponent<Image>();
 			image.transform.SetParent(parent);
-			new Texture2D(2, 2);
 			image.sprite = Image;
 			image.rectTransform.sizeDelta = new Vector2(Image.texture.width, Image.texture.height);
 			gameObject.SetActive(true);

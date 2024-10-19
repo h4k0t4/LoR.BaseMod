@@ -352,7 +352,8 @@ namespace BaseMod
 			{
 				return default;
 			}
-			return File.ReadAllText(text).ToObject<Test<T>>().value;
+			var test = File.ReadAllText(text).ToObject<Test<T>>();
+			return test != null ? test.value : default;
 		}
 		public static string GetModId(Assembly callingAssembly)
 		{

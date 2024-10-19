@@ -5,7 +5,6 @@ using Workshop;
 
 namespace ExtendedLoader
 {
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 	[HarmonyPatch]
 	public class ExtendedClothCustomizeData : ClothCustomizeData
 	{
@@ -28,6 +27,7 @@ namespace ExtendedLoader
 		public string effectSpritePath = "";
 		public float resolution = 50f;
 		public List<EffectPivot> additionalPivots = new List<EffectPivot>();
+		public List<GiftPivot> giftPivots = new List<GiftPivot>();
 		public EffectPivot headPivot;
 		public FaceOverride faceOverride = FaceOverride.None;
 
@@ -191,5 +191,4 @@ namespace ExtendedLoader
 			_ = effectSprite;
 		}
 	}
-#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
 }

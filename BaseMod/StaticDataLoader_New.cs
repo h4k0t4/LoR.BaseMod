@@ -443,7 +443,7 @@ namespace BaseMod
 		static void LoadAllCard_MOD(List<ModContent> mods)
 		{
 			TrackerDict<DiceCardXmlInfo> cardDict = new TrackerDict<DiceCardXmlInfo>();
-			SplitTrackerDict<string, DiceCardXmlInfo> splitCardDict = new SplitTrackerDict<string, DiceCardXmlInfo>();
+			SplitTrackerDict<string, DiceCardXmlInfo> splitCardDict = new SplitTrackerDict<string, DiceCardXmlInfo>(string.Compare);
 			foreach (ModContent modcontent in mods)
 			{
 				DirectoryInfo _dirInfo = modcontent._dirInfo;
@@ -625,7 +625,7 @@ namespace BaseMod
 		static void LoadAllBook_MOD(List<ModContent> mods)
 		{
 			TrackerDict<BookXmlInfo_V2> bookDict = new TrackerDict<BookXmlInfo_V2>();
-			SplitTrackerDict<string, BookXmlInfo_V2> splitBookDict = new SplitTrackerDict<string, BookXmlInfo_V2>();
+			SplitTrackerDict<string, BookXmlInfo_V2> splitBookDict = new SplitTrackerDict<string, BookXmlInfo_V2>(string.Compare);
 			foreach (ModContent modcontent in mods)
 			{
 				DirectoryInfo _dirInfo = modcontent._dirInfo;
@@ -718,7 +718,7 @@ namespace BaseMod
 		static void LoadAllCardDropTable_MOD(List<ModContent> mods)
 		{
 			TrackerDict<CardDropTableXmlInfo> cardDropDict = new TrackerDict<CardDropTableXmlInfo>();
-			SplitTrackerDict<string, CardDropTableXmlInfo> splitCardDropDict = new SplitTrackerDict<string, CardDropTableXmlInfo>();
+			SplitTrackerDict<string, CardDropTableXmlInfo> splitCardDropDict = new SplitTrackerDict<string, CardDropTableXmlInfo>(string.Compare);
 			foreach (ModContent modcontent in mods)
 			{
 				DirectoryInfo _dirInfo = modcontent._dirInfo;
@@ -808,7 +808,7 @@ namespace BaseMod
 		static void LoadAllDropBook_MOD(List<ModContent> mods)
 		{
 			TrackerDict<DropBookXmlInfo> dropBookDict = new TrackerDict<DropBookXmlInfo>();
-			SplitTrackerDict<string, DropBookXmlInfo> splitDropBookDict = new SplitTrackerDict<string, DropBookXmlInfo>();
+			SplitTrackerDict<string, DropBookXmlInfo> splitDropBookDict = new SplitTrackerDict<string, DropBookXmlInfo>(string.Compare);
 			foreach (ModContent modcontent in mods)
 			{
 				DirectoryInfo _dirInfo = modcontent._dirInfo;
@@ -1074,12 +1074,15 @@ namespace BaseMod
 			AddTracker<GiftXmlInfo_V2> gift1 = null;
 			AddTracker<TitleXmlInfo_V2> prefix = null;
 			AddTracker<TitleXmlInfo_V2> postfix = null;
-			foreach (var lorid in giftDict.Keys.Concat(prefixDict.Keys).Concat(postfixDict.Keys))
+			var keySet = new HashSet<LorId>();
+			keySet.UnionWith(giftDict.Keys);
+			keySet.UnionWith(prefixDict.Keys);
+			keySet.UnionWith(postfixDict.Keys);
+			keySet.RemoveWhere(x => x.IsBasic());
+			var keyList = keySet.ToList();
+			keyList.Sort(packageSortedComp);
+			foreach (var lorid in keyList)
 			{
-				if (lorid.IsBasic())
-				{
-					continue;
-				}
 				if ((!giftDict.TryGetValue(lorid, out gift1) || gift1.added) && (!prefixDict.TryGetValue(lorid, out prefix) || prefix.added) && (!postfixDict.TryGetValue(lorid, out postfix) || postfix.added))
 				{
 					continue;
@@ -1112,7 +1115,7 @@ namespace BaseMod
 
 		static void LoadAllEmotionCard_MOD(List<ModContent> mods)
 		{
-			SplitTrackerDict<SephirahType, EmotionCardXmlInfo_V2> emotionCardDict = new SplitTrackerDict<SephirahType, EmotionCardXmlInfo_V2>();
+			SplitTrackerDict<SephirahType, EmotionCardXmlInfo_V2> emotionCardDict = new SplitTrackerDict<SephirahType, EmotionCardXmlInfo_V2>(sephirahComp);
 			foreach (ModContent modcontent in mods)
 			{
 				DirectoryInfo _dirInfo = modcontent._dirInfo;
@@ -1229,7 +1232,7 @@ namespace BaseMod
 		static void LoadAllEmotionEgo_MOD(List<ModContent> mods)
 		{
 			FixEmotionEgoIds();
-			SplitTrackerDict<SephirahType, EmotionEgoXmlInfo_V2> egoDict = new SplitTrackerDict<SephirahType, EmotionEgoXmlInfo_V2>();
+			SplitTrackerDict<SephirahType, EmotionEgoXmlInfo_V2> egoDict = new SplitTrackerDict<SephirahType, EmotionEgoXmlInfo_V2>(sephirahComp);
 			foreach (ModContent modcontent in mods)
 			{
 				DirectoryInfo _dirInfo = modcontent._dirInfo;
@@ -1538,7 +1541,7 @@ namespace BaseMod
 
 		static void LoadAllQuest_MOD(List<ModContent> mods)
 		{
-			SplitTrackerDict<SephirahType, QuestXmlInfo_V2> questDict = new SplitTrackerDict<SephirahType, QuestXmlInfo_V2>();
+			SplitTrackerDict<SephirahType, QuestXmlInfo_V2> questDict = new SplitTrackerDict<SephirahType, QuestXmlInfo_V2>(sephirahComp);
 			foreach (ModContent modcontent in mods)
 			{
 				DirectoryInfo _dirInfo = modcontent._dirInfo;
@@ -1620,7 +1623,7 @@ namespace BaseMod
 		static void LoadAllEnemyUnit_MOD(List<ModContent> mods)
 		{
 			TrackerDict<EnemyUnitClassInfo_V2> enemyDict = new TrackerDict<EnemyUnitClassInfo_V2>();
-			SplitTrackerDict<string, EnemyUnitClassInfo_V2> splitEnemyDict = new SplitTrackerDict<string, EnemyUnitClassInfo_V2>();
+			SplitTrackerDict<string, EnemyUnitClassInfo_V2> splitEnemyDict = new SplitTrackerDict<string, EnemyUnitClassInfo_V2>(string.Compare);
 			foreach (ModContent modcontent in mods)
 			{
 				DirectoryInfo _dirInfo = modcontent._dirInfo;
@@ -1765,7 +1768,7 @@ namespace BaseMod
 		static void LoadAllStage_MOD(List<ModContent> mods)
 		{
 			TrackerDict<StageClassInfo_V2> stageDict = new TrackerDict<StageClassInfo_V2>();
-			SplitTrackerDict<string, StageClassInfo_V2> splitStageDict = new SplitTrackerDict<string, StageClassInfo_V2>();
+			SplitTrackerDict<string, StageClassInfo_V2> splitStageDict = new SplitTrackerDict<string, StageClassInfo_V2>(string.Compare);
 			foreach (ModContent modcontent in mods)
 			{
 				DirectoryInfo _dirInfo = modcontent._dirInfo;
@@ -1884,7 +1887,7 @@ namespace BaseMod
 
 		static void LoadAllFloorInfo_MOD(List<ModContent> mods)
 		{
-			SplitTrackerDict<SephirahType, FloorLevelXmlInfo_V2> levelDict = new SplitTrackerDict<SephirahType, FloorLevelXmlInfo_V2>();
+			SplitTrackerDict<SephirahType, FloorLevelXmlInfo_V2> levelDict = new SplitTrackerDict<SephirahType, FloorLevelXmlInfo_V2>(sephirahComp);
 			foreach (ModContent modcontent in mods)
 			{
 				DirectoryInfo _dirInfo = modcontent._dirInfo;

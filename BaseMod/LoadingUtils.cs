@@ -1,6 +1,7 @@
 ﻿using GTMDProjectMoon;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace BaseMod
 {
@@ -16,16 +17,60 @@ namespace BaseMod
 
 	class TrackerDict<TValue> : Dictionary<LorId, AddTracker<TValue>>
 	{
-
+		public IEnumerable<LorId> SortedKeys => Keys.OrderBy(x => x, OptimizedReplacer.packageSortedComp);
 	}
 
 	class SplitTrackerDict<TSplitter, TValue> : Dictionary<TSplitter, TrackerDict<TValue>>
 	{
+		public readonly IComparer<TSplitter> splitterSorter;
 
+		public SplitTrackerDict(Comparison<TSplitter> splitterSorter) : base()
+		{
+			this.splitterSorter = Comparer<TSplitter>.Create(splitterSorter);
+		}
+
+		public SplitTrackerDict(IComparer<TSplitter> splitterSorter) : base()
+		{
+			this.splitterSorter = splitterSorter;
+		}
+
+		public IEnumerable<TSplitter> SortedKeys => Keys.OrderBy(x => x, splitterSorter);
 	}
 
 	static class OptimizedReplacer
 	{
+		public static readonly IComparer<LorId> packageSortedComp = Comparer<LorId>.Create((x, y) =>
+		{
+			int result = (x.packageId ?? "").CompareTo(y.packageId ?? "");
+			if (result != 0)
+			{
+				return result;
+			}
+			return x.id - y.id;
+		});
+
+		public static readonly IComparer<SephirahType> sephirahComp = Comparer<SephirahType>.Create((x, y) =>
+		{
+			bool isXOriginal = x >= SephirahType.None && x <= SephirahType.ETC;
+			bool isYOriginal = y >= SephirahType.None && y <= SephirahType.ETC;
+			if (isXOriginal)
+			{
+				if (isYOriginal)
+				{
+					return x.CompareTo(y);
+				}
+				return -1;
+			}
+			else
+			{
+				if (isYOriginal)
+				{
+					return 1;
+				}
+				return x.ToString().CompareTo(y.ToString());
+			}
+		});
+
 		internal static void AddOrReplace<TElement, TBase>(TrackerDict<TElement> dict, List<TBase> originList, Func<TBase, LorId> idSelector, Predicate<TElement> predicate = null) where TElement : TBase
 		{
 			for (int i = 0; i < originList.Count; i++)
@@ -37,8 +82,9 @@ namespace BaseMod
 					tracker.added = true;
 				}
 			}
-			foreach (var tracker in dict.Values)
+			foreach (var key in dict.SortedKeys)
 			{
+				var tracker = dict[key];
 				if (tracker.added)
 				{
 					tracker.added = false;
@@ -60,8 +106,9 @@ namespace BaseMod
 					tracker.added = true;
 				}
 			}
-			foreach (var tracker in dict.Values)
+			foreach (var key in dict.SortedKeys)
 			{
+				var tracker = dict[key];
 				if (tracker.added)
 				{
 					tracker.added = false;
@@ -74,24 +121,24 @@ namespace BaseMod
 		}
 		internal static void AddOrReplace<TSplitter, TElement, TBase>(SplitTrackerDict<TSplitter, TElement> splitDict, Dictionary<TSplitter, List<TBase>> originSplitDict, Func<TBase, LorId> idSelector, Predicate<TElement> predicate = null) where TElement : TBase
 		{
-			foreach (var kvp in splitDict)
+			foreach (var key in splitDict.SortedKeys)
 			{
-				if (!originSplitDict.TryGetValue(kvp.Key, out var originList))
+				if (!originSplitDict.TryGetValue(key, out var originList))
 				{
-					originSplitDict[kvp.Key] = originList = new List<TBase>();
+					originSplitDict[key] = originList = new List<TBase>();
 				}
-				AddOrReplace(kvp.Value, originList, idSelector, predicate);
+				AddOrReplace(splitDict[key], originList, idSelector, predicate);
 			}
 		}
 		internal static void AddOrReplace<TSplitter, TElement, TBase>(SplitTrackerDict<TSplitter, TElement> splitDict, Dictionary<TSplitter, List<TBase>> originSplitDict, Func<TBase, int> idSelector, Predicate<TElement> predicate = null) where TElement : TBase
 		{
-			foreach (var kvp in splitDict)
+			foreach (var key in splitDict.SortedKeys)
 			{
-				if (!originSplitDict.TryGetValue(kvp.Key, out var originList))
+				if (!originSplitDict.TryGetValue(key, out var originList))
 				{
-					originSplitDict[kvp.Key] = originList = new List<TBase>();
+					originSplitDict[key] = originList = new List<TBase>();
 				}
-				AddOrReplace(kvp.Value, originList, idSelector, predicate);
+				AddOrReplace(splitDict[key], originList, idSelector, predicate);
 			}
 		}
 		internal static void AddOrReplace<TSplitter, TElement, TBase>(SplitTrackerDict<TSplitter, TElement> splitDict, List<TBase> originSplitList, Func<TBase, int> idSelector, Func<TBase, TSplitter> splitSelector, Predicate<TElement> predicate = null) where TElement : TBase
@@ -106,10 +153,12 @@ namespace BaseMod
 					tracker.added = true;
 				}
 			}
-			foreach (var kvp in splitDict)
+			foreach (var key in splitDict.SortedKeys)
 			{
-				foreach (var tracker in kvp.Value.Values)
+				var dict = splitDict[key];
+				foreach (var subkey in dict.SortedKeys)
 				{
+					var tracker = dict[subkey];
 					if (tracker.added)
 					{
 						tracker.added = false;
@@ -133,36 +182,28 @@ namespace BaseMod
 					tracker.added = true;
 				}
 			}
-			foreach (var subDict in splitDict.Values)
+			foreach (var key in splitDict.SortedKeys)
 			{
-				foreach (var kvp in subDict)
+				var subDict = splitDict[key];
+				foreach (var subkey in subDict.SortedKeys)
 				{
-					if (!kvp.Value.added)
+					var tracker = subDict[subkey];
+					if (tracker.added)
 					{
-						if (kvp.Key.IsBasic())
-						{
-							var element = kvp.Value.element;
-							if (predicate == null || predicate(element))
-							{
-								element.InjectId(kvp.Key.id);
-								originSplitList.Add(element);
-								addAction?.Invoke(element);
-							}
-						}
-					}
-				}
-				foreach (var kvp in subDict)
-				{
-					if (kvp.Value.added)
-					{
-						kvp.Value.added = false;
+						tracker.added = false;
 					}
 					else
 					{
-						if (kvp.Key.IsWorkshop())
+						var element = tracker.element;
+						if (predicate == null || predicate(element))
 						{
-							var element = kvp.Value.element;
-							if (predicate == null || predicate(element))
+							if (subkey.IsBasic())
+							{
+								element.InjectId(subkey.id);
+								originSplitList.Add(element);
+								addAction?.Invoke(element);
+							}
+							else
 							{
 								element.InjectId(injectIdFunc(element));
 								originSplitList.Add(element);
@@ -183,34 +224,25 @@ namespace BaseMod
 					tracker.added = true;
 				}
 			}
-			foreach (var kvp in dict)
+			foreach (var key in dict.SortedKeys)
 			{
-				if (!kvp.Value.added)
+				var tracker = dict[key];
+				if (tracker.added)
 				{
-					if (kvp.Key.IsBasic())
-					{
-						var element = kvp.Value.element;
-						if (predicate == null || predicate(element))
-						{
-							element.InjectId(kvp.Key.id);
-							originList.Add(element);
-							addAction?.Invoke(element);
-						}
-					}
-				}
-			}
-			foreach (var kvp in dict)
-			{
-				if (kvp.Value.added)
-				{
-					kvp.Value.added = false;
+					tracker.added = false;
 				}
 				else
 				{
-					if (kvp.Key.IsWorkshop())
+					var element = tracker.element;
+					if (predicate == null || predicate(element))
 					{
-						var element = kvp.Value.element;
-						if (predicate == null || predicate(element))
+						if (key.IsBasic())
+						{
+							element.InjectId(key.id);
+							originList.Add(element);
+							addAction?.Invoke(element);
+						}
+						else
 						{
 							element.InjectId(injectIdFunc(element));
 							originList.Add(element);

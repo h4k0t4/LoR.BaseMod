@@ -3,7 +3,6 @@ using UnityEngine;
 
 namespace ExtendedLoader
 {
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 	public class SpriteUtilExtension
 	{
 		public static Sprite LoadCustomSizedPivotSprite(string filePath, Vector2 pivot, Vector2Int size, float resolution)
@@ -32,5 +31,4 @@ namespace ExtendedLoader
 			return Sprite.Create(texture2D2, new Rect(0f, 0f, texture2D2.width, texture2D2.height), pivot, resolution, 0U, SpriteMeshType.Tight);
 		}
 	}
-#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
 }

@@ -33,49 +33,15 @@ namespace ExtendedLoader
 			{
 				var harmony = new Harmony("Cyaminthe.ExtendedLoader");
 				harmony.PatchAll(Assembly.GetExecutingAssembly());
-				LoadCoreThumbs();
-				LoadCoreSounds();
 				FixLocalize(harmony);
-				CustomBookUIPatch.IntegrateSearcher();
 				
 
-				SceneManager.sceneLoaded += DoReversePatches;
 				XLRoot.EnsureInit();
 				LegacyCompatibilityPatch.PrepareLegacy(harmony);
-				XLConfig.Load();
 			}
 			catch (Exception ex)
 			{
 				Debug.LogException(ex);
-			}
-		}
-
-		static void DoReversePatches(Scene scene, LoadSceneMode _)
-		{
-			if (scene.name == "Stage_Hod_New")
-			{
-				SceneManager.sceneLoaded -= DoReversePatches;
-				var harmony = new Harmony("Cyaminthe.ExtendedLoader.Reverse");
-				foreach (var method in typeof(ReversePatches).GetMethods())
-				{
-					var target = method.GetCustomAttributes<HarmonyPatch>()?.FirstOrDefault();
-					if (target != null)
-					{
-						var targetMethod = AccessTools.Method(target.info.declaringType, target.info.methodName, target.info.argumentTypes);
-						if (targetMethod != null)
-						{
-							var patcher = harmony.CreateReversePatcher(targetMethod, new HarmonyMethod(method));
-							if (Harmony.GetPatchInfo(targetMethod) != null)
-							{
-								patcher.Patch(HarmonyReversePatchType.Snapshot);
-							}
-							else
-							{
-								patcher.Patch(HarmonyReversePatchType.Original);
-							}
-						}
-					}
-				}
 			}
 		}
 
@@ -120,41 +86,6 @@ namespace ExtendedLoader
 			internal static void SetCustomBookLabel()
 			{
 				TextDataModel.textDic["ui_customcorebook_custommodtoggle"] = $"{TextDataModel.textDic.GetValueSafe("ui_corepage") ?? "Key Page"} ({TextDataModel.textDic.GetValueSafe("ui_invitation_customtoggle") ?? "Workshop"})";
-			}
-		}
-
-		static void LoadCoreThumbs()
-		{
-			var dic = new Dictionary<string, int>();
-			var list = BookXmlList.Instance._list;
-			foreach (BookXmlInfo info in list)
-			{
-				if (info.id.IsWorkshop())
-				{
-					continue;
-				}
-				foreach (string skinName in info.CharacterSkin)
-				{
-					if (!dic.ContainsKey(skinName))
-					{
-						dic.Add(skinName, info._id);
-					}
-				}
-			}
-			XLRoot.CoreThumbDic = dic;
-		}
-		static void LoadCoreSounds()
-		{
-			if (CharacterSound._motionSoundResources == null)
-			{
-				CharacterSound._motionSoundResources = new Dictionary<string, AudioClip>();
-			}
-			foreach (AudioClip audioClip in Resources.LoadAll<AudioClip>("Sounds/MotionSound"))
-			{
-				if (!CharacterSound._motionSoundResources.ContainsKey(audioClip.name))
-				{
-					CharacterSound._motionSoundResources.Add(audioClip.name, audioClip);
-				}
 			}
 		}
 

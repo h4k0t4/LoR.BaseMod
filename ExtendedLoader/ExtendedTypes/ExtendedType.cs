@@ -6,7 +6,6 @@ using System.Runtime.CompilerServices;
 
 namespace ExtendedLoader
 {
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 	public class SkinData
 	{
 		public SkinData(Dictionary<ActionDetail, ClothCustomizeData> original)
@@ -123,6 +122,11 @@ namespace ExtendedLoader
 		public Vector3 localEulerAngles = Vector3.zero;
 		public bool isNested = true;
 	}
+	public struct GiftPivot
+	{
+		public GiftPosition giftPos;
+		public EffectPivot pivot;
+	}
 	public class SkinPartRenderer : WorkshopSkinDataSetter.PartRenderer
 	{
 		public SpriteRenderer rearSkin = null;
@@ -150,5 +154,4 @@ namespace ExtendedLoader
 		Attack = 4,
 		Hit = 6
 	}
-#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
 }

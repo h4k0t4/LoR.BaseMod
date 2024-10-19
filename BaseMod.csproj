@@ -37,7 +37,10 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="Krafs.Publicizer" Version="1.0.2" />
+    <PackageReference Include="Krafs.Publicizer" Version="2.2.1">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
     <Publicize Include="Assembly-CSharp" />
   </ItemGroup>
   <ItemGroup>
@@ -235,6 +238,10 @@
       <Project>{8fe72e92-19a8-409c-bdec-8955c0919924}</Project>
       <Name>LorIdExtensions</Name>
       <Private>True</Private>
+    </ProjectReference>
+    <ProjectReference Include="UnitRenderUtils\UnitRenderUtils.csproj">
+      <Project>{5321be1f-9842-4576-953f-565f682e6e02}</Project>
+      <Name>UnitRenderUtils</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

@@ -1,4 +1,5 @@
 ﻿using HarmonyLib;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection.Emit;
@@ -6,13 +7,30 @@ using System.Reflection.Emit;
 namespace ExtendedLoader
 {
 	[HarmonyPatch]
-	internal class GiftOrderPatch
+	class GiftSortingOrderPatch
 	{
 		[HarmonyPatch(typeof(GiftAppearance), nameof(GiftAppearance.RefreshAppearance))]
 		[HarmonyTranspiler]
-		static IEnumerable<CodeInstruction> GiftAppearance_RefreshAppearance_Transpiler(IEnumerable<CodeInstruction> instructions, ILGenerator ilgen)
+		static IEnumerable<CodeInstruction> GiftAppearance_RefreshAppearance_Transpiler(IEnumerable<CodeInstruction> instructions)
 		{
 			var codes = instructions.ToList();
+			for (int i = 1; i < codes.Count; i++)
+			{
+				if (codes[i - 1].IsLdloc(3) && codes[i].LoadsConstant(100L))
+				{
+					codes.InsertRange(i - 1, new CodeInstruction[]
+					{
+						new CodeInstruction(OpCodes.Ldarg_2),
+						new CodeInstruction(OpCodes.Ldloca, 1),
+						new CodeInstruction(OpCodes.Ldloca, 2),
+						new CodeInstruction(OpCodes.Ldloca, 4),
+						new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(GiftSortingOrderPatch), nameof(GiftSortingOrderPatch.GiftAppearance_RefreshAppearance_FixLayers)))
+					});
+					break;
+				}
+			}
+			return codes;
+			/*
 			var indexes = new object[4];
 			bool found = false;
 			for (var i = 0; i < codes.Count; i++)
@@ -65,6 +83,44 @@ namespace ExtendedLoader
 					return 3;
 				return null;
 			}
+			*/
+		}
+
+		static void GiftAppearance_RefreshAppearance_FixLayers(CharacterMotion motion, ref int faceOrder, ref int frontHairOrder, ref int headOrder)
+		{
+			if (!motion)
+			{
+				return;
+			}
+			int headOrderFixed = int.MinValue;
+			int faceOrderFixed = int.MinValue;
+			int frontHairOrderFixed = int.MinValue;
+			foreach (var spr in motion.motionSpriteSet)
+			{
+				switch (spr.sprType)
+				{
+					case CharacterAppearanceType.Head:
+						headOrderFixed = Math.Max(headOrderFixed, spr.sprRenderer.sortingOrder);
+						break;
+					case CharacterAppearanceType.Face:
+						faceOrderFixed = Math.Max(faceOrderFixed, spr.sprRenderer.sortingOrder);
+						break;
+					case CharacterAppearanceType.FrontHair:
+						frontHairOrderFixed = Math.Max(frontHairOrderFixed, spr.sprRenderer.sortingOrder);
+						break;
+				}
+			}
+			if (faceOrderFixed == int.MinValue)
+			{
+				faceOrderFixed = headOrderFixed + 10;
+			}
+			if (frontHairOrderFixed == int.MinValue)
+			{
+				frontHairOrderFixed = faceOrderFixed + 10;
+			}
+			headOrder = headOrderFixed;
+			faceOrder = faceOrderFixed;
+			frontHairOrder = frontHairOrderFixed;
 		}
 	}
 }

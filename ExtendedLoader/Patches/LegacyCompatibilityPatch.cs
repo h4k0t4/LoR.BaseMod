@@ -26,7 +26,7 @@ namespace ExtendedLoader
 				{
 					if (basemod.GetType("ExtendedLoader.LorName") != null)
 					{
-						harmony.Patch(basemod.GetType("BaseMod.BaseModInitialize").GetMethod("OnInitializeMod"), finalizer: new HarmonyMethod(typeof(LegacyCompatibilityPatch), nameof(UnpatchLegacy)));
+						harmony.Patch(basemod.GetType("BaseMod.BaseModInitializer").GetMethod("OnInitializeMod"), finalizer: new HarmonyMethod(typeof(LegacyCompatibilityPatch), nameof(UnpatchLegacy)));
 						harmony.Patch(basemod.GetType("BaseMod.Harmony_Patch").GetMethod("LoadBookSkins", AccessTools.all), prefix: new HarmonyMethod(typeof(LegacyCompatibilityPatch), nameof(LoadBookSkinsForLegacy)));
 					}
 				}
@@ -37,7 +37,7 @@ namespace ExtendedLoader
 			}
 		}
 
-		static Exception UnpatchLegacy(Exception __exception)
+		static void UnpatchLegacy()
 		{
 			Harmony.UnpatchID(LegacyLoaderId);
 			foreach (var target in legacyPrefixTargets)
@@ -48,7 +48,6 @@ namespace ExtendedLoader
 			{
 				harmony.Unpatch(target, HarmonyPatchType.Postfix, BasemodId);
 			}
-			return null;
 		}
 
 		static readonly MethodInfo[] legacyPrefixTargets = new MethodInfo[]

@@ -4,11 +4,11 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{3FC0C757-8DEE-4A4A-BCB4-20A46806B196}</ProjectGuid>
+    <ProjectGuid>{5321BE1F-9842-4576-953F-565F682E6E02}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>ExtendedLoader</RootNamespace>
-    <AssemblyName>1ExtendedLoader</AssemblyName>
+    <RootNamespace>UnitRenderUtils</RootNamespace>
+    <AssemblyName>UnitRenderUtils</AssemblyName>
     <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <Deterministic>true</Deterministic>
@@ -21,6 +21,7 @@
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -30,6 +31,7 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <DocumentationFile>bin\Release\UnitRenderUtils.xml</DocumentationFile>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Krafs.Publicizer" Version="2.2.1">
@@ -39,6 +41,7 @@
     <Publicize Include="0Harmony" />
     <Publicize Include="Assembly-CSharp" />
     <Publicize Include="UnityEngine.CoreModule" IncludeCompilerGeneratedMembers="false" />
+    <Publicize Include="UnityEngine.UI" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="0Harmony">
@@ -51,11 +54,19 @@
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="Microsoft.CSharp" />
-    <Reference Include="System.Drawing" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Net.Http" />
     <Reference Include="System.Xml" />
+    <Reference Include="Unity.TextMeshPro">
+      <HintPath>..\..\..\..\..\Program Files\Steam\steamapps\common\Library Of Ruina\LibraryOfRuina_Data\Managed\Unity.TextMeshPro.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
     <Reference Include="UnityEngine.AudioModule">
       <HintPath>..\..\..\..\..\Program Files\Steam\steamapps\common\Library Of Ruina\LibraryOfRuina_Data\Managed\UnityEngine.AudioModule.dll</HintPath>
+      <Private>False</Private>
     </Reference>
     <Reference Include="UnityEngine.CoreModule">
       <HintPath>..\..\..\..\..\Program Files\Steam\steamapps\common\Library Of Ruina\LibraryOfRuina_Data\Managed\UnityEngine.CoreModule.dll</HintPath>
@@ -71,30 +82,41 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Patches\CustomSkinPrefabPatch.cs" />
-    <Compile Include="Patches\CustomUnitDataSaveLoadPatch.cs" />
-    <Compile Include="Patches\EarlyPatches.cs" />
-    <Compile Include="ExtendedTypes\ExtendedClothCustomizeData.cs" />
-    <Compile Include="ExtendedTypes\ExtendedType.cs" />
-    <Compile Include="Patches\EditorPatches.cs" />
-    <Compile Include="Patches\FaceOverridePatch.cs" />
-    <Compile Include="Patches\LegacyCompatibilityPatch.cs" />
-    <Compile Include="Tools\InternalExtensions.cs" />
-    <Compile Include="Patches\ThumbPatch.cs" />
-    <Compile Include="Patches\WorkshopSetterPatch.cs" />
-    <Compile Include="Commons\XLInitializer.cs" />
-    <Compile Include="Commons\XLRoot.cs" />
+    <Compile Include="Commons\XLConfig.cs" />
+    <Compile Include="Commons\XLUtilInitializer.cs" />
+    <Compile Include="Commons\XLUtilRoot.cs" />
+    <Compile Include="Patches\AbCardSelectorSizePatch.cs" />
+    <Compile Include="Patches\CardSkinChangePatch.cs" />
+    <Compile Include="Patches\CustomBookUIPatch.cs" />
+    <Compile Include="Patches\CustomGiftPivotPatch.cs" />
+    <Compile Include="Patches\CustomizingLorNameRecognitionPatch.cs" />
+    <Compile Include="Patches\CustomSkinCreatePatch.cs" />
+    <Compile Include="Patches\CustomBookSaveLoadPatch.cs" />
+    <Compile Include="Patches\DestroyCharactersPatch.cs" />
+    <Compile Include="Patches\FaceFixPatch.cs" />
+    <Compile Include="Patches\SephirahHeadPatch.cs" />
+    <Compile Include="Patches\FrontRearHairColorPatch.cs" />
+    <Compile Include="Patches\GenderVariantCheckPatch.cs" />
+    <Compile Include="Patches\GiftSortingOrderPatch.cs" />
+    <Compile Include="Patches\LegacyCompatibilityPatchBasic.cs" />
+    <Compile Include="Patches\ReversePatches.cs" />
+    <Compile Include="Patches\ThumbPatchBasic.cs" />
+    <Compile Include="Patches\UnitLimitPatch.cs" />
+    <Compile Include="Patches\VanillaSkinCopyPatch.cs" />
+    <Compile Include="Patches\WorkshopSetterPatchBasic.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Tools\SpriteUtilExtension.cs" />
-    <Compile Include="TypeForwarders.cs" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\UnitRenderUtils\UnitRenderUtils.csproj">
-      <Project>{5321be1f-9842-4576-953f-565f682e6e02}</Project>
-      <Name>UnitRenderUtils</Name>
-    </ProjectReference>
+    <Compile Include="Tools\UnitUIUtils.cs" />
+    <Compile Include="Tools\InternalExtensions.cs" />
+    <Compile Include="Tools\SkinExtensions.cs" />
+    <Compile Include="Tools\UICRIndexHelpers.cs" />
   </ItemGroup>
   <ItemGroup />
+  <ItemGroup>
+    <ProjectReference Include="..\LorIdExtensions\LorIdExtensions.csproj">
+      <Project>{8fe72e92-19a8-409c-bdec-8955c0919924}</Project>
+      <Name>LorIdExtensions</Name>
+    </ProjectReference>
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
     <PathMap>$(MSBuildProjectDirectory)\$(IntermediateOutputPath)=.</PathMap>

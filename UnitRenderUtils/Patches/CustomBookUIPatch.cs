@@ -85,8 +85,10 @@ namespace ExtendedLoader
 					textLoader.key = "ui_customcorebook_custommodtoggle";
 					var selectable = workshopButton.GetComponent<UICustomSelectable>();
 					var submitEvent = selectable.SubmitEvent;
+					submitEvent.RemoveAllListeners();
 					submitEvent.m_PersistentCalls.Clear();
-					submitEvent.AddCall(new InvokableCall(XLRoot.Instance, Method(typeof(XLRoot), nameof(XLRoot.OnClickWorkshopBook))));
+					submitEvent.DirtyPersistentCalls();
+					submitEvent.AddCall(new InvokableCall(OnClickWorkshopBook));
 					workshopBookButton = workshopButton.gameObject;
 				}
 				ReloadCustomProjectionIndex();

@@ -6,10 +6,10 @@ using UI;
 using UnityEngine;
 using Workshop;
 using Mod;
+using System;
 
 namespace ExtendedLoader
 {
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 	public class XLRoot : SingletonBehavior<XLRoot>
 	{
 		public const int THUMB_LAYER = 23;
@@ -214,6 +214,7 @@ namespace ExtendedLoader
 			}
 		}
 
+		[Obsolete("Core thumbs are now handled by UnitRenderUtil", true)]
 		public static Dictionary<string, int> CoreThumbDic = new Dictionary<string, int>();
 		public static Dictionary<LorId, Sprite> BookThumb = new Dictionary<LorId, Sprite>();
 
@@ -521,11 +522,6 @@ namespace ExtendedLoader
 			return indexesToLocations[type].TryGetValue(index, out locationId);
 		}
 
-		internal void OnClickWorkshopBook()
-		{
-			CustomBookUIPatch.OnClickWorkshopBook();
-		}
-
 		internal static Dictionary<CustomizeType, Dictionary<string, int>> locationsToIndexes = new Dictionary<CustomizeType, Dictionary<string, int>>
 		{
 			[CustomizeType.FrontHair] = new Dictionary<string, int>(),
@@ -594,5 +590,4 @@ namespace ExtendedLoader
 			return null;
 		}
 	}
-#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
 }

@@ -91,25 +91,6 @@ namespace ExtendedLoader
 				texture2D.LoadImage(File.ReadAllBytes(Path));
 				result = Sprite.Create(texture2D, new Rect(0f, 0f, texture2D.width, texture2D.height), new Vector2(0.5f, 0.5f));
 			}
-			else if (BookInfo.skinType != "Custom")
-			{
-				var skin = BookInfo.GetCharacterSkin();
-				XLRoot.CoreThumbDic.TryGetValue(skin, out int index);
-				if (index == 0)
-				{
-					int skip = skin.IndexOf(':');
-					if (skip >= 0) 
-					{
-						skin = skin.Substring(skip + 1);
-						XLRoot.CoreThumbDic.TryGetValue(skin, out index);
-					}
-					if (index == 0)
-					{
-						index = 1;
-					}
-				}
-				result = Resources.Load<Sprite>("Sprites/Books/Thumb/" + index);
-			}
 			if (result != null)
 			{
 				XLRoot.BookThumb[BookId] = result;

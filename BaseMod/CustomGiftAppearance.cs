@@ -117,36 +117,35 @@ namespace BaseMod
 		}
 		public void CustomInit(string name)
 		{
-			File.WriteAllText(Application.dataPath + "/Mods/" + name, "");
-
-			_frontSpriteRenderer.enabled = GiftArtWork.TryGetValue(name + "_front", out var frontSprite);
-			_frontSpriteRenderer.sprite = frontSprite;
-
-			_sideSpriteRenderer.enabled = GiftArtWork.TryGetValue(name + "_side", out var sideSprite);
-			_sideSpriteRenderer.sprite = sideSprite;
-
-			_frontBackSpriteRenderer.enabled = GiftArtWork.TryGetValue(name + "_frontBack", out var frontBackSprite);
-			_frontBackSpriteRenderer.sprite = frontBackSprite;
-
-			_sideBackSpriteRenderer.enabled = GiftArtWork.TryGetValue(name + "_sideBack", out var sideBackSprite);
-			_sideBackSpriteRenderer.sprite = sideBackSprite;
+			SetGiftArtWork(this, name);
 		}
 
 		internal static void SetGiftArtWork(GiftAppearance giftAppearance, string name)
 		{
 			GetGiftArtWork();
 
-			giftAppearance._frontSpriteRenderer.enabled = GiftArtWork.TryGetValue(name + "_front", out var frontSprite);
-			giftAppearance._frontSpriteRenderer.sprite = frontSprite;
+			SetGiftRendererSprite(giftAppearance._frontSpriteRenderer, name + "_front");
+			SetGiftRendererSprite(giftAppearance._sideSpriteRenderer, name + "_side");
+			SetGiftRendererSprite(giftAppearance._frontBackSpriteRenderer, name + "_frontBack");
+			SetGiftRendererSprite(giftAppearance._sideBackSpriteRenderer, name + "_sideBack");
+		}
 
-			giftAppearance._sideSpriteRenderer.enabled = GiftArtWork.TryGetValue(name + "_side", out var sideSprite);
-			giftAppearance._sideSpriteRenderer.sprite = sideSprite;
-
-			giftAppearance._frontBackSpriteRenderer.enabled = GiftArtWork.TryGetValue(name + "_frontBack", out var frontBackSprite);
-			giftAppearance._frontBackSpriteRenderer.sprite = frontBackSprite;
-
-			giftAppearance._sideBackSpriteRenderer.enabled = GiftArtWork.TryGetValue(name + "_sideBack", out var sideBackSprite);
-			giftAppearance._sideBackSpriteRenderer.sprite = sideBackSprite;
+		static void SetGiftRendererSprite(SpriteRenderer renderer, string name)
+		{
+			if (!renderer)
+			{
+				return;
+			}
+			if (GiftArtWork.ContainsKey(name))
+			{
+				renderer.enabled = true;
+				renderer.sprite = GiftArtWork[name];
+			}
+			else
+			{
+				renderer.enabled = false;
+				renderer.sprite = null;
+			}
 		}
 
 		public static Dictionary<string, GiftAppearance> CreatedGifts = new Dictionary<string, GiftAppearance>();

@@ -91,7 +91,7 @@ namespace ExtendedLoader
 		[HarmonyPriority(Priority.HigherThanNormal)]
 		static void UICharacterRenderer_SetCharacter_Prefix(UICharacterRenderer __instance, int index, ref UnitDataModel __state)
 		{
-			if (index > 10 && index < __instance.characterList.Count && SkipCustomizationIndex())
+			if (UICRIndexHelpers.GetIndexWithSkip(index) != index)
 			{
 				__state = __instance.characterList[index].unitModel;
 			}
@@ -104,7 +104,6 @@ namespace ExtendedLoader
 			var bookGetter = PropertyGetter(typeof(UnitDataModel), nameof(UnitDataModel.bookItem));
 			var customBookGetter = PropertyGetter(typeof(UnitDataModel), nameof(UnitDataModel.CustomBookItem));
 			var setDataMethod = Method(typeof(WorkshopSkinDataSetter), nameof(WorkshopSkinDataSetter.SetData), new Type[] { typeof(WorkshopSkinData) });
-			var customPrefabGetter = PropertyGetter(typeof(XLRoot), nameof(XLRoot.UICustomAppearancePrefab));
 			var unitGenderField = Field(typeof(UnitDataModel), nameof(UnitDataModel.gender));
 			var fixGenderMethods = new MethodInfo[] { Method(typeof(CustomSkinCreatePatch), nameof(TryInjectCreatureGender)), Method(typeof(CustomSkinCreatePatch), nameof(TryInjectEgoGender)) };
 			var isWorkshopGetter = PropertyGetter(typeof(BookModel), nameof(BookModel.IsWorkshop));
@@ -166,11 +165,6 @@ namespace ExtendedLoader
 						i++;
 					}
 				}
-				else if (codes[i].Is(Ldstr, "Prefabs/Characters/[Prefab]Appearance_Custom"))
-				{
-					codes[i] = new CodeInstruction(Call, customPrefabGetter);
-					codes.RemoveAt(i + 1);
-				}
 				else if (codes[i].Is(Ldfld, unitGenderField))
 				{
 					if (genderInjectCounter < 2)
@@ -209,27 +203,6 @@ namespace ExtendedLoader
 		{
 			return isWorkshop || CustomizingBookSkinLoader.Instance.GetWorkshopBookSkinData("") != null;
 		}
-		static int UICharacterRenderer_SetCharacter_GetMaxWithoutSkip(UICharacterRenderer renderer)
-		{
-			int count = renderer.characterList.Count;
-			if (count >= 11 && SkipCustomizationIndex())
-			{
-				count--;
-			}
-			return count;
-		}
-		static int UICharacterRenderer_SetCharacter_GetIndexWithSkip(int index)
-		{
-			if (index >= 10 && SkipCustomizationIndex())
-			{
-				index++;
-			}
-			return index;
-		}
-		static bool SkipCustomizationIndex()
-		{
-			return Singleton<StageController>.Instance.State == StageController.StageState.Battle && GameSceneManager.Instance.battleScene.gameObject.activeSelf;
-		}
 
 		//catch other mods breaking things
 		[HarmonyPatch(typeof(UICharacterRenderer), nameof(UICharacterRenderer.SetCharacter))]
@@ -240,7 +213,7 @@ namespace ExtendedLoader
 			{
 				Debug.LogException(__exception);
 			}
-			int fixedIndex = UICharacterRenderer_SetCharacter_GetIndexWithSkip(index);
+			int fixedIndex = UICRIndexHelpers.GetIndexWithSkip(index);
 			if (fixedIndex >= UICharacterRenderer.Instance.characterList.Count)
 			{
 				return null;
@@ -540,18 +513,12 @@ namespace ExtendedLoader
 			var customBookGetter = PropertyGetter(typeof(UnitDataModel), nameof(UnitDataModel.CustomBookItem));
 			var unitGenderField = Field(typeof(UnitDataModel), nameof(UnitDataModel.gender));
 			var fixGenderMethod = Method(typeof(CustomSkinCreatePatch), nameof(TryInjectAbnormalGender));
-			var customPrefabGetter = PropertyGetter(typeof(XLRoot), nameof(XLRoot.CustomAppearancePrefab));
 			var codes = new List<CodeInstruction>(instructions);
 			for (var i = 0; i < codes.Count; i++)
 			{
 				if (codes[i].Calls(bookGetter))
 				{
 					yield return new CodeInstruction(Callvirt, customBookGetter);
-				}
-				else if (codes[i].Is(Ldstr, "Prefabs/Characters/[Prefab]Appearance_Custom"))
-				{
-					yield return new CodeInstruction(Call, customPrefabGetter);
-					i++;
 				}
 				else if (codes[i].Is(Ldfld, unitGenderField))
 				{
@@ -578,63 +545,6 @@ namespace ExtendedLoader
 				return Gender.Creature;
 			}
 			return original;
-		}
-
-		[HarmonyPatch(typeof(AssetBundleManagerRemake), nameof(AssetBundleManagerRemake.LoadCharacterPrefab_DefaultMotion))]
-		[HarmonyTranspiler]
-		static IEnumerable<CodeInstruction> AssetBundleManagerRemake_LoadCharacterPrefab_DefaultMotion_Transpiler(IEnumerable<CodeInstruction> instructions)
-		{
-			var codes = instructions.ToList();
-			for (var i = 0; i < codes.Count; i++)
-			{
-				if (codes[i].Is(Ldstr, "Prefabs/Characters/[Prefab]Appearance_Custom"))
-				{
-					yield return new CodeInstruction(Call, PropertyGetter(typeof(XLRoot), nameof(XLRoot.UICustomAppearancePrefab)));
-					i++;
-				}
-				else
-				{
-					yield return codes[i];
-				}
-			}
-		}
-
-		[HarmonyPatch(typeof(AssetBundleManagerRemake), nameof(AssetBundleManagerRemake.LoadCharacterPrefab))]
-		[HarmonyTranspiler]
-		static IEnumerable<CodeInstruction> AssetBundleManagerRemake_LoadCharacterPrefab_Transpiler(IEnumerable<CodeInstruction> instructions)
-		{
-			var codes = instructions.ToList();
-			for (var i = 0; i < codes.Count; i++)
-			{
-				if (codes[i].Is(Ldstr, "Prefabs/Characters/[Prefab]Appearance_Custom"))
-				{
-					yield return new CodeInstruction(Call, PropertyGetter(typeof(XLRoot), nameof(XLRoot.CustomAppearancePrefab)));
-					i++;
-				}
-				else
-				{
-					yield return codes[i];
-				}
-			}
-		}
-
-		[HarmonyPatch(typeof(AssetBundleManagerRemake), nameof(AssetBundleManagerRemake.LoadSdPrefab))]
-		[HarmonyTranspiler]
-		static IEnumerable<CodeInstruction> AssetBundleManagerRemake_LoadSdPrefab_Transpiler(IEnumerable<CodeInstruction> instructions)
-		{
-			var codes = instructions.ToList();
-			for (var i = 0; i < codes.Count; i++)
-			{
-				if (codes[i].Is(Ldstr, "Prefabs/Characters/[Prefab]Appearance_Custom"))
-				{
-					yield return new CodeInstruction(Call, PropertyGetter(typeof(XLRoot), nameof(XLRoot.CustomAppearancePrefab)));
-					i++;
-				}
-				else
-				{
-					yield return codes[i];
-				}
-			}
 		}
 	}
 
