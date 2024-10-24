@@ -5,6 +5,7 @@ using UI;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
+using System.Collections;
 
 namespace ExtendedLoader
 {
@@ -33,6 +34,15 @@ namespace ExtendedLoader
 		internal static void SetSlotCount(UICharacterList characterList, int count)
 		{
 			count = Math.Max(count, 5);
+
+			for (int i = 0; i < count; i++)
+			{
+				if (characterList.slotList.Count <= i)
+				{
+					break;
+				}
+				characterList.slotList[i].gameObject.SetActive(true);
+			}
 			if (count == characterList.slotList.Count)
 			{
 				return;
@@ -46,6 +56,7 @@ namespace ExtendedLoader
 			}
 			else
 			{
+				bool changedEnemySlotCount = false;
 				var enemyListPanel = GetEnemyCharacterListPanel();
 				if (enemyListPanel && enemyListPanel.CharacterList == characterList)
 				{
@@ -93,7 +104,7 @@ namespace ExtendedLoader
 					maskRect.pivot = (contentRect.parent as RectTransform).pivot;
 					maskRect.sizeDelta = Vector2.zero;
 					maskRect.localRotation = Quaternion.identity;
-					maskRect.localScale = Vector2.one;
+					maskRect.localScale = Vector3.one;
 					maskRect.anchoredPosition = Vector2.zero;
 					//maskRect.gameObject.AddComponent<Image>();
 					//maskRect.gameObject.AddComponent<Mask>().showMaskGraphic = false;
@@ -101,6 +112,7 @@ namespace ExtendedLoader
 					maskRect.SetSiblingIndex(contentRect.GetSiblingIndex());
 					maskRect.offsetMax += new Vector2(3, 5);
 					maskRect.offsetMin -= new Vector2(3, 10);
+
 					var posRect = new GameObject("[Rect]ListPos").AddComponent<RectTransform>();
 					posRect.SetParent(maskRect);
 					posRect.anchorMin = Vector2.zero;
@@ -108,12 +120,13 @@ namespace ExtendedLoader
 					posRect.pivot = (contentRect.parent as RectTransform).pivot;
 					posRect.sizeDelta = Vector2.zero;
 					posRect.localRotation = Quaternion.identity;
-					posRect.localScale = Vector2.one;
+					posRect.localScale = Vector3.one;
 					posRect.anchoredPosition = Vector2.zero;
 					posRect.offsetMax -= new Vector2(3, 5);
 					posRect.offsetMin += new Vector2(3, 10);
 					contentRect.SetParent(posRect);
 					contentRect.pivot = new Vector2(0, 1);
+					contentRect.localScale = Vector3.one;
 
 					Image leftArrow = UnityEngine.Object.Instantiate(((UICardPanel)UIPanel.Controller.GetUIPanel(UIPanelType.Page)).InvenCardList.scrollBar.ImageDown, characterList.transform, false);
 					leftArrow.name = "[Image]Left";
@@ -339,8 +352,6 @@ namespace ExtendedLoader
 		}
 
 		internal static bool updatingLibrarianForWave;
-
-		internal static bool changedEnemySlotCount;
 	}
 #pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
 }

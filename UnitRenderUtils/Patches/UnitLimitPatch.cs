@@ -391,6 +391,29 @@ namespace ExtendedLoader
 			UnitUIUtils.SetSlotCount(__instance, 0);
 		}
 
+		[HarmonyPatch(typeof(UI.UIController), nameof(UI.UIController.ChangePanelCanvas))]
+		[HarmonyPostfix]
+		static void UIController_ChangePanelCanvas_Postfix(UI.UIController __instance, bool ApplyPostprocessing)
+		{
+			Canvas canvas = ApplyPostprocessing ? __instance.postprocessCanvas : __instance.originCanvas;
+			canvas.enabled = false;
+			canvas.enabled = true;
+		}
+
+		[HarmonyPatch(typeof(UIBgScreenChangeAnim), nameof(UIBgScreenChangeAnim.StartBg))]
+		[HarmonyPrefix]
+		static void UIBgScreenChangeAnim_StartBg_Prefix(UIScreenChangeType cType)
+		{
+			if (cType == UIScreenChangeType.EnterSephirah)
+			{
+				var battleSettingPanel = UI.UIController.Instance.GetUIPanel(UIPanelType.BattleSetting) as UIBattleSettingPanel;
+				if (battleSettingPanel)
+				{
+					battleSettingPanel.OnClose();
+				}
+			}
+		}
+
 		[HarmonyPatch(typeof(UICharacterListPanel), nameof(UICharacterListPanel.SetCharacterRenderer), new Type[] { typeof(List<UnitDataModel>), typeof(bool) })]
 		[HarmonyPatch(typeof(UICharacterListPanel), nameof(UICharacterListPanel.SetCharacterRenderer), new Type[] { typeof(List<UnitBattleDataModel>), typeof(bool) })]
 		[HarmonyTranspiler]

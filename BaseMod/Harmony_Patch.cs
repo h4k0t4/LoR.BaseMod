@@ -755,7 +755,7 @@ namespace BaseMod
 				foreach (LorId id in onlyCardList)
 				{
 					DiceCardXmlInfo cardItem = ItemXmlDataList.instance.GetCardItem(id);
-					if (cardItem == null)
+					if (cardItem == null || cardItem.isError)
 					{
 						Debug.LogError("onlycard not found");
 					}
@@ -793,7 +793,7 @@ namespace BaseMod
 					return false;
 				}
 				DiceCardXmlInfo cardItem = ItemXmlDataList.instance.GetCardItem(soulCardNew.lorId);
-				if (cardItem == null)
+				if (cardItem == null || cardItem.isError)
 				{
 					__result = null;
 					return false;
