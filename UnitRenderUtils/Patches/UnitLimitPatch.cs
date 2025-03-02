@@ -21,6 +21,69 @@ namespace ExtendedLoader
 		internal static int minEmotionSlots = 9;
 		internal static float yShift = 64f;
 
+		[HarmonyPatch(typeof(LibraryFloorModel), nameof(LibraryFloorModel.Init))]
+		[HarmonyPostfix]
+		[HarmonyPriority(Priority.LowerThanNormal)]
+		static void LibraryFloorModel_Init_Post(LibraryFloorModel __instance)
+		{
+			try
+			{
+				AddIndexes(__instance._formationIndex, __instance.appliedFormation.PostionList.Count);
+			}
+			catch (Exception ex)
+			{
+				Debug.LogException(ex);
+			}
+		}
+		[HarmonyPatch(typeof(StageWaveModel), nameof(StageWaveModel.Init))]
+		[HarmonyPostfix]
+		[HarmonyPriority(Priority.LowerThanNormal)]
+		static void StageWaveModel_Init_Post(StageWaveModel __instance)
+		{
+			try
+			{
+				AddIndexes(__instance._formationIndex, __instance.GetFormation().PostionList.Count);
+			}
+			catch (Exception ex)
+			{
+				Debug.LogException(ex);
+			}
+		}
+		static void AddIndexes(List<int> indexes, int targetCount)
+		{
+			List<int> sortedIndexes = new List<int>(indexes);
+			sortedIndexes.Sort();
+			int i = 0;
+			for (int j = 0; indexes.Count < targetCount; j++)
+			{
+				if (i < sortedIndexes.Count && j == sortedIndexes[i])
+				{
+					i++;
+				}
+				else
+				{
+					indexes.Add(j);
+				}
+			}
+		}
+
+		[HarmonyPatch(typeof(LibraryFloorModel), nameof(LibraryFloorModel.LoadFromSaveData))]
+		[HarmonyTranspiler]
+		static IEnumerable<CodeInstruction> LibraryFloorModel_LoadFromSaveData_Transpiler(IEnumerable<CodeInstruction> instructions)
+		{
+			var method = AccessTools.Method(typeof(Debug), nameof(Debug.LogError), new Type[] { typeof(object) });
+			var codes = instructions.ToList();
+			for (int i = 0; i < codes.Count - 2; i++)
+			{
+				if (codes[i].Is(OpCodes.Ldstr, "formation index length is too high") && codes[i + 1].Is(OpCodes.Call, method))
+				{
+					codes.RemoveRange(i, 2);
+					break;
+				}
+			}
+			return codes;
+		}
+
 		[HarmonyPatch(typeof(StageWaveModel), nameof(StageWaveModel.GetUnitBattleDataListByFormation))]
 		[HarmonyTranspiler]
 		static IEnumerable<CodeInstruction> StageWaveModel_GetUnitBattleDataListByFormation_Transpiler(IEnumerable<CodeInstruction> instructions)
@@ -478,17 +541,31 @@ namespace ExtendedLoader
 					scrollTransform.localPosition = new Vector3(0, -35, 0);
 					scrollTransform.localEulerAngles = Vector3.zero;
 					scrollTransform.localScale = Vector3.one;
-					scrollTransform.sizeDelta = Vector2.one * 800;
+					scrollTransform.sizeDelta = Vector2.one * 820;
 					scrollView.AddComponent<RectMask2D>();
+					//scrollView.AddComponent<Image>();
+					//scrollView.AddComponent<Mask>().showMaskGraphic = false;
 					target.SetParent(scrollTransform, true);
 					scrollRect = scrollView.AddComponent<ScrollRect>();
 					scrollRect.content = target;
+					var scrollFitter = __instance.gameObject.AddComponent<ContentSizeFitter>();
+					scrollFitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
 				}
 				scrollRect.scrollSensitivity = 15f;
 				scrollRect.horizontal = false;
 				scrollRect.vertical = true;
 				scrollRect.movementType = ScrollRect.MovementType.Elastic;
 				scrollRect.elasticity = 0.1f;
+				var rect = __instance.transform as RectTransform;
+				if (stage.waveList.Count > 5)
+				{
+					rect.pivot = new Vector2(rect.pivot.x, 0f);
+				}
+				else
+				{
+					rect.pivot = new Vector2(rect.pivot.x, 0.5f);
+				}
+
 				if (stage.waveList.Count > __instance.waveSlots.Count)
 				{
 					var newList = new List<UIBattleSettingWaveSlot>(stage.waveList.Count - __instance.waveSlots.Count);

@@ -6,14 +6,172 @@ using System.Linq;
 using System.Reflection;
 using UnityEngine;
 using Workshop;
-using static System.Reflection.Emit.OpCodes;
-using static HarmonyLib.AccessTools;
 
 namespace ExtendedLoader
 {
 	[HarmonyPatch]
 	internal class WorkshopSetterPatch
 	{
+		[HarmonyPatch(typeof(WorkshopSkinDataSetter), nameof(WorkshopSkinDataSetter.SetData), new Type[] { typeof(WorkshopSkinData) })]
+		[HarmonyPrefix]
+		[HarmonyPriority(Priority.First)]
+		static void WorkshopSkinDataSetter_SetData_PrefixFirst(WorkshopSkinData data, WorkshopSkinDataSetter __instance, ref Dictionary<ActionDetail, ClothCustomizeData> __state)
+		{
+			if (__instance is UIWorkshopSkinDataSetter && data.dic.Count > 1)
+			{
+				__state = new Dictionary<ActionDetail, ClothCustomizeData>(data.dic);
+				data.dic.Clear();
+				data.dic[ActionDetail.Default] = __state[ActionDetail.Default];
+			}
+		}
+
+		[HarmonyPatch(typeof(WorkshopSkinDataSetter), nameof(WorkshopSkinDataSetter.SetData), new Type[] { typeof(WorkshopSkinData) })]
+		[HarmonyFinalizer]
+		[HarmonyPriority(Priority.Last)]
+		static void WorkshopSkinDataSetter_SetData_FinalizerLast(WorkshopSkinData data, WorkshopSkinDataSetter __instance, Dictionary<ActionDetail, ClothCustomizeData> __state)
+		{
+			if (__instance is UIWorkshopSkinDataSetter && __state != null)
+			{
+				foreach (var kvp in __state)
+				{
+					data.dic[kvp.Key] = kvp.Value;
+				}
+			}
+		}
+
+		[HarmonyPatch(typeof(WorkshopSkinDataSetter), nameof(WorkshopSkinDataSetter.SetData), new Type[] { typeof(WorkshopSkinData) })]
+		[HarmonyPrefix]
+		static void WorkshopSkinDataSetter_SetData_Prefix(WorkshopSkinData data, WorkshopSkinDataSetter __instance)
+		{
+			var extendedData = SkinData.GetExtraData(data.dic);
+			if (extendedData != null && extendedData.faceData != null)
+			{
+				var dataHolder = __instance.GetComponent<CharacterFaceData>();
+				if (dataHolder == null)
+				{
+					dataHolder = __instance.gameObject.AddComponent<CharacterFaceData>();
+				}
+				dataHolder.faceData = extendedData.faceData;
+			}
+			CharacterAppearance characterAppearance = __instance.gameObject.GetComponent<CharacterAppearance>();
+			List<CharacterMotion> disabledMotions = new List<CharacterMotion>();
+			foreach (CharacterMotion characterMotion in characterAppearance._motionList)
+			{
+				if (!characterAppearance._characterMotionDic.ContainsKey(characterMotion.actionDetail))
+				{
+					characterAppearance._characterMotionDic.Add(characterMotion.actionDetail, characterMotion);
+					characterMotion.gameObject.SetActive(false);
+				}
+			}
+			foreach (CharacterMotion characterMotion in characterAppearance._motionList)
+			{
+				if (characterMotion.actionDetail == ActionDetail.Standing)
+				{
+					continue;
+				}
+				if (!data.dic.ContainsKey(characterMotion.actionDetail))
+				{
+					disabledMotions.Add(characterMotion);
+					//characterAppearance._motionList.Remove(characterMotion);
+				}
+			}
+			foreach (ActionDetail actionDetail in characterAppearance._characterMotionDic.Keys.ToList())
+			{
+				if (actionDetail == ActionDetail.Standing)
+				{
+					continue;
+				}
+				if (!data.dic.ContainsKey(actionDetail))
+				{
+					disabledMotions.Add(characterAppearance._characterMotionDic[actionDetail]);
+					//characterAppearance._characterMotionDic.Remove(actionDetail);
+				}
+			}
+			disabledMotions = disabledMotions.Distinct().ToList();
+			foreach (CharacterMotion characterMotion in disabledMotions)
+			{
+				characterAppearance._motionList.Remove(characterMotion);
+				characterAppearance._characterMotionDic.Remove(characterMotion.actionDetail);
+				characterMotion.gameObject?.SetActive(false);
+			}
+			if (extendedData != null)
+			{
+				if (extendedData.motionSoundList != null && extendedData.motionSoundList.Count > 0)
+				{
+					string text = data.dic[ActionDetail.Default].spritePath;
+					DirectoryInfo skinRootPath = new DirectoryInfo(text).Parent.Parent;
+					string motionSoundPath = Path.Combine(skinRootPath.FullName, "MotionSound");
+					if (!Directory.Exists(motionSoundPath))
+					{
+						DirectoryInfo charFolderParent = skinRootPath.Parent.Parent;
+						motionSoundPath = charFolderParent.Name == "Resource" ? Path.Combine(charFolderParent.FullName, "MotionSound") : Path.Combine(charFolderParent.FullName, "Resource", "MotionSound");
+					}
+					characterAppearance.GetComponent<CharacterSound>()?.SetMotionSounds(extendedData.motionSoundList, motionSoundPath);
+				}
+				if (extendedData.atkEffectPivotDic != null)
+				{
+					Transform root = characterAppearance.atkEffectRoot;
+					Transform parent = characterAppearance.atkEffectRoot.parent;
+					if (extendedData.atkEffectPivotDic.TryGetValue("atkEffectRoot", out EffectPivot atkEffectRoot))
+					{
+						characterAppearance.atkEffectRoot.position = Vector3.zero;
+						characterAppearance.atkEffectRoot.localPosition = atkEffectRoot.localPosition;
+						characterAppearance.atkEffectRoot.localScale = atkEffectRoot.localScale;
+						characterAppearance.atkEffectRoot.localEulerAngles = atkEffectRoot.localEulerAngles;
+						if (!atkEffectRoot.isNested)
+						{
+							root = parent;
+						}
+					}
+					if (extendedData.atkEffectPivotDic.TryGetValue("atkEffectPivot_H", out EffectPivot atkEffectPivot_H))
+					{
+						characterAppearance.atkEffectPivot_H = CreateTransform(atkEffectPivot_H.isNested ? root : parent, "atkEffectPivot_H", atkEffectPivot_H);
+					}
+					if (extendedData.atkEffectPivotDic.TryGetValue("atkEffectPivot_J", out EffectPivot atkEffectPivot_J))
+					{
+						characterAppearance.atkEffectPivot_J = CreateTransform(atkEffectPivot_J.isNested ? root : parent, "atkEffectPivot_J", atkEffectPivot_J);
+					}
+					if (extendedData.atkEffectPivotDic.TryGetValue("atkEffectPivot_Z", out EffectPivot atkEffectPivot_Z))
+					{
+						characterAppearance.atkEffectPivot_Z = CreateTransform(atkEffectPivot_Z.isNested ? root : parent, "atkEffectPivot_Z", atkEffectPivot_Z);
+					}
+					if (extendedData.atkEffectPivotDic.TryGetValue("atkEffectPivot_G", out EffectPivot atkEffectPivot_G))
+					{
+						characterAppearance.atkEffectPivot_G = CreateTransform(atkEffectPivot_G.isNested ? root : parent, "atkEffectPivot_G", atkEffectPivot_G);
+					}
+					if (extendedData.atkEffectPivotDic.TryGetValue("atkEffectPivot_E", out EffectPivot atkEffectPivot_E))
+					{
+						characterAppearance.atkEffectPivot_E = CreateTransform(atkEffectPivot_E.isNested ? root : parent, "atkEffectPivot_E", atkEffectPivot_E);
+					}
+					if (extendedData.atkEffectPivotDic.TryGetValue("atkEffectPivot_S", out EffectPivot atkEffectPivot_S))
+					{
+						characterAppearance.atkEffectPivot_S = CreateTransform(atkEffectPivot_S.isNested ? root : parent, "atkEffectPivot_S", atkEffectPivot_S);
+					}
+					if (extendedData.atkEffectPivotDic.TryGetValue("atkEffectPivot_F", out EffectPivot atkEffectPivot_F))
+					{
+						characterAppearance.atkEffectPivot_F = CreateTransform(atkEffectPivot_F.isNested ? root : parent, "atkEffectPivot_F", atkEffectPivot_F);
+					}
+				}
+				if (extendedData.specialMotionPivotDic != null && extendedData.specialMotionPivotDic.Count > 0)
+				{
+					Transform SpecialPivot = CreateTransform(characterAppearance.transform, "SpecialPivot", Vector3.zero, new Vector3(1, 1, 1), Vector3.zero);
+					if (characterAppearance._specialMotionPivotList == null)
+					{
+						characterAppearance._specialMotionPivotList = new List<CharacterAppearance.MotionPivot>();
+					}
+					foreach (KeyValuePair<ActionDetail, EffectPivot> keyValuePair in extendedData.specialMotionPivotDic)
+					{
+						characterAppearance._specialMotionPivotList.Add(new CharacterAppearance.MotionPivot()
+						{
+							motion = keyValuePair.Key,
+							pivot = CreateTransform(SpecialPivot, "Special_" + keyValuePair.Key.ToString(), keyValuePair.Value)
+						});
+					}
+				}
+			}
+		}
+
+		/*
 		[HarmonyPatch(typeof(WorkshopSkinDataSetter), nameof(WorkshopSkinDataSetter.SetData), new Type[] { typeof(WorkshopSkinData) })]
 		[HarmonyPrefix]
 		static bool WorkshopSkinDataSetter_SetData_Prefix(WorkshopSkinData data, WorkshopSkinDataSetter __instance)
@@ -155,6 +313,7 @@ namespace ExtendedLoader
 			}
 			return true;
 		}
+		 */
 
 		[HarmonyPatch(typeof(WorkshopSkinDataSetter), nameof(WorkshopSkinDataSetter.SetData), new Type[] { typeof(WorkshopSkinData) })]
 		[HarmonyPostfix]
@@ -168,6 +327,7 @@ namespace ExtendedLoader
 				characterAppearance.Initialize(data.dataName);
 			}
 		}
+
 		static Transform CreateTransform(Transform parent, string name, Vector3 localPosition, Vector3 localScale, Vector3 localEulerAngles)
 		{
 			try

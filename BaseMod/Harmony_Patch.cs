@@ -1134,6 +1134,7 @@ namespace BaseMod
 			}
 			return result;
 		}
+		/*
 		//防止被动过多炸UI，存在字体问题待解决
 		[HarmonyPatch(typeof(BattleUnitInformationUI_PassiveList), nameof(BattleUnitInformationUI_PassiveList.SetData))]
 		[HarmonyPrefix]
@@ -1194,6 +1195,7 @@ namespace BaseMod
 				return result;
 			}
 		}
+		*/
 		//Card
 		//CardName
 		[HarmonyPatch(typeof(BattleDiceCardModel), nameof(BattleDiceCardModel.GetName))]
@@ -4219,6 +4221,7 @@ namespace BaseMod
 			__instance.GetComponent<Text>().fontSize = 30;
 			__instance.gameObject.transform.localPosition = new Vector3(-830f, -460f);
 		}
+		/*
 		//CopyCheck
 		[HarmonyPatch(typeof(DiceCardXmlInfo), nameof(DiceCardXmlInfo.Copy))]
 		[HarmonyPostfix]
@@ -4226,7 +4229,6 @@ namespace BaseMod
 		{
 			__result.Keywords = __instance.Keywords.ToList();
 		}
-		/*
 		//Mod_Update
 		//Using For Reload
 		[HarmonyPatch(typeof(DebugConsoleScript), nameof(DebugConsoleScript.Update))]

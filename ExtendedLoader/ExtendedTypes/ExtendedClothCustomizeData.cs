@@ -36,7 +36,6 @@ namespace ExtendedLoader
 		[HarmonyPrefix]
 		static bool ClothCustomizeData_LoadSprite_Prefix(ClothCustomizeData __instance)
 		{
-
 			if (!(__instance is ExtendedClothCustomizeData instance))
 			{
 				return true;

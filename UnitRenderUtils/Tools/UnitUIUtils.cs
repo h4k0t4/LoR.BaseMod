@@ -6,6 +6,7 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
 using System.Collections;
+using UnityEngine.Events;
 
 namespace ExtendedLoader
 {
@@ -67,6 +68,11 @@ namespace ExtendedLoader
 				if (!scrollRect)
 				{
 					scrollRect = characterList.gameObject.AddComponent<ScrollRect>();
+					var handler = characterList.gameObject.AddComponent<UnitScrollHandler>();
+					handler.scrollRect = scrollRect;
+					handler.characterList = characterList;
+					handler.minIn = 0;
+					handler.maxIn = 4;
 					scrollRect.vertical = false;
 					scrollRect.scrollSensitivity = 30f;
 					scrollRect.movementType = ScrollRect.MovementType.Clamped;
@@ -83,13 +89,8 @@ namespace ExtendedLoader
 					{
 						var trigger = character.GetComponentsInChildren<EventTrigger>(true).FirstOrDefault();
 						var triggerEntry = new EventTrigger.Entry { eventID = EventTriggerType.Scroll };
-						triggerEntry.callback.AddListener(bData => 
-						{
-							if (bData is PointerEventData pData && scrollRect && scrollRect.hScrollingNeeded)
-							{
-								scrollRect.OnScroll(pData);
-							}
-						});
+						var scrollCall = new PersistentCall { m_Target = handler, m_MethodName = nameof(UnitScrollHandler.OnScrollEvent), m_Mode = PersistentListenerMode.EventDefined };
+						triggerEntry.callback.m_PersistentCalls.AddListener(scrollCall);
 						trigger.triggers.Add(triggerEntry);
 						var effect = character.img_hpFill.GetComponent<_2dxFX_WaterAndBackgroundDeluxe>();
 						if (effect)
@@ -135,7 +136,7 @@ namespace ExtendedLoader
 					leftRect.localRotation = Quaternion.Euler(0, 0, -90);
 					leftRect.pivot = new Vector2(1, 0);//new Vector2(0, 0);
 					leftRect.anchorMin = leftRect.anchorMax = Vector2.zero;//new Vector2(0, 1);
-					var leftHandler = leftArrow.gameObject.AddComponent<UnitScrollHandler>();
+					var leftHandler = leftArrow.gameObject.AddComponent<UnitScrollArrow>();
 					leftHandler.basePos = leftRect.anchoredPosition = new Vector2(-5, 40);//new Vector2(-5, 0);
 					leftHandler.image = leftArrow;
 					leftHandler.scrollRect = scrollRect;
@@ -169,7 +170,7 @@ namespace ExtendedLoader
 					rightRect.localRotation = Quaternion.Euler(0, 0, 90);
 					rightRect.pivot = Vector2.zero;//new Vector2(1, 0);
 					rightRect.anchorMin = rightRect.anchorMax = new Vector2(1, 0);//new Vector2(1, 1);
-					var rightHandler = rightArrow.GetComponent<UnitScrollHandler>();
+					var rightHandler = rightArrow.GetComponent<UnitScrollArrow>();
 					rightHandler.basePos = rightRect.anchoredPosition = new Vector2(5, 40);//new Vector2(5, 0);
 					rightHandler.image = rightArrow;
 					rightHandler.scrollRect = scrollRect;
@@ -196,54 +197,10 @@ namespace ExtendedLoader
 					}
 					rightArrow.gameObject.SetActive(false);
 
-					int minIn = 0;
-					int maxIn = 4;
-					scrollRect.onValueChanged.AddListener(pos => 
-					{
-						float overflow = scrollRect.GetBounds().size.x - scrollRect.viewRect.rect.size.x;
-						leftArrow.gameObject.SetActive(scrollRect.hScrollingNeeded && (pos.x * overflow > 0.01f));
-						rightArrow.gameObject.SetActive(scrollRect.hScrollingNeeded && ((1 - pos.x) * overflow > 0.01f));
-						int newMinIn = -1;
-						int newMaxIn = -1;
-						int i = 0;
-						float minX = maskRect.rect.xMin;
-						float maxX = maskRect.rect.xMax;
-						var worldToMask = maskRect.worldToLocalMatrix;
-						foreach (var character in characterList.slotList)
-						{
-							if (!character.gameObject.activeSelf)
-							{
-								break;
-							}
-							RectTransform charRectT = character.transform as RectTransform;
-							Rect charRect = charRectT.rect;
-							Matrix4x4 charToMask = worldToMask * charRectT.localToWorldMatrix;
-							if (charToMask.MultiplyPoint(charRect.center - new Vector2(charRect.width / 2, 0)).x >= minX 
-								&& charToMask.MultiplyPoint(charRect.center + new Vector2(charRect.width / 2, 0)).x <= maxX)
-							{
-								newMaxIn = i;
-								if (newMinIn == -1)
-								{
-									newMinIn = i;
-								}
-							}
-							i++;
-						}
-						if (newMaxIn != maxIn || newMinIn != minIn)
-						{
-							for (i = 0; i < characterList.slotList.Count; i++)
-							{
-								bool inBounds = i >= newMinIn && i <= newMaxIn;
-								bool wasInBounds = i >= minIn && i <= maxIn;
-								if (inBounds != wasInBounds)
-								{
-									characterList.slotList[i].img_hpFill.GetComponent<_2dxFX_WaterAndBackgroundDeluxe>().enabled = inBounds;
-								}
-							}
-							minIn = newMinIn;
-							maxIn = newMaxIn;
-						}
-					});
+					handler.leftArrow = leftArrow;
+					handler.rightArrow = rightArrow;
+					handler.maskRect = maskRect;
+					scrollRect.onValueChanged.AddListener(pos => handler.UpdateUnitView(pos));
 					scrollRect.onValueChanged.Invoke(scrollRect.normalizedPosition);
 					characterList.panel.graphics.graphics = characterList.panel.graphics.graphics.AddRangeToArray(new Graphic[]
 					{
@@ -260,6 +217,7 @@ namespace ExtendedLoader
 					var blockerImg = blockerRect.gameObject.AddComponent<Image>();
 					blockerImg.color = Color.clear;
 				}
+				var defaultMaterial = characterList.slotList[0].img_hpFill.GetComponent<_2dxFX_WaterAndBackgroundDeluxe>().defaultMaterial;
 				for (int i = characterList.slotList.Count; i < count; i++)
 				{
 					var newSlot = UnityEngine.Object.Instantiate(characterList.slotList[1], characterList.slotList[1].transform.parent);
@@ -267,9 +225,10 @@ namespace ExtendedLoader
 					var effect = newSlot.img_hpFill.GetComponent<_2dxFX_WaterAndBackgroundDeluxe>();
 					if (effect)
 					{
-						effect.defaultMaterial = characterList.slotList[1].img_hpFill.GetComponent<_2dxFX_WaterAndBackgroundDeluxe>().defaultMaterial;
+						effect.defaultMaterial = defaultMaterial;
 						effect.enabled = false;
 					}
+					newSlot.img_hpFill.material = defaultMaterial;
 					characterList.slotList.Add(newSlot);
 				}
 				if (changedEnemySlotCount)
@@ -294,7 +253,7 @@ namespace ExtendedLoader
 			}
 		}
 
-		class UnitScrollHandler : MonoBehaviour
+		class UnitScrollArrow : MonoBehaviour
 		{
 			void Update()
 			{
@@ -349,6 +308,89 @@ namespace ExtendedLoader
 			public ScrollRect scrollRect;
 			public Image image;
 			Color defaultColor;
+		}
+
+		class UnitScrollHandler : MonoBehaviour, ICanvasElement
+		{
+			public ScrollRect scrollRect;
+			public Image leftArrow;
+			public Image rightArrow;
+			public UICharacterList characterList;
+			public RectTransform maskRect;
+			public int minIn;
+			public int maxIn;
+
+			public void OnScrollEvent(BaseEventData bData)
+			{
+				if (bData is PointerEventData pData && scrollRect && scrollRect.hScrollingNeeded)
+				{
+					scrollRect.OnScroll(pData);
+				}
+			}
+
+			void ICanvasElement.GraphicUpdateComplete() {}
+			void ICanvasElement.Rebuild(CanvasUpdate executing) {}
+			bool ICanvasElement.IsDestroyed() => !this;
+
+			public void OnEnable()
+			{
+				CanvasUpdateRegistry.RegisterCanvasElementForLayoutRebuild(this);
+			}
+
+			public void LayoutComplete()
+			{
+				UpdateUnitView(scrollRect.normalizedPosition);
+			}
+
+			public void UpdateUnitView(Vector2 scrollPosition)
+			{
+				float contentXSize = scrollRect.GetBounds().size.x;
+				float viewXSize = scrollRect.viewRect.rect.size.x;
+				//Debug.Log($"content size {contentXSize}, view size {viewXSize}");
+				float overflow = contentXSize - viewXSize;
+				leftArrow.gameObject.SetActive(scrollRect.hScrollingNeeded && (scrollPosition.x * overflow > 0.01f));
+				rightArrow.gameObject.SetActive(scrollRect.hScrollingNeeded && ((1 - scrollPosition.x) * overflow > 0.01f));
+				int newMinIn = -1;
+				int newMaxIn = -1;
+				int i = 0;
+				float minX = maskRect.rect.xMin;
+				float maxX = maskRect.rect.xMax;
+				var worldToMask = maskRect.worldToLocalMatrix;
+				foreach (var character in characterList.slotList)
+				{
+					if (!character.gameObject.activeSelf)
+					{
+						break;
+					}
+					RectTransform charRectT = character.transform as RectTransform;
+					Rect charRect = charRectT.rect;
+					Matrix4x4 charToMask = worldToMask * charRectT.localToWorldMatrix;
+					if (charToMask.MultiplyPoint(charRect.center - new Vector2(charRect.width / 2, 0)).x >= minX
+						&& charToMask.MultiplyPoint(charRect.center + new Vector2(charRect.width / 2, 0)).x <= maxX)
+					{
+						newMaxIn = i;
+						if (newMinIn == -1)
+						{
+							newMinIn = i;
+						}
+					}
+					i++;
+				}
+				if (newMaxIn != maxIn || newMinIn != minIn)
+				{
+					for (i = 0; i < characterList.slotList.Count; i++)
+					{
+						bool inBounds = i >= newMinIn && i <= newMaxIn;
+						bool wasInBounds = i >= minIn && i <= maxIn;
+						if (inBounds != wasInBounds)
+						{
+							characterList.slotList[i].img_hpFill.GetComponent<_2dxFX_WaterAndBackgroundDeluxe>().enabled = inBounds;
+						}
+					}
+					minIn = newMinIn;
+					maxIn = newMaxIn;
+				}
+			}
 		}
 
 		internal static bool updatingLibrarianForWave;

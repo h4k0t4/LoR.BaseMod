@@ -33,7 +33,7 @@ namespace BaseMod
 			GlobalGameManager.Instance.ver = string.Join(Environment.NewLine,
 				new string[] {
 					GlobalGameManager.Instance.ver,
-					"BaseMod for workshop 2.3.1 ver",
+					"BaseMod for workshop 2.3.2 ver",
 					//"(NIGHTLY BUILD)",
 					//"(featuring Cya from the Toolbox series)",
 				}

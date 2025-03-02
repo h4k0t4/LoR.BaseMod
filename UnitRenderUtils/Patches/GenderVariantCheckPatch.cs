@@ -82,7 +82,7 @@ namespace ExtendedLoader
 
 		static Workshop.WorkshopSkinData TryReplaceGenderData(Workshop.WorkshopSkinData baseData, string id, string name, Gender gender)
 		{
-			var upgradeData = SkinTools.GetWorkshopBookSkinData(id, name, "_" + gender);
+			var upgradeData = SkinTools.GetWorkshopBookSkinData_NoDefault(id, name, "_" + gender);
 			return upgradeData ?? baseData;
 		}
 

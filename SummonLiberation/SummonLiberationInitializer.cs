@@ -16,11 +16,11 @@ namespace SummonLiberation
 		//Enlarge Librarian's formation
 		[HarmonyPatch(typeof(LibraryFloorModel), nameof(LibraryFloorModel.Init))]
 		[HarmonyPostfix]
+		[HarmonyPriority(Priority.HigherThanNormal)]
 		static void LibraryFloorModel_Init_Post(LibraryFloorModel __instance)
 		{
 			try
 			{
-				AddIndexes(__instance._formationIndex, 99);
 				AddFormationPosition(__instance._defaultFormation, 99);
 				if (__instance._formation == null)
 				{
@@ -36,53 +36,19 @@ namespace SummonLiberation
 				File.WriteAllText(Application.dataPath + "/Mods/LFIerror.txt", ex.Message + Environment.NewLine + ex.StackTrace);
 			}
 		}
-		//remove error logs about saved formations being too big
-		[HarmonyPatch(typeof(LibraryFloorModel), nameof(LibraryFloorModel.LoadFromSaveData))]
-		[HarmonyTranspiler]
-		static IEnumerable<CodeInstruction> LibraryFloorModel_LoadFromSaveData_Transpiler(IEnumerable<CodeInstruction> instructions)
-		{
-			var method = AccessTools.Method(typeof(Debug), nameof(Debug.LogError), new Type[] {typeof(object)});
-			var codes = instructions.ToList();
-			for (int i = 0; i < codes.Count - 2; i++)
-			{
-				if (codes[i].Is(OpCodes.Ldstr, "formation index length is too high") && codes[i + 1].Is(OpCodes.Call, method))
-				{
-					codes.RemoveRange(i, 2);
-					break;
-				}
-			}
-			return codes;
-		}
 		//Enlarge Enemy's formation
 		[HarmonyPatch(typeof(StageWaveModel), nameof(StageWaveModel.Init))]
 		[HarmonyPostfix]
+		[HarmonyPriority(Priority.HigherThanNormal)]
 		static void StageWaveModel_Init_Post(StageWaveModel __instance)
 		{
 			try
 			{
-				AddIndexes(__instance._formationIndex, 100);
 				AddFormationPositionForEnemy(__instance._formation, 100);
 			}
 			catch (Exception ex)
 			{
 				File.WriteAllText(Application.dataPath + "/Mods/SWMIerror.txt", ex.Message + Environment.NewLine + ex.StackTrace);
-			}
-		}
-		static void AddIndexes(List<int> indexes, int targetCount)
-		{
-			List<int> sortedIndexes = new List<int>(indexes);
-			sortedIndexes.Sort();
-			int i = 0;
-			for (int j = 0; indexes.Count < targetCount; j++)
-			{
-				if (i < sortedIndexes.Count && j == sortedIndexes[i])
-				{
-					i++;
-				}
-				else
-				{
-					indexes.Add(j);
-				}
 			}
 		}
 		static void AddFormationPosition(FormationModel Formation, int targetCount)
@@ -247,7 +213,7 @@ namespace SummonLiberation
 
 					if (Index == -1)
 					{
-						battleUnitModel.index = -1;
+						battleUnitModel.index = 0;
 						foreach (BattleUnitModel unit in BattleObjectManager.instance.GetAliveList(Faction))
 						{
 							if (unit.index >= battleUnitModel.index)
@@ -379,7 +345,7 @@ namespace SummonLiberation
 
 					if (Index == -1)
 					{
-						battleUnitModel.index = -1;
+						battleUnitModel.index = 0;
 						foreach (BattleUnitModel unit in BattleObjectManager.instance.GetAliveList(Faction))
 						{
 							if (unit.index >= battleUnitModel.index)
@@ -498,7 +464,7 @@ namespace SummonLiberation
 
 					if (Index == -1)
 					{
-						battleUnitModel.index = -1;
+						battleUnitModel.index = 0;
 						foreach (BattleUnitModel unit in BattleObjectManager.instance.GetAliveList(Faction))
 						{
 							if (unit.index >= battleUnitModel.index)

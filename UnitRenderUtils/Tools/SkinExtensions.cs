@@ -285,6 +285,27 @@ namespace ExtendedLoader
 			}
 			return result;
 		}
+
+		internal static WorkshopSkinData GetWorkshopBookSkinData_NoDefault(string id, string name, string gender = "_N")
+		{
+			WorkshopSkinData result = null;
+			if (!LorName.IsWorkshopGenericId(id))
+			{
+				if (!TryGetBookSkinData(id, name + gender, out result))
+				{
+					if (gender != "_N")
+					{
+						TryGetBookSkinData(id, name + "_N", out result);
+					}
+				}
+			}
+			if (result == null)
+			{
+				result = CustomizingResourceLoader.Instance.GetWorkshopSkinData(name);
+			}
+			return result;
+		}
+
 		/// <summary>
 		/// Tries to find external skin data by mod id and skin name, specifying gender if possible.
 		/// Also tries to check standalone external skins with the given name if the given mod id does not contain the given skin name.
