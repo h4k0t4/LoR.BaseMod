@@ -17,18 +17,23 @@ namespace ExtendedLoader
 				Debug.LogError(message);
 				return null;
 			}
-			Texture2D texture2D = new Texture2D(2, 2, TextureFormat.RGBA32, true);
-			texture2D.LoadImage(data);
+			Texture2D texture = new Texture2D(2, 2, TextureFormat.RGBA32, true);
+			texture.LoadImage(data);
 			if (size.x <= 0)
 			{
-				size.x = texture2D.width;
+				size.x = texture.width;
 			}
 			if (size.y <= 0)
 			{
-				size.y = texture2D.height;
+				size.y = texture.height;
 			}
-			Texture2D texture2D2 = SpriteUtil.ScaleTexture(texture2D, size.x, size.y, true);
-			return Sprite.Create(texture2D2, new Rect(0f, 0f, texture2D2.width, texture2D2.height), pivot, resolution, 0U, SpriteMeshType.Tight);
+			if (size.x != texture.width || size.y != texture.height)
+			{
+				texture = SpriteUtil.ScaleTexture(texture, size.x, size.y, true);
+			}
+			texture.Compress(true);
+			texture.Apply(false, true);
+			return Sprite.Create(texture, new Rect(0f, 0f, texture.width, texture.height), pivot, resolution, 0U, SpriteMeshType.Tight);
 		}
 	}
 }

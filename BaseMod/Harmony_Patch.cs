@@ -86,8 +86,6 @@ namespace BaseMod
 			{
 				path = Path.GetDirectoryName(Uri.UnescapeDataString(new UriBuilder(Assembly.GetExecutingAssembly().CodeBase).Path));
 				//IsEditing = false;
-				AssemList = new List<Assembly>();
-				LoadedAssembly = new List<string>();
 				ArtWorks = null;
 				BookThumb = null;
 				AudioClips = null;
@@ -140,6 +138,7 @@ namespace BaseMod
 		public static void LoadAssemblyFiles()
 		{
 			ModSaveTool.LoadedModsWorkshopId.Add("BaseMod");
+			HashSet<Assembly> loadedAssemblies = AppDomain.CurrentDomain.GetAssemblies().ToHashSet();
 			foreach (ModContent modContent in LoadedModContents)
 			{
 				ModContentManager.Instance._currentPid = modContent._itemUniqueId;
@@ -148,6 +147,7 @@ namespace BaseMod
 				var config = BasemodConfig.FindBasemodConfig(modContent._itemUniqueId);
 				if (config.IgnoreStaticFiles)
 				{
+					ModContentManager.Instance._currentPid = "";
 					continue;
 				}
 				foreach (FileInfo fileInfo in _dirInfo.GetFiles())
@@ -155,15 +155,19 @@ namespace BaseMod
 					string errorname = "unknown";
 					try
 					{
-						if (fileInfo.Name.Contains(".dll") && !LoadedAssembly.Contains(fileInfo.FullName))
+						if (fileInfo.Extension.ToLower() == ".dll")
 						{
-							LoadedAssembly.Add(fileInfo.Directory.FullName);
+							ModSaveTool.LoadedModsWorkshopId.Add(modContent._itemUniqueId);
 							errorname = "LoadAssembly";
 							if (IsBasemodDebugMode)
 							{
 								Debug.Log("Basemod load : " + fileInfo.FullName);
 							}
 							currentAssembly = Assembly.LoadFile(fileInfo.FullName);
+							if (!loadedAssemblies.Add(currentAssembly))
+							{
+								continue;
+							}
 							errorname = "GetAssemblyTypes";
 							IEnumerable<Type> types;
 							try
@@ -212,8 +216,6 @@ namespace BaseMod
 							}
 							errorname = "LoadOtherTypes";
 							LoadTypesFromAssembly(types, fileInfo.Name);
-							ModSaveTool.LoadedModsWorkshopId.Add(Tools.GetModId(currentAssembly));
-							AssemList.Add(currentAssembly);
 						}
 					}
 					catch (Exception ex)
@@ -318,7 +320,6 @@ namespace BaseMod
 			CustomBattleDialogModel.Clear();
 			CustomGiftPassive.Clear();
 			CustomEmotionCardAbility.Clear();
-			LoadedAssembly.Clear();
 			ArtWorks.Clear();
 			BookThumb.Clear();
 			AudioClips.Clear();
@@ -2697,22 +2698,6 @@ namespace BaseMod
 			{
 				File.WriteAllText(Application.dataPath + "/Mods/HasEffectFileerror.log", ex.Message + Environment.NewLine + ex.StackTrace);
 			}
-			return true;
-		}
-		//GetModPath - prioritize activated mods
-		[HarmonyPatch(typeof(ModContentManager), nameof(ModContentManager.GetModPath))]
-		[HarmonyPrefix]
-		static bool ModContentManager_GetModPath_Pre(ModContentManager __instance, string packageId, ref string __result)
-		{
-			try
-			{
-				if (__instance._loadedContents != null && __instance._loadedContents.Find(mod => mod._modInfo.invInfo.workshopInfo.uniqueId == packageId) is ModContent mod1 && mod1._dirInfo.FullName is string path && !string.IsNullOrWhiteSpace(path))
-				{
-					__result = path;
-					return false;
-				}
-			}
-			catch { }
 			return true;
 		}
 		//LoadStageStory
@@ -6472,10 +6457,6 @@ namespace BaseMod
 		static string Storylocalizepath;
 
 		static string Localizepath;
-
-		static List<Assembly> AssemList;
-
-		static List<string> LoadedAssembly;
 
 		public static Dictionary<string, Type> CustomEffects = new Dictionary<string, Type>();
 

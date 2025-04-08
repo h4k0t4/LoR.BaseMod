@@ -33,8 +33,6 @@ namespace ExtendedLoader
 			{
 				var harmony = new Harmony("Cyaminthe.ExtendedLoader");
 				harmony.PatchAll(Assembly.GetExecutingAssembly());
-				FixLocalize(harmony);
-				
 
 				XLRoot.EnsureInit();
 				LegacyCompatibilityPatch.PrepareLegacy(harmony);
@@ -42,50 +40,6 @@ namespace ExtendedLoader
 			catch (Exception ex)
 			{
 				Debug.LogException(ex);
-			}
-		}
-
-		static void FixLocalize(Harmony harmony)
-		{
-			bool locCompat = false;
-			try
-			{
-				var addOnLocalize = (from a in AppDomain.CurrentDomain.GetAssemblies()
-									 where a.GetName().Name == "LoRLocalizationManager"
-									 select a into v
-									 orderby v.GetName().Version descending
-									 select v).FirstOrDefault()?.GetType("LoRLocalizationManager.LocalizationUtil")?.GetMethod("AddOnLocalizeAction");
-				if (addOnLocalize != null)
-				{
-					addOnLocalize.Invoke(null, new object[] { new Action<string>(x => CustomBookLabelPatch.SetCustomBookLabel()) });
-					locCompat = true;
-				}
-			}
-			catch (Exception ex)
-			{
-				Debug.LogException(ex);
-			}
-			if (!locCompat)
-			{
-				try
-				{
-					harmony.PatchAll(typeof(CustomBookLabelPatch));
-				}
-				catch (Exception ex)
-				{
-					Debug.LogException(ex);
-				}
-			}
-		}
-
-		static class CustomBookLabelPatch
-		{
-			[HarmonyPatch(typeof(TextDataModel), nameof(TextDataModel.InitTextData))]
-			[HarmonyPostfix]
-			[HarmonyPriority(Priority.Low)]
-			internal static void SetCustomBookLabel()
-			{
-				TextDataModel.textDic["ui_customcorebook_custommodtoggle"] = $"{TextDataModel.textDic.GetValueSafe("ui_corepage") ?? "Key Page"} ({TextDataModel.textDic.GetValueSafe("ui_invitation_customtoggle") ?? "Workshop"})";
 			}
 		}
 

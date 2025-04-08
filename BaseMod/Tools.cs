@@ -14,7 +14,7 @@ using UnityEngine.Networking;
 using System.Globalization;
 using EnumExtenderV2;
 using LorIdExtensions;
-using BaseBridge;
+using System.Runtime.CompilerServices;
 
 namespace BaseMod
 {
@@ -23,6 +23,7 @@ namespace BaseMod
 		/// <summary>
 		/// 生成LorId
 		/// </summary>
+		[MethodImpl(MethodImplOptions.NoInlining)]
 		public static LorId MakeLorId(int id)
 		{
 			Assembly callingAssembly = Assembly.GetCallingAssembly();
@@ -724,10 +725,10 @@ namespace BaseMod
 			if (byCard)
 			{
 				buf._owner.OnAddKeywordBufByCardForEvent(buf.bufType, stack, BufReadyType.NextRound);
-			}
-			if (buf.bufType == KeywordBuf.WarpCharge && buf.stack > stack2)
-			{
-				buf._owner.OnGainChargeStack();
+				if (buf.bufType == KeywordBuf.WarpCharge && buf.stack > stack2)
+				{
+					buf._owner.OnGainChargeStack();
+				}
 			}
 			buf._owner.bufListDetail.CheckGift(buf.bufType, stack, actor);
 			return buf;
