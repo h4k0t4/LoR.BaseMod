@@ -482,7 +482,7 @@ namespace ExtendedLoader
 		[HarmonyTranspiler]
 		static IEnumerable<CodeInstruction> UICharacterListPanel_SetCharacterRenderer_Transpiler(IEnumerable<CodeInstruction> instructions)
 		{
-			var skipFix = AccessTools.Method(typeof(UnitLimitPatch), nameof(UnitLimitPatch.SkipCustomizationIndex));
+			var skipFix = AccessTools.Method(typeof(UnitLimitPatch), nameof(UnitLimitPatch.FixNextIndexWithSkip));
 			var startFix = AccessTools.Method(typeof(UnitLimitPatch), nameof(UnitLimitPatch.FixRightStartIndex));
 			CodeInstruction fixLeaveFor = null;
 			foreach (var instruction in instructions)
@@ -511,14 +511,19 @@ namespace ExtendedLoader
 				yield return new CodeInstruction(OpCodes.Nop).MoveBlocksFrom(fixLeaveFor);
 			}
 		}
-		static int SkipCustomizationIndex(int index)
+		static int FixNextIndexWithSkip(int index)
 		{
-			return index >= 10 ? index + 1 : index;
+			return index == 10 ? 11 : index;
 		}
 		static int FixRightStartIndex(int index)
 		{
 			var enemyPanel = UnitUIUtils.GetEnemyCharacterListPanel();
-			return enemyPanel ? enemyPanel.CharacterList.slotList.Count : index;
+			if (enemyPanel)
+			{
+				index = enemyPanel.CharacterList.slotList.Count;
+				return index >= 10 ? index + 1 : index;
+			}
+			return index;
 		}
 
 		#endregion

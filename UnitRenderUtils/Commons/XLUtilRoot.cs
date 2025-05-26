@@ -1,4 +1,6 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 namespace ExtendedLoader
@@ -37,6 +39,62 @@ namespace ExtendedLoader
 				Destroy(this);
 				return;
 			}
+		}
+
+		public static event Func<UnitDataModel, IEnumerable<LorId>> CustomWorkshopBooksForUnit = null;
+		public static event Func<IEnumerable<LorId>> CustomWorkshopBooksForAll = null;
+
+
+		static List<LorId> GetCustomWorkshopBooksForUnit(UnitDataModel unit)
+		{
+			var result = new List<LorId>();
+			if (CustomWorkshopBooksForUnit == null)
+			{
+				return result;
+			}
+			foreach (var del in CustomWorkshopBooksForUnit.GetInvocationList())
+			{
+				try
+				{
+					result.AddRange(((Func<UnitDataModel, IEnumerable<LorId>>)del)(unit));
+				}
+				catch (Exception ex)
+				{
+					Debug.LogException(ex);
+				}
+			}
+			return result;
+		}
+
+		static List<LorId> GetCustomWorkshopBooksForAll()
+		{
+			var result = new List<LorId>();
+			if (CustomWorkshopBooksForAll == null)
+			{
+				return result;
+			}
+			foreach (var del in CustomWorkshopBooksForAll.GetInvocationList())
+			{
+				try
+				{
+					result.AddRange(((Func<IEnumerable<LorId>>)del)());
+				}
+				catch (Exception ex)
+				{
+					Debug.LogException(ex);
+				}
+			}
+			return result;
+		}
+
+		public static List<LorId> GetAllCustomWorkshopBooks(UnitDataModel currentUnit)
+		{
+			var unitBooks = GetCustomWorkshopBooksForUnit(currentUnit).Distinct().OrderBy(id => id.packageId).ThenBy(id => id.id).ToList();
+			var unitBookSet = new HashSet<LorId>(unitBooks);
+
+			var allBooks = BookInventoryModel.Instance.GetIdList_noDuplicate().Concat(GetCustomWorkshopBooksForAll()).Where(x => unitBookSet.Add(x)).OrderBy(id => id.packageId).ThenBy(id => id.id);
+
+			return unitBooks.Concat(allBooks).ToList();
 		}
 	}
 #pragma warning restore CS1591 // Missing XML comment for publicly visible type or member

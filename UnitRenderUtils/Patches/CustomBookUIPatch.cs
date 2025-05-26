@@ -123,7 +123,8 @@ namespace ExtendedLoader
 
 			var unequippable = new List<int>();
 			int index = 0;
-			var userRange = UICustomizePopup.Instance.SelectedUnit.bookItem.ClassInfo.RangeType;
+			var currentUnit = UICustomizePopup.Instance.SelectedUnit;
+			var userRange = currentUnit.bookItem.ClassInfo.RangeType;
 
 			Predicate<EquipRangeType> check = x => true;
 			switch (userRange)
@@ -139,7 +140,7 @@ namespace ExtendedLoader
 					break;
 			}
 
-			foreach (LorId lorId in BookInventoryModel.Instance.GetIdList_noDuplicate().OrderByDescending(id => id.packageId).ThenBy(id => id.id))
+			foreach (LorId lorId in XLUtilRoot.GetAllCustomWorkshopBooks(currentUnit))
 			{
 				BookXmlInfo info = BookXmlList.Instance.GetData(lorId);
 				if (lorId.IsWorkshop() && !info.isError && !info.canNotEquip)
@@ -161,6 +162,7 @@ namespace ExtendedLoader
 
 			return modWorkshopBookList;
 		}
+
 		[HarmonyPatch(typeof(UIEquipPageCustomizePanel), nameof(UIEquipPageCustomizePanel.Init))]
 		[HarmonyPrefix]
 		static void UIEquipPageCustomizePanel_Init_Prefix(List<int> data)

@@ -14,11 +14,11 @@ namespace ExtendedLoader
 		{
 			try
 			{
-				SaveCustomizeLocation(__result, CustomizeType.FrontHair, __instance.frontHairID, frontHairSaveKey);
-				SaveCustomizeLocation(__result, CustomizeType.RearHair, __instance.backHairID, backHairSaveKey);
-				SaveCustomizeLocation(__result, CustomizeType.Eye, __instance.eyeID, eyeSaveKey);
-				SaveCustomizeLocation(__result, CustomizeType.Brow, __instance.browID, browSaveKey);
-				SaveCustomizeLocation(__result, CustomizeType.Mouth, __instance.mouthID, mouthSaveKey);
+				SaveCustomizeLocation(__result, CustomizingLookType.FrontHair, __instance.frontHairID, frontHairSaveKey);
+				SaveCustomizeLocation(__result, CustomizingLookType.BackHair, __instance.backHairID, backHairSaveKey);
+				SaveCustomizeLocation(__result, CustomizingLookType.Eye, __instance.eyeID, eyeSaveKey);
+				SaveCustomizeLocation(__result, CustomizingLookType.Brow, __instance.browID, browSaveKey);
+				SaveCustomizeLocation(__result, CustomizingLookType.Mouth, __instance.mouthID, mouthSaveKey);
 			}
 			catch (Exception ex)
 			{
@@ -26,7 +26,7 @@ namespace ExtendedLoader
 			}
 		}
 
-		static void SaveCustomizeLocation(SaveData saveData, CustomizeType type, int index, string saveKey)
+		static void SaveCustomizeLocation(SaveData saveData, CustomizingLookType type, int index, string saveKey)
 		{
 			if (XLRoot.indexesToLocations[type].TryGetValue(index, out var location))
 			{
@@ -42,11 +42,11 @@ namespace ExtendedLoader
 			{
 				try
 				{
-					LoadCustomizeLocation(data, CustomizeType.FrontHair, ref __instance.frontHairID, frontHairSaveKey);
-					LoadCustomizeLocation(data, CustomizeType.RearHair, ref __instance.backHairID, backHairSaveKey);
-					LoadCustomizeLocation(data, CustomizeType.Eye, ref __instance.eyeID, eyeSaveKey);
-					LoadCustomizeLocation(data, CustomizeType.Brow,	ref __instance.browID, browSaveKey);
-					LoadCustomizeLocation(data, CustomizeType.Mouth, ref __instance.mouthID, mouthSaveKey);
+					LoadCustomizeLocation(data, CustomizingLookType.FrontHair, ref __instance.frontHairID, frontHairSaveKey);
+					LoadCustomizeLocation(data, CustomizingLookType.BackHair, ref __instance.backHairID, backHairSaveKey);
+					LoadCustomizeLocation(data, CustomizingLookType.Eye, ref __instance.eyeID, eyeSaveKey);
+					LoadCustomizeLocation(data, CustomizingLookType.Brow,	ref __instance.browID, browSaveKey);
+					LoadCustomizeLocation(data, CustomizingLookType.Mouth, ref __instance.mouthID, mouthSaveKey);
 				}
 				catch (Exception ex)
 				{
@@ -55,7 +55,7 @@ namespace ExtendedLoader
 			}
 		}
 
-		static void LoadCustomizeLocation(SaveData saveData, CustomizeType type, ref int index, string saveKey)
+		static void LoadCustomizeLocation(SaveData saveData, CustomizingLookType type, ref int index, string saveKey)
 		{
 			var save = saveData.GetData(saveKey);
 			if (save != null)

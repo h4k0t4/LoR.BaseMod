@@ -58,11 +58,9 @@ namespace ExtendedLoader
 					{
 						DirectoryInfo spriteDir = new DirectoryInfo(defaultData.spritePath);
 						string thumbPath = Path.Combine(spriteDir.Parent.Parent.FullName, "Thumb.png");
-						if (File.Exists(thumbPath))
+						var sprite = SpriteUtilExtension.LoadSpriteCompressed(thumbPath, new Vector2(0.5f, 0.5f));
+						if (sprite)
 						{
-							Texture2D texture2D = new Texture2D(2, 2);
-							texture2D.LoadImage(File.ReadAllBytes(thumbPath));
-							Sprite sprite = Sprite.Create(texture2D, new Rect(0f, 0f, texture2D.width, texture2D.height), new Vector2(0.5f, 0.5f));
 							XLRoot.SkinThumb[skinId] = sprite;
 							return sprite;
 						}

@@ -19,7 +19,7 @@ namespace ExtendedLoader
 				var harmony = new Harmony("Cyaminthe.ExtendedLoader.HighPriority");
 				harmony.PatchAll(typeof(EarlyPatches));
 				XLRoot.LoadModFolders();
-				ReLoadWorkshopCustomAppearance();
+				ReloadWorkshopCustomAppearance();
 			}
 			catch (Exception ex)
 			{
@@ -43,7 +43,7 @@ namespace ExtendedLoader
 			}
 		}
 
-		static void ReLoadWorkshopCustomAppearance()
+		static void ReloadWorkshopCustomAppearance()
 		{
 			SetOriginalIndexes();
 			TryFixThatOneHair();
@@ -149,13 +149,13 @@ namespace ExtendedLoader
 		static void ReloadExternalData()
 		{
 			var loader = CustomizingResourceLoader.Instance;
-			ReloadExternalFaceSets(loader.ExternalEyeDir, CustomizeType.Eye, ref originalEyeIndex, loader._eyeResources);
-			ReloadExternalFaceSets(loader.ExternalBrowDir, CustomizeType.Brow, ref originalBrowIndex, loader._browResources);
-			ReloadExternalFaceSets(loader.ExternalMouthDir, CustomizeType.Mouth, ref originalMouthIndex, loader._mouthResources);
-			ReloadExternalHairSets(loader.ExternalFrontHairDir, CustomizeType.FrontHair, ref originalFrontHairIndex, loader._frontHairResources);
-			ReloadExternalHairSets(loader.ExternalRearHairDir, CustomizeType.RearHair, ref originalRearHairIndex, loader._rearHairResources);
+			ReloadExternalFaceSets(loader.ExternalEyeDir, CustomizingLookType.Eye, ref originalEyeIndex, loader._eyeResources);
+			ReloadExternalFaceSets(loader.ExternalBrowDir, CustomizingLookType.Brow, ref originalBrowIndex, loader._browResources);
+			ReloadExternalFaceSets(loader.ExternalMouthDir, CustomizingLookType.Mouth, ref originalMouthIndex, loader._mouthResources);
+			ReloadExternalHairSets(loader.ExternalFrontHairDir, CustomizingLookType.FrontHair, ref originalFrontHairIndex, loader._frontHairResources);
+			ReloadExternalHairSets(loader.ExternalRearHairDir, CustomizingLookType.BackHair, ref originalRearHairIndex, loader._rearHairResources);
 		}
-		static void ReloadExternalFaceSets(string dirPath, CustomizeType type, ref int index, List<FaceResourceSet> resList)
+		static void ReloadExternalFaceSets(string dirPath, CustomizingLookType type, ref int index, List<FaceResourceSet> resList)
 		{
 			var loader = CustomizingResourceLoader.Instance;
 			string[] targetName = new string[]
@@ -207,9 +207,9 @@ namespace ExtendedLoader
 			}
 		}
 
-		static void ReloadExternalHairSets(string dirPath, CustomizeType type, ref int index, List<HairResourceSet> resList)
+		static void ReloadExternalHairSets(string dirPath, CustomizingLookType type, ref int index, List<HairResourceSet> resList)
 		{
-			bool rear = type == CustomizeType.RearHair;
+			bool rear = type == CustomizingLookType.BackHair;
 			var loader = CustomizingResourceLoader.Instance;
 			string[] targetName = new string[]
 			{
@@ -274,7 +274,7 @@ namespace ExtendedLoader
 				{
 					try
 					{
-						Sprite sprite = SpriteUtil.LoadSprite(fileInfo.FullName, pivot);
+						Sprite sprite = SpriteUtilExtension.LoadSpriteCompressed(fileInfo.FullName, pivot);
 						if (sprite != null && !dictionary.ContainsKey(text))
 						{
 							dictionary.Add(text, sprite);

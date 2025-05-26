@@ -350,7 +350,6 @@ namespace ExtendedLoader
 			CreateSkinRenderer("Customize_Renderer_Effect", CharacterAppearanceType.Effect, 50);
 		}
 
-
 		public static void LoadFaceCustom(Dictionary<Workshop.FaceCustomType, Sprite> faceCustomInfo, string location)
 		{
 			FaceResourceSet eyeResourceSet = new FaceResourceSet();
@@ -428,7 +427,7 @@ namespace ExtendedLoader
 					XLInitializer.originalEyeIndex = -1;
 					loader._eyeResources.Add(eyeResourceSet);
 				}
-				TrySetIndex(data, location, CustomizeType.Eye, XLInitializer.originalEyeIndex, loader._eyeResources);
+				TrySetIndex(data, location, CustomizingLookType.Eye, XLInitializer.originalEyeIndex, loader._eyeResources);
 			}
 			if (faceCustomInfo.ContainsKey(Workshop.FaceCustomType.Front_Brow_Attack) || faceCustomInfo.ContainsKey(Workshop.FaceCustomType.Front_Brow_Hit) || faceCustomInfo.ContainsKey(Workshop.FaceCustomType.Front_Brow_Normal) || faceCustomInfo.ContainsKey(Workshop.FaceCustomType.Side_Brow))
 			{
@@ -442,7 +441,7 @@ namespace ExtendedLoader
 					XLInitializer.originalBrowIndex = -1;
 					loader._browResources.Add(browResourceSet);
 				}
-				TrySetIndex(data, location, CustomizeType.Brow, XLInitializer.originalBrowIndex, loader._browResources);
+				TrySetIndex(data, location, CustomizingLookType.Brow, XLInitializer.originalBrowIndex, loader._browResources);
 			}
 			if (faceCustomInfo.ContainsKey(Workshop.FaceCustomType.Front_Mouth_Attack) || faceCustomInfo.ContainsKey(Workshop.FaceCustomType.Front_Mouth_Hit) || faceCustomInfo.ContainsKey(Workshop.FaceCustomType.Front_Mouth_Normal) || faceCustomInfo.ContainsKey(Workshop.FaceCustomType.Side_Mouth))
 			{
@@ -456,7 +455,7 @@ namespace ExtendedLoader
 					XLInitializer.originalMouthIndex = -1;
 					loader._mouthResources.Add(mouthResourceSet);
 				}
-				TrySetIndex(data, location, CustomizeType.Mouth, XLInitializer.originalMouthIndex, loader._mouthResources);
+				TrySetIndex(data, location, CustomizingLookType.Mouth, XLInitializer.originalMouthIndex, loader._mouthResources);
 			}
 			if (faceCustomInfo.ContainsKey(Workshop.FaceCustomType.Front_FrontHair) || faceCustomInfo.ContainsKey(Workshop.FaceCustomType.Side_FrontHair))
 			{
@@ -470,7 +469,7 @@ namespace ExtendedLoader
 					XLInitializer.originalFrontHairIndex = -1;
 					loader._frontHairResources.Add(frontHairResourceSet);
 				}
-				TrySetIndex(data, location, CustomizeType.FrontHair, XLInitializer.originalFrontHairIndex, loader._frontHairResources);
+				TrySetIndex(data, location, CustomizingLookType.FrontHair, XLInitializer.originalFrontHairIndex, loader._frontHairResources);
 			}
 			if (faceCustomInfo.ContainsKey(Workshop.FaceCustomType.Front_RearHair) || faceCustomInfo.ContainsKey(Workshop.FaceCustomType.Side_RearHair_Front) || faceCustomInfo.ContainsKey(Workshop.FaceCustomType.Side_RearHair_Rear))
 			{
@@ -484,10 +483,10 @@ namespace ExtendedLoader
 					XLInitializer.originalRearHairIndex = -1;
 					loader._rearHairResources.Add(rearHairResourceSet);
 				}
-				TrySetIndex(data, location, CustomizeType.RearHair, XLInitializer.originalRearHairIndex, loader._rearHairResources);
+				TrySetIndex(data, location, CustomizingLookType.BackHair, XLInitializer.originalRearHairIndex, loader._rearHairResources);
 			}
 		}
-		internal static void TrySetIndex(FaceData data, string location, CustomizeType type, int originalIndex, ICollection originalList)
+		internal static void TrySetIndex(FaceData data, string location, CustomizingLookType type, int originalIndex, ICollection originalList)
 		{
 			int index = (originalIndex > 0 ? originalIndex : originalList.Count) - 1;
 			if (location != null)
@@ -512,31 +511,41 @@ namespace ExtendedLoader
 			}
 		}
 
-		public static void SetStableCustomizeLocation(CustomizeType type, int index, string locationId)
+		public static void SetStableCustomizeLocation(CustomizingLookType type, int index, string locationId)
 		{
 			indexesToLocations[type][index] = locationId;
+			locationsToIndexes[type][locationId] = index;
 		}
 
-		public static bool TryGetStableCustomizeLocation(CustomizeType type, int index, out string locationId)
+		public static bool TryGetStableCustomizeLocation(CustomizingLookType type, int index, out string locationId)
 		{
 			return indexesToLocations[type].TryGetValue(index, out locationId);
 		}
 
-		internal static Dictionary<CustomizeType, Dictionary<string, int>> locationsToIndexes = new Dictionary<CustomizeType, Dictionary<string, int>>
+		internal static Dictionary<CustomizingLookType, Dictionary<string, int>> locationsToIndexes = new Dictionary<CustomizingLookType, Dictionary<string, int>>
 		{
-			[CustomizeType.FrontHair] = new Dictionary<string, int>(),
-			[CustomizeType.RearHair] = new Dictionary<string, int>(),
-			[CustomizeType.Eye] = new Dictionary<string, int>(),
-			[CustomizeType.Brow] = new Dictionary<string, int>(),
-			[CustomizeType.Mouth] = new Dictionary<string, int>(),
+			[CustomizingLookType.FrontHair] = new Dictionary<string, int>(),
+			[CustomizingLookType.BackHair] = new Dictionary<string, int>(),
+			[CustomizingLookType.Eye] = new Dictionary<string, int>(),
+			[CustomizingLookType.Brow] = new Dictionary<string, int>(),
+			[CustomizingLookType.Mouth] = new Dictionary<string, int>()
 		};
-		internal static Dictionary<CustomizeType, Dictionary<int, string>> indexesToLocations = new Dictionary<CustomizeType, Dictionary<int, string>>
+		internal static Dictionary<CustomizingLookType, Dictionary<int, string>> indexesToLocations = new Dictionary<CustomizingLookType, Dictionary<int, string>>
 		{
-			[CustomizeType.FrontHair] = new Dictionary<int, string>(),
-			[CustomizeType.RearHair] = new Dictionary<int, string>(),
-			[CustomizeType.Eye] = new Dictionary<int, string>(),
-			[CustomizeType.Brow] = new Dictionary<int, string>(),
-			[CustomizeType.Mouth] = new Dictionary<int, string>(),
+			[CustomizingLookType.FrontHair] = new Dictionary<int, string>(),
+			[CustomizingLookType.BackHair] = new Dictionary<int, string>(),
+			[CustomizingLookType.Eye] = new Dictionary<int, string>(),
+			[CustomizingLookType.Brow] = new Dictionary<int, string>(),
+			[CustomizingLookType.Mouth] = new Dictionary<int, string>()
+		};
+
+		internal static Dictionary<CustomizingLookType, HashSet<string>> lockCustomNames = new Dictionary<CustomizingLookType, HashSet<string>>
+		{
+			[CustomizingLookType.FrontHair] = new HashSet<string>(),
+			[CustomizingLookType.BackHair] = new HashSet<string>(),
+			[CustomizingLookType.Eye] = new HashSet<string>(),
+			[CustomizingLookType.Brow] = new HashSet<string>(),
+			[CustomizingLookType.Mouth] = new HashSet<string>()
 		};
 
 		static readonly string localModsFolder = Path.Combine(Application.dataPath, "Mods"); 

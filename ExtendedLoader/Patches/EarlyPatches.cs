@@ -145,7 +145,7 @@ namespace ExtendedLoader
 				if (list[l].Is(OpCodes.Call, spriteMethod))
 				{
 					list.Insert(l, new CodeInstruction(OpCodes.Ldsfld, AccessTools.Field(typeof(EarlyPatches), nameof(midPivot))));
-					list[l + 1].operand = AccessTools.Method(typeof(SpriteUtil), nameof(SpriteUtil.LoadSprite));
+					list[l + 1].operand = AccessTools.Method(typeof(SpriteUtilExtension), nameof(SpriteUtilExtension.LoadSpriteCompressed));
 					Debug.Log("ExtendedLoader: Full Size Face Loading transpiler Successful");
 					num = l + 2;
 					break;
@@ -208,7 +208,7 @@ namespace ExtendedLoader
 				{
 					return;
 				}
-				XmlNode versionXml = rootNode.Attributes.GetNamedItem("version") ?? rootNode.Attributes.GetNamedItem("Version");
+				//XmlNode versionXml = rootNode.Attributes.GetNamedItem("version") ?? rootNode.Attributes.GetNamedItem("Version");
 				FaceData faceData = null;
 				XmlNode extendedFaceNode = rootNode.SelectSingleNode("ExtendedFaceInfo");
 				if (extendedFaceNode != null)
@@ -220,10 +220,10 @@ namespace ExtendedLoader
 					faceData = new FaceData(__result.faceCustomInfo);
 					for (int i = 0; i < 6; i++)
 					{
-						CustomizeType key = (CustomizeType)i;
+						CustomizingLookType key = (CustomizingLookType)i;
 						string xpath = key.ToString();
 						XmlNode customNameNode = extendedFaceNode.SelectSingleNode(xpath);
-						if (customNameNode != null)
+						if (customNameNode != null || key == CustomizingLookType.BackHair && (customNameNode = extendedFaceNode.SelectSingleNode("RearHair")) != null)
 						{
 							string name = customNameNode.InnerText;
 							if (!string.IsNullOrWhiteSpace(name))

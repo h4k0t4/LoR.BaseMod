@@ -30,6 +30,7 @@ namespace ExtendedLoader
 			return null;
 		}
 	}
+
 	public class FaceData
 	{
 		public FaceData(Dictionary<Workshop.FaceCustomType, Sprite> original)
@@ -38,20 +39,20 @@ namespace ExtendedLoader
 			ExtraDataDic.Add(original, this);
 		}
 
-		public readonly Dictionary<CustomizeType, string> customNames = new Dictionary<CustomizeType, string>();
+		public readonly Dictionary<CustomizingLookType, string> customNames = new Dictionary<CustomizingLookType, string>();
 
-		public readonly Dictionary<CustomizeType, int> customIds = new Dictionary<CustomizeType, int>();
+		public readonly Dictionary<CustomizingLookType, int> customIds = new Dictionary<CustomizingLookType, int>();
 
 		public readonly Dictionary<CustomizeColor, Color> customColors = new Dictionary<CustomizeColor, Color>();
 
 		public readonly Dictionary<GiftPosition, string> customVisualGifts = new Dictionary<GiftPosition, string>();
 
-		public static readonly Dictionary<CustomizeType, Dictionary<string, int>> idsByNames = new Dictionary<CustomizeType, Dictionary<string, int>> {
-			[CustomizeType.FrontHair] = new Dictionary<string, int>(),
-			[CustomizeType.RearHair] = new Dictionary<string, int>(),
-			[CustomizeType.Eye] = new Dictionary<string, int>(),
-			[CustomizeType.Brow] = new Dictionary<string, int>(),
-			[CustomizeType.Mouth] = new Dictionary<string, int>(),
+		{
+			[CustomizingLookType.FrontHair] = new Dictionary<string, int>(),
+			[CustomizingLookType.BackHair] = new Dictionary<string, int>(),
+			[CustomizingLookType.Eye] = new Dictionary<string, int>(),
+			[CustomizingLookType.Brow] = new Dictionary<string, int>(),
+			[CustomizingLookType.Mouth] = new Dictionary<string, int>(),
 		};
 
 		internal static readonly ConditionalWeakTable<Dictionary<Workshop.FaceCustomType, Sprite>, FaceData> ExtraDataDic = new ConditionalWeakTable<Dictionary<Workshop.FaceCustomType, Sprite>, FaceData>();
@@ -65,7 +66,7 @@ namespace ExtendedLoader
 			return null;
 		}
 
-		public int TryGetId(CustomizeType type)
+		public int TryGetId(CustomizingLookType type)
 		{
 			if (customIds.TryGetValue(type, out var id))
 			{
@@ -100,14 +101,6 @@ namespace ExtendedLoader
 			customColors[type] = color;
 			return color;
 		}
-	}
-	public enum CustomizeType
-	{
-		FrontHair,
-		RearHair,
-		Eye,
-		Brow,
-		Mouth
 	}
 	public enum CustomizeColor
 	{

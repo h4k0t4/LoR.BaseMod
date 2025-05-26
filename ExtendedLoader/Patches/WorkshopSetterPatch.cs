@@ -613,11 +613,11 @@ namespace ExtendedLoader
 					var faceData = container.faceData;
 					customizeData = new UnitCustomizingData(customizeData.specialCustomID, true)
 					{
-						frontHairID = faceData.TryGetId(CustomizeType.FrontHair),
-						backHairID = faceData.TryGetId(CustomizeType.RearHair),
-						eyeID = faceData.TryGetId(CustomizeType.Eye),
-						browID = faceData.TryGetId(CustomizeType.Brow),
-						mouthID = faceData.TryGetId(CustomizeType.Mouth),
+						frontHairID = faceData.TryGetId(CustomizingLookType.FrontHair),
+						backHairID = faceData.TryGetId(CustomizingLookType.BackHair),
+						eyeID = faceData.TryGetId(CustomizingLookType.Eye),
+						browID = faceData.TryGetId(CustomizingLookType.Brow),
+						mouthID = faceData.TryGetId(CustomizingLookType.Mouth),
 						hairColor = faceData.TryGetColor(CustomizeColor.HairColor),
 						eyeColor = faceData.TryGetColor(CustomizeColor.EyeColor),
 						skinColor = faceData.TryGetColor(CustomizeColor.SkinColor)

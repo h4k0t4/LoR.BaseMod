@@ -36,46 +36,64 @@ namespace ExtendedLoader
 					Debug.Log("XL: Found WorkshopSetter, but no data in WorkshopCacher! Trying to recreate...");
 					return true;
 				}
-				WorkshopSkinData baseSkinData = null;
-				WorkshopSkinData baseSkinDataAlt = null;
+				List<WorkshopSkinData> baseSkinDataOptions = new List<WorkshopSkinData>(4);
 				WorkshopSkinData upgradeSkinData = null;
-				if (skinName == null)
+				var instance = CustomizingBookSkinLoader.Instance;
+				bool optionsFromBooks = false;
+
+				if (string.IsNullOrEmpty(skinName))
 				{
-					if (unit.workshopSkin == null && unit.CustomBookItem.ClassInfo.skinType == "Custom" && (unit.CustomBookItem.IsWorkshop || CustomizingBookSkinLoader.Instance.GetWorkshopBookSkinData("") != null))
+					if (string.IsNullOrEmpty(unit.workshopSkin) && unit.CustomBookItem.ClassInfo.skinType == "Custom" && (unit.CustomBookItem.IsWorkshop || instance.GetWorkshopBookSkinData("") != null))
 					{
 						upgradeSkinData = SkinTools.GetWorkshopBookSkinData(unit.CustomBookItem.BookId.packageId, unit.CustomBookItem.GetCharacterName(), "_" + unit.appearanceType);
-						if (unit.CustomBookItem.ClassInfo.skinType == "Custom" || unit.CustomBookItem.IsWorkshop)
-						{
-							baseSkinData = CustomizingBookSkinLoader.Instance.GetWorkshopBookSkinData(unit.CustomBookItem.BookId.packageId, unit.CustomBookItem.GetCharacterName());
-						}
-						if (unit._CustomBookItem != unit.bookItem && (unit.bookItem.ClassInfo.skinType == "Custom" || unit.bookItem.IsWorkshop))
-						{
-							baseSkinDataAlt = CustomizingBookSkinLoader.Instance.GetWorkshopBookSkinData(unit.bookItem.BookId.packageId, unit.bookItem.GetCharacterName());
-						}
+						optionsFromBooks = true;
 					}
 				}
 				else
 				{
 					upgradeSkinData = SkinTools.GetWorkshopBookSkinData(new LorName(unit.bookItem.BookId.packageId, skinName), "");
-					if (unit.workshopSkin == null)
+					if (string.IsNullOrEmpty(unit.workshopSkin))
 					{
-						if (unit.CustomBookItem.ClassInfo.skinType == "Custom" || unit.CustomBookItem.IsWorkshop)
-						{
-							baseSkinData = CustomizingBookSkinLoader.Instance.GetWorkshopBookSkinData(unit.CustomBookItem.BookId.packageId, unit.CustomBookItem.GetCharacterName());
-						}
-						if (unit._CustomBookItem != unit.bookItem && (unit.bookItem.ClassInfo.skinType == "Custom" || unit.bookItem.IsWorkshop))
-						{
-							baseSkinDataAlt = CustomizingBookSkinLoader.Instance.GetWorkshopBookSkinData(unit.bookItem.BookId.packageId, unit.bookItem.GetCharacterName());
-						}
+						optionsFromBooks = true;
 					}
 					else
 					{
-						baseSkinData = CustomizingResourceLoader.Instance.GetWorkshopSkinData(unit.workshopSkin);
+						baseSkinDataOptions.Add(CustomizingResourceLoader.Instance.GetWorkshopSkinData(unit.workshopSkin));
 					}
 				}
+
+				if (optionsFromBooks)
+				{
+					var customBookSkinName = unit.CustomBookItem.GetCharacterName();
+					var customBookPid = unit.CustomBookItem.BookId.packageId;
+					if (unit.CustomBookItem.ClassInfo.skinType == "Custom" || unit.CustomBookItem.IsWorkshop)
+					{
+						baseSkinDataOptions.Add(instance.GetWorkshopBookSkinData(customBookPid, customBookSkinName));
+
+						var customBookInfoSkinName = unit.CustomBookItem.ClassInfo.GetCharacterSkin();
+						if (customBookSkinName != customBookInfoSkinName)
+						{
+							baseSkinDataOptions.Add(instance.GetWorkshopBookSkinData(customBookPid, customBookInfoSkinName));
+						}
+					}
+
+					if (unit._CustomBookItem != unit.bookItem && (unit.bookItem.ClassInfo.skinType == "Custom" || unit.bookItem.IsWorkshop))
+					{
+						var baseBookSkinName = unit.bookItem.GetCharacterName();
+						var baseBookPid = unit.bookItem.BookId.packageId;
+						baseSkinDataOptions.Add(CustomizingBookSkinLoader.Instance.GetWorkshopBookSkinData(baseBookPid, baseBookSkinName));
+
+						var baseBookInfoSkinName = unit.bookItem.ClassInfo.GetCharacterSkin();
+						if (baseBookSkinName != baseBookInfoSkinName)
+						{
+							baseSkinDataOptions.Add(CustomizingBookSkinLoader.Instance.GetWorkshopBookSkinData(baseBookPid, baseBookInfoSkinName));
+						}
+					}
+				}
+
 				if (appliedSkinData != upgradeSkinData && upgradeSkinData != null)
 				{
-					if (appliedSkinData == baseSkinData || appliedSkinData == baseSkinDataAlt)
+					if (baseSkinDataOptions.Contains(appliedSkinData))
 					{
 						Debug.Log($"XL: Found cached data for {appliedSkinData.dataName} {appliedSkinData.contentFolderIdx} in WorkshopCacher, but also a possible upgrade to {upgradeSkinData.dataName} {upgradeSkinData.contentFolderIdx} (changing to {(skinName ?? "null")}); trying to recreate...");
 						return true;
@@ -103,6 +121,8 @@ namespace ExtendedLoader
 		{
 			var bookGetter = PropertyGetter(typeof(UnitDataModel), nameof(UnitDataModel.bookItem));
 			var customBookGetter = PropertyGetter(typeof(UnitDataModel), nameof(UnitDataModel.CustomBookItem));
+			var bookClassInfoGetter = PropertyGetter(typeof(BookModel), nameof(BookModel.ClassInfo));
+			var bookInfoSkinGetter = Method(typeof(BookXmlInfo), nameof(BookXmlInfo.GetCharacterSkin));
 			var setDataMethod = Method(typeof(WorkshopSkinDataSetter), nameof(WorkshopSkinDataSetter.SetData), new Type[] { typeof(WorkshopSkinData) });
 			var unitGenderField = Field(typeof(UnitDataModel), nameof(UnitDataModel.gender));
 			var fixGenderMethods = new MethodInfo[] { Method(typeof(CustomSkinCreatePatch), nameof(TryInjectCreatureGender)), Method(typeof(CustomSkinCreatePatch), nameof(TryInjectEgoGender)) };
@@ -114,13 +134,25 @@ namespace ExtendedLoader
 			int genderInjectCounter = 0;
 			for (var i = 0; i < codes.Count; i++)
 			{
-				if (codes[i].opcode == Callvirt)
+				if (codes[i].opcode == Ldarg_1)
 				{
-					if ((MethodInfo)codes[i].operand == bookGetter)
+					if (codes[i + 1].Calls(bookGetter) || codes[i + 1].Calls(customBookGetter))
 					{
-						codes[i] = new CodeInstruction(Callvirt, customBookGetter);
+						if (codes[i + 2].Calls(bookClassInfoGetter) && codes[i + 3].Calls(bookInfoSkinGetter))
+						{
+							codes[i] = new CodeInstruction(Ldloc_3).MoveLabelsFrom(codes[i]);
+							codes.RemoveRange(i + 1, 3);
+						}
 					}
-					else if ((MethodInfo)codes[i].operand == setDataMethod)
+				}
+				else if (codes[i].opcode == Callvirt)
+				{
+					var called = codes[i].operand as MethodInfo;
+					if (called == bookGetter)
+					{
+						codes[i].operand = customBookGetter;
+					}
+					else if (called == setDataMethod)
 					{
 						int j;
 						if (!obtainedFlag)
@@ -255,6 +287,10 @@ namespace ExtendedLoader
 		{
 			var bookGetter = PropertyGetter(typeof(UnitDataModel), nameof(UnitDataModel.bookItem));
 			var customBookGetter = PropertyGetter(typeof(UnitDataModel), nameof(UnitDataModel.CustomBookItem));
+			var bookClassInfoGetter = PropertyGetter(typeof(BookModel), nameof(BookModel.ClassInfo));
+			var bookInfoSkinField = Field(typeof(BookXmlInfo), nameof(BookXmlInfo.CharacterSkin));
+			var stringListItemGetter = Method(typeof(List<string>), "get_Item");
+			var originalNameGetter = Method(typeof(BookModel), nameof(BookModel.GetOriginalCharcterName));
 			var setDataMethod = Method(typeof(WorkshopSkinDataSetter), nameof(WorkshopSkinDataSetter.SetData), new Type[] { typeof(WorkshopSkinData) });
 			var isWorkshopGetter = PropertyGetter(typeof(BookModel), nameof(BookModel.IsWorkshop));
 			var checkPseudoCoreMethod = Method(typeof(CustomSkinCreatePatch), nameof(TryCheckPseudoCoreSkins));
@@ -264,63 +300,75 @@ namespace ExtendedLoader
 			var codes = new List<CodeInstruction>(instructions);
 			for (var i = 0; i < codes.Count; i++)
 			{
-				if (codes[i].Calls(isWorkshopGetter))
+				if (codes[i].opcode == Callvirt)
 				{
-					var bookLocal = ilgen.DeclareLocal(typeof(BookModel));
-					codes.InsertRange(i, new CodeInstruction[]
+					var called = codes[i].operand as MethodInfo;
+					if (called == isWorkshopGetter)
 					{
-						new CodeInstruction(Dup),
-						new CodeInstruction(Stloc, bookLocal)
-					});
-					codes.InsertRange(i + 3, new CodeInstruction[]
-					{
-						new CodeInstruction(Call, checkPseudoCoreMethod),
-						new CodeInstruction(Ldloc, bookLocal),
-						new CodeInstruction(Call, checkCustomMethod)
-					});
-					i += 5;
-				}
-				else if (codes[i].Calls(bookGetter))
-				{
-					codes[i] = new CodeInstruction(Callvirt, customBookGetter);
-				}
-				else if (codes[i].Calls(setDataMethod))
-				{
-					if (!obtainedFlag)
-					{
-						int j;
-						for (j = i + 1; j < codes.Count; j++)
+						var bookLocal = ilgen.DeclareLocal(typeof(BookModel));
+						codes.InsertRange(i, new CodeInstruction[]
 						{
-							if (codes[j].Branches(out Label? _))
+							new CodeInstruction(Dup),
+							new CodeInstruction(Stloc, bookLocal)
+						});
+						codes.InsertRange(i + 3, new CodeInstruction[]
+						{
+							new CodeInstruction(Call, checkPseudoCoreMethod),
+							new CodeInstruction(Ldloc, bookLocal),
+							new CodeInstruction(Call, checkCustomMethod)
+						});
+						i += 5;
+					}
+					else if (called == bookGetter)
+					{
+						codes[i].operand = customBookGetter;
+					}
+					else if (called == bookClassInfoGetter)
+					{
+						if (codes[i + 1].LoadsField(bookInfoSkinField) && codes[i + 3].Calls(stringListItemGetter))
+						{
+							codes[i].operand = originalNameGetter;
+							codes.RemoveRange(i + 1, 3);
+						}
+					}
+					else if (called == setDataMethod)
+					{
+						if (!obtainedFlag)
+						{
+							int j;
+							for (j = i + 1; j < codes.Count; j++)
 							{
-								j = codes.Count;
-							}
-							else
-							{
-								if (codes[j].IsStloc())
+								if (codes[j].Branches(out Label? _))
 								{
-									local = codes[j].operand as LocalBuilder;
-									if (local != null && local.LocalType == typeof(bool))
+									j = codes.Count;
+								}
+								else
+								{
+									if (codes[j].IsStloc())
 									{
-										obtainedFlag = true;
-										break;
+										local = codes[j].operand as LocalBuilder;
+										if (local != null && local.LocalType == typeof(bool))
+										{
+											obtainedFlag = true;
+											break;
+										}
 									}
 								}
 							}
+							if (j == codes.Count)
+							{
+								Debug.Log("Extended Loader: Failed to obtain LateInit flag for CreateSkin");
+							}
 						}
-						if (j == codes.Count)
+						else
 						{
-							Debug.Log("Extended Loader: Failed to obtain LateInit flag for CreateSkin");
+							codes.InsertRange(i + 1, new CodeInstruction[]
+							{
+								new CodeInstruction(Ldc_I4_1),
+								new CodeInstruction(Stloc_S, local)
+							});
+							i += 2;
 						}
-					}
-					else
-					{
-						codes.InsertRange(i + 1, new CodeInstruction[]
-						{
-							new CodeInstruction(Ldc_I4_1),
-							new CodeInstruction(Stloc_S, local)
-						});
-						i += 2;
 					}
 				}
 			}

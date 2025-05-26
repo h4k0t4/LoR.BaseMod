@@ -35,5 +35,32 @@ namespace ExtendedLoader
 			texture.Apply(false, true);
 			return Sprite.Create(texture, new Rect(0f, 0f, texture.width, texture.height), pivot, resolution, 0U, SpriteMeshType.Tight);
 		}
+
+		public static Sprite LoadSpriteCompressed(string filePath, Vector2 pivot)
+		{
+			Sprite result;
+			try
+			{
+				if (!File.Exists(filePath))
+				{
+					result = null;
+				}
+				else
+				{
+					byte[] data = File.ReadAllBytes(filePath);
+					Texture2D texture2D = new Texture2D(2, 2, TextureFormat.RGBA32, true);
+					texture2D.LoadImage(data);
+					texture2D.Compress(true);
+					texture2D.Apply(false, true);
+					result = Sprite.Create(texture2D, new Rect(0f, 0f, texture2D.width, texture2D.height), pivot, 100f, 0U, SpriteMeshType.FullRect);
+				}
+			}
+			catch (FileNotFoundException message)
+			{
+				Debug.LogError(message);
+				result = null;
+			}
+			return result;
+		}
 	}
 }

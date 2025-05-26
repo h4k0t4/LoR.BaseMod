@@ -74,26 +74,24 @@ namespace ExtendedLoader
 			}
 			return true;
 		}
-		static Sprite GetBookThumb(BookXmlInfo BookInfo, string Path)
+		static Sprite GetBookThumb(BookXmlInfo bookInfo, string path)
 		{
-			var BookId = BookInfo.id;
+			var bookId = bookInfo.id;
 			if (XLRoot.BookThumb == null)
 			{
 				XLRoot.BookThumb = new Dictionary<LorId, Sprite>();
 			}
-			if (XLRoot.BookThumb.TryGetValue(BookId, out Sprite result))
+			if (XLRoot.BookThumb.TryGetValue(bookId, out Sprite result))
 			{
 				return result;
 			}
-			else if (Path != null && File.Exists(Path))
+			if (path != null)
 			{
-				Texture2D texture2D = new Texture2D(2, 2);
-				texture2D.LoadImage(File.ReadAllBytes(Path));
-				result = Sprite.Create(texture2D, new Rect(0f, 0f, texture2D.width, texture2D.height), new Vector2(0.5f, 0.5f));
+				result = SpriteUtilExtension.LoadSpriteCompressed(path, new Vector2(0.5f, 0.5f));
 			}
 			if (result != null)
 			{
-				XLRoot.BookThumb[BookId] = result;
+				XLRoot.BookThumb[bookId] = result;
 			}
 			return result;
 		}
