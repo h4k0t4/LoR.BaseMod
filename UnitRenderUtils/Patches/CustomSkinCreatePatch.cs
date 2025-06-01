@@ -283,6 +283,7 @@ namespace ExtendedLoader
 		//CreateSkin
 		[HarmonyPatch(typeof(SdCharacterUtil), nameof(SdCharacterUtil.CreateSkin))]
 		[HarmonyTranspiler]
+		[HarmonyPriority(Priority.LowerThanNormal)]
 		static IEnumerable<CodeInstruction> SdCharacterUtil_CreateSkin_Transpiler(IEnumerable<CodeInstruction> instructions, ILGenerator ilgen)
 		{
 			var bookGetter = PropertyGetter(typeof(UnitDataModel), nameof(UnitDataModel.bookItem));
