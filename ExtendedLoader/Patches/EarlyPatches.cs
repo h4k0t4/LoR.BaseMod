@@ -135,6 +135,7 @@ namespace ExtendedLoader
 
 		[HarmonyPatch(typeof(Workshop.WorkshopAppearanceItemLoader), nameof(WorkshopAppearanceItemLoader.LoadCustomAppearanceInfo))]
 		[HarmonyTranspiler]
+		[HarmonyBefore("LoR.uGuardian.SMotionLoader")]
 		static IEnumerable<CodeInstruction> WorkshopAppearanceItemLoader_LoadCustomAppearanceInfo_Transpiler(IEnumerable<CodeInstruction> instructions)
 		{
 			List<CodeInstruction> list = new List<CodeInstruction>(instructions);
@@ -171,12 +172,16 @@ namespace ExtendedLoader
 					break;
 				}
 			}
-			sbyte b = (sbyte)(Enum.GetValues(typeof(ActionDetail)).Length - 1);
 			for (int k = num; k < list.Count; k++)
 			{
 				if (list[k].opcode == OpCodes.Ldc_I4_S && list[k].LoadsConstant(11L))
 				{
-					list[k].operand = b;
+					list[k] = new CodeInstruction(OpCodes.Call, AccessTools.PropertyGetter(typeof(XLRoot), nameof(XLRoot.MotionCount))).MoveLabelsFrom(list[k]);
+					list.InsertRange(k + 1, new CodeInstruction[]
+					{
+						new CodeInstruction(OpCodes.Ldc_I4_1),
+						new CodeInstruction(OpCodes.Sub)
+					});
 					Debug.Log("ExtendedLoader: Entry Expansion transpiler Successful");
 					break;
 				}
@@ -296,7 +301,7 @@ namespace ExtendedLoader
 					if (Directory.Exists(folderPath))
 					{
 						HashSet<string> files = new HashSet<string>(new DirectoryInfo(folderPath).EnumerateFiles().Select(file => file.Name));
-						for (int j = 0; j < 31; j++)
+						for (int j = 0; j < XLRoot.MotionCount; j++)
 						{
 							ActionDetail actionDetail = (ActionDetail)j;
 							if (actionDetail == ActionDetail.Standing || actionDetail == ActionDetail.NONE)
@@ -561,7 +566,7 @@ namespace ExtendedLoader
 					if (specialNode != null)
 					{
 						Dictionary<ActionDetail, EffectPivot> specialMotionPivotDic = skinData.specialMotionPivotDic;
-						for (int j = 0; j < 31; j++)
+						for (int j = 0; j < XLRoot.MotionCount; j++)
 						{
 							ActionDetail actionDetail = (ActionDetail)j;
 							string text = actionDetail.ToString();

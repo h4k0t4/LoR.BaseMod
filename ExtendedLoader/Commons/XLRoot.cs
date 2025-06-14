@@ -14,6 +14,22 @@ namespace ExtendedLoader
 	{
 		public const int THUMB_LAYER = 23;
 		public const int THUMB_MASK = 1 << THUMB_LAYER;
+		static int motionCount = -1;
+		public static int MotionCount
+		{
+			get
+			{
+				if (motionCount < 0)
+				{
+					UpdateMotionCount();
+				}
+				return motionCount;
+			}
+		}
+		public static void UpdateMotionCount()
+		{
+			motionCount = Enum.GetValues(typeof(ActionDetail)).Length;
+		}
 		static GameObject _persistentRoot;
 		public static GameObject persistentRoot
 		{

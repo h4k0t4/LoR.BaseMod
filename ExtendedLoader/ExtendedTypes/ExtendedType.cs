@@ -47,6 +47,7 @@ namespace ExtendedLoader
 
 		public readonly Dictionary<GiftPosition, string> customVisualGifts = new Dictionary<GiftPosition, string>();
 
+		public static readonly Dictionary<CustomizingLookType, Dictionary<string, int>> idsByNames = new Dictionary<CustomizingLookType, Dictionary<string, int>>
 		{
 			[CustomizingLookType.FrontHair] = new Dictionary<string, int>(),
 			[CustomizingLookType.BackHair] = new Dictionary<string, int>(),
