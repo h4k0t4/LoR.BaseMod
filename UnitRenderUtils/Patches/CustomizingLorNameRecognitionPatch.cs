@@ -23,7 +23,7 @@ namespace ExtendedLoader
 		[HarmonyFinalizer]
 		static Exception CustomizingBookSkinLoader_GetWorkshopBookSkinData_Finalizer(Exception __exception, ref WorkshopSkinData __result, string id, string name)
 		{
-			if (__exception != null)
+			if (__exception != null && XLConfig.Instance.logRenderErrors)
 			{
 				Debug.Log($"Got an error trying to load skin data for {id}:{name}, this is most frequently caused by mods attempting to add special motions with hardcoded patches without null-checking to see if a skin has been returned to begin with: ");
 				Debug.LogException(__exception);
