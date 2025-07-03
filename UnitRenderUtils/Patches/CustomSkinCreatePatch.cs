@@ -117,7 +117,8 @@ namespace ExtendedLoader
 
 		[HarmonyPatch(typeof(UICharacterRenderer), nameof(UICharacterRenderer.SetCharacter))]
 		[HarmonyTranspiler]
-		static IEnumerable<CodeInstruction> UICharacterRenderer_SetCharacter_Transpiler(IEnumerable<CodeInstruction> instructions)
+		[HarmonyPriority(Priority.LowerThanNormal)]
+		static IEnumerable<CodeInstruction> UICharacterRenderer_SetCharacter_Transpiler(IEnumerable<CodeInstruction> instructions, ILGenerator ilgen)
 		{
 			var bookGetter = PropertyGetter(typeof(UnitDataModel), nameof(UnitDataModel.bookItem));
 			var customBookGetter = PropertyGetter(typeof(UnitDataModel), nameof(UnitDataModel.CustomBookItem));
@@ -128,11 +129,24 @@ namespace ExtendedLoader
 			var fixGenderMethods = new MethodInfo[] { Method(typeof(CustomSkinCreatePatch), nameof(TryInjectCreatureGender)), Method(typeof(CustomSkinCreatePatch), nameof(TryInjectEgoGender)) };
 			var isWorkshopGetter = PropertyGetter(typeof(BookModel), nameof(BookModel.IsWorkshop));
 			var checkPseudoCoreMethod = Method(typeof(CustomSkinCreatePatch), nameof(TryCheckPseudoCoreSkins));
+			var tryFixCustomSkinOverride = Method(typeof(CustomSkinCreatePatch), nameof(TryFixCustomSkinOverride));
 			bool obtainedFlag = false;
-			LocalBuilder local = null;
+			bool insertedTypeFix = false;
+			LocalBuilder lateInitFlagLocal = null;
+			Label defaultSkinRenderLabel = default;
 			var codes = new List<CodeInstruction>(instructions);
 			int genderInjectCounter = 0;
-			for (var i = 0; i < codes.Count; i++)
+
+			for (int i = 0; i < codes.Count; i++)
+			{
+				if (codes[i].IsLdloc(8) && codes[i + 1].LoadsConstant(2) && codes[i + 2].Branches(out var maybeLabel))
+				{
+					defaultSkinRenderLabel = maybeLabel.Value;
+					break;
+				}
+			}
+
+			for (int i = 0; i < codes.Count; i++)
 			{
 				if (codes[i].opcode == Ldarg_1)
 				{
@@ -167,8 +181,8 @@ namespace ExtendedLoader
 								{
 									if (codes[j].IsStloc())
 									{
-										local = codes[j].operand as LocalBuilder;
-										if (local != null && local.LocalType == typeof(bool))
+										lateInitFlagLocal = codes[j].operand as LocalBuilder;
+										if (lateInitFlagLocal != null && lateInitFlagLocal.LocalType == typeof(bool))
 										{
 											obtainedFlag = true;
 											break;
@@ -186,7 +200,7 @@ namespace ExtendedLoader
 							codes.InsertRange(i + 1, new CodeInstruction[]
 							{
 								new CodeInstruction(Ldc_I4_1),
-								new CodeInstruction(Stloc_S, local)
+								new CodeInstruction(Stloc_S, lateInitFlagLocal)
 							});
 							i += 2;
 						}
@@ -208,6 +222,29 @@ namespace ExtendedLoader
 						});
 						i += 2;
 						genderInjectCounter++;
+					}
+				}
+				else if (codes[i].IsLdloc(8) && !insertedTypeFix)
+				{
+					codes.InsertRange(i, new CodeInstruction[]
+					{
+						new CodeInstruction(Ldloca, 8).MoveLabelsFrom(codes[i]),
+						new CodeInstruction(Ldloc_3),
+						new CodeInstruction(Call, tryFixCustomSkinOverride)
+					});
+					i += 3;
+					insertedTypeFix = true;
+				}
+				else if (codes[i].IsStloc(out var localIndex) && (localIndex == 9 || localIndex == 10))
+				{
+					if (defaultSkinRenderLabel != default)
+					{
+						codes.InsertRange(i + 1, new CodeInstruction[]
+						{
+							new CodeInstruction(Ldloc_S, (byte)localIndex),
+							new CodeInstruction(Brfalse, defaultSkinRenderLabel)
+						});
+						i += 2;
 					}
 				}
 			}
@@ -234,6 +271,17 @@ namespace ExtendedLoader
 		static bool TryCheckPseudoCoreSkins(bool isWorkshop)
 		{
 			return isWorkshop || CustomizingBookSkinLoader.Instance.GetWorkshopBookSkinData("") != null;
+		}
+		static void TryFixCustomSkinOverride(ref int skinType, string characterName)
+		{
+			if (skinType != 0)
+			{
+				return;
+			}
+			if (LorName.IsCompressed(characterName))
+			{
+				skinType = 2;
+			}
 		}
 
 		//catch other mods breaking things

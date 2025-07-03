@@ -250,11 +250,11 @@ namespace ExtendedLoader
 
 		[HarmonyPatch(typeof(BattleEmotionCoinUI), nameof(BattleEmotionCoinUI.Acquisition))]
 		[HarmonyPrefix]
-		static bool BattleEmotionCoinUI_Acquisition_Prefix(BattleUnitModel unit)
+		static bool BattleEmotionCoinUI_Acquisition_Prefix(BattleUnitModel unit, BattleEmotionCoinUI __instance)
 		{
 			try
 			{
-				if (BattleManagerUI.Instance.ui_unitListInfoSummary.GetProfileUI(unit) == null)
+				if (BattleManagerUI.Instance.ui_unitListInfoSummary.GetProfileUI(unit) == null || __instance.GetCoinData(unit) == null)
 				{
 					return false;
 				}
@@ -262,6 +262,7 @@ namespace ExtendedLoader
 			catch (Exception ex)
 			{
 				Debug.LogException(ex);
+				return false;
 			}
 			return true;
 		}
