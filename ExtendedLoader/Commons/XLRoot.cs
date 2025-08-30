@@ -15,6 +15,7 @@ namespace ExtendedLoader
 		public const int THUMB_LAYER = 23;
 		public const int THUMB_MASK = 1 << THUMB_LAYER;
 		static int motionCount = -1;
+
 		public static int MotionCount
 		{
 			get

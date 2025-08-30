@@ -71,6 +71,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Commons\SpriteCompressionConfig.cs" />
     <Compile Include="Patches\CustomSkinPrefabPatch.cs" />
     <Compile Include="Patches\CustomUnitDataSaveLoadPatch.cs" />
     <Compile Include="Patches\EarlyPatches.cs" />

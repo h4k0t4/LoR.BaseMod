@@ -16,6 +16,7 @@ namespace ExtendedLoader
 		{
 			try
 			{
+				SpriteCompressionConfig.Load();
 				var harmony = new Harmony("Cyaminthe.ExtendedLoader.HighPriority");
 				harmony.PatchAll(typeof(EarlyPatches));
 				XLRoot.LoadModFolders();

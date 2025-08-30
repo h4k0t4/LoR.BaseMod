@@ -158,6 +158,13 @@ namespace ExtendedLoader
 					CharacterSound._motionSoundResources.Add(audioClip.name, audioClip);
 				}
 			}
+			foreach (AudioClip audioClip in Resources.LoadAll<AudioClip>("Sounds/Creature"))
+			{
+				if (!CharacterSound._motionSoundResources.ContainsKey(audioClip.name))
+				{
+					CharacterSound._motionSoundResources.Add(audioClip.name, audioClip);
+				}
+			}
 		}
 	}
 }

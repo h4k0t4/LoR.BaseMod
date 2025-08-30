@@ -9,7 +9,6 @@ using Workshop;
 using System.Globalization;
 using System.IO;
 using LOR_DiceSystem;
-using System.Drawing;
 
 namespace ExtendedLoader
 {
@@ -396,8 +395,7 @@ namespace ExtendedLoader
 									pathForSize = pathForSize ?? effectSpritePath;
 								}
 
-								isDynamicRes &= pathForSize != null;
-								Vector2Int size = isDynamicRes ? GetImageNativeSize(folderPath + pathForSize) : new Vector2Int(512, 512);
+								Vector2Int size = (isDynamicRes && pathForSize != null) ? SpriteUtilExtension.TryGetImageNativeSize(folderPath + pathForSize) : new Vector2Int(512, 512);
 								float res = defaultRes;
 								XmlNode sizeX = actionNode.Attributes.GetNamedItem("size_x");
 								if (sizeX != null)
@@ -582,18 +580,6 @@ namespace ExtendedLoader
 			catch (Exception ex)
 			{
 				Debug.LogException(ex);
-			}
-		}
-		static Vector2Int GetImageNativeSize(string path)
-		{
-			try
-			{
-				var img = Image.FromStream(File.OpenRead(path), false, false);
-				return new Vector2Int(img.Width, img.Height);
-			}
-			catch
-			{
-				return new Vector2Int(512, 512);
 			}
 		}
 		static void AddPivot(Dictionary<string, EffectPivot> atkEffectPivotDic, XmlNode effectNode, string pivotNode)

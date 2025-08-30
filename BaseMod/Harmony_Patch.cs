@@ -22,7 +22,6 @@ using ExtendedLoader;
 using static System.Reflection.Emit.OpCodes;
 using static HarmonyLib.AccessTools;
 using EnumExtenderV2;
-using System.Xml.Linq;
 
 namespace BaseMod
 {
@@ -418,43 +417,7 @@ namespace BaseMod
 		public static Workshop.WorkshopAppearanceInfo LoadCustomAppearance(string path)
 		{
 			return Workshop.WorkshopAppearanceItemLoader.LoadCustomAppearance(path);
-		}/*
-		//Clone special motion characterMotion
-		[HarmonyPatch(typeof(Workshop.WorkshopSkinDataSetter), nameof(Workshop.WorkshopSkinDataSetter.SetMotionData))]
-		[HarmonyPrefix]
-		static void WorkshopSkinDataSetter_SetMotionData_Pre(Workshop.WorkshopSkinDataSetter __instance, ActionDetail motion)
-		{
-			try
-			{
-				if (__instance.Appearance.GetCharacterMotion(motion) == null)
-				{
-					CharacterMotion NewMotion = CopyCharacterMotion(__instance.Appearance, motion);
-					__instance.Appearance._motionList.Add(NewMotion);
-					if (__instance.Appearance._motionList.Count > 0)
-					{
-						foreach (CharacterMotion characterMotion in __instance.Appearance._motionList)
-						{
-							if (!__instance.Appearance.CharacterMotions.ContainsKey(characterMotion.actionDetail))
-							{
-								__instance.Appearance.CharacterMotions.Add(characterMotion.actionDetail, characterMotion);
-							}
-							characterMotion.gameObject.SetActive(false);
-						}
-					}
-				}
-				else if (motion >= ActionDetail.Special)
-				{
-					__instance.Appearance.GetCharacterMotion(motion).transform.position = __instance.Appearance._motionList[0].transform.position;
-					__instance.Appearance.GetCharacterMotion(motion).transform.localPosition = __instance.Appearance._motionList[0].transform.localPosition;
-					__instance.Appearance.GetCharacterMotion(motion).transform.localScale = __instance.Appearance._motionList[0].transform.localScale;
-					__instance.Appearance.GetCharacterMotion(motion).transform.name = "Custom_" + motion.ToString();
-				}
-			}
-			catch (Exception ex)
-			{
-				File.WriteAllText(Application.dataPath + "/Mods/SetMotionDataerror.log", ex.Message + Environment.NewLine + ex.StackTrace);
-			}
-		}*/
+		}
 		//no longer used
 		public static GameObject CreateCustomCharacter_new(Workshop.WorkshopSkinData workshopSkinData, out string resourceName, Transform characterRotationCenter = null)
 		{
@@ -518,95 +481,6 @@ namespace BaseMod
 
 			return characterMotion;
 		}
-		//CharacterSound
-		//new version moved to ExtendedLoader
-		/*
-		[HarmonyPatch(typeof(CharacterSound), nameof(CharacterSound.LoadAudioCoroutine))]
-		[HarmonyPrefix]
-		static bool CharacterSound_LoadAudioCoroutine_Pre(CharacterSound __instance, string path, List<CharacterSound.ExternalSound> externalSoundList, ref IEnumerator __result)
-		{
-			try
-			{
-				__result = LoadAudioCoroutine(path, externalSoundList, __instance._motionSounds);
-			}
-			catch (Exception ex)
-			{
-				ModContentManager.Instance.AddErrorLog(ex.Message + Environment.NewLine + ex.StackTrace);
-				File.WriteAllText(Application.dataPath + "/Mods/LoadAudioCoroutineerror.log", ex.Message + Environment.NewLine + ex.StackTrace);
-			}
-			return false;
-		}
-		static IEnumerator LoadAudioCoroutine(string path, List<CharacterSound.ExternalSound> externalSoundList, List<CharacterSound.Sound> motionSounds)
-		{
-			foreach (CharacterSound.ExternalSound externalSound1 in externalSoundList)
-			{
-				CharacterSound.ExternalSound externalSound = externalSound1;
-				string soundName = externalSound.soundName;
-				bool win = externalSound.isWin;
-				MotionDetail motion = externalSound.motion;
-				string path1 = Path.Combine(path, soundName);
-				AudioType audioType = AudioType.OGGVORBIS;
-				if (path1.EndsWith(".wav"))
-					audioType = AudioType.WAV;
-				if (File.Exists(path1))
-				{
-					using (UnityWebRequest www = UnityWebRequestMultimedia.GetAudioClip("file://" + path1, audioType))
-					{
-						yield return www.SendWebRequest();
-						if (www.isNetworkError)
-						{
-							Debug.Log(www.error);
-						}
-						else
-						{
-							DownloadHandlerAudioClip downloadHandler = www.downloadHandler as DownloadHandlerAudioClip;
-							if (downloadHandler != null && downloadHandler.isDone)
-							{
-								AudioClip audioClip = downloadHandler.audioClip;
-								audioClip.name = soundName;
-								CharacterSound.Sound sound1 = motionSounds.Find(x => x.motion == motion);
-								if (sound1 != null)
-								{
-									if (win)
-									{
-										sound1.winSound = audioClip;
-									}
-									else
-									{
-										sound1.loseSound = audioClip;
-									}
-								}
-								else
-								{
-									CharacterSound.Sound sound2 = new CharacterSound.Sound
-									{
-										motion = motion
-									};
-									if (win)
-									{
-										sound2.winSound = audioClip;
-									}
-									else
-									{
-										sound2.loseSound = audioClip;
-									}
-									motionSounds.Add(sound2);
-									sound2 = null;
-								}
-								audioClip = null;
-								sound1 = null;
-							}
-							downloadHandler = null;
-						}
-					}
-				}
-				soundName = null;
-				soundName = null;
-				path1 = null;
-				externalSound = null;
-			}
-		}
-		*/
 		//Remove Garbage Projection
 		[HarmonyPatch(typeof(CustomCoreBookInventoryModel), nameof(CustomCoreBookInventoryModel.GetBookIdList_CustomCoreBook))]
 		[HarmonyPostfix]
@@ -624,34 +498,7 @@ namespace BaseMod
 			}
 			return idList;
 		}
-		//save custom title
-		//moved to BaseBridge
-		/*
-		[HarmonyPatch(typeof(UnitDataModel), nameof(UnitDataModel.GetSaveData))]
-		[HarmonyPostfix]
-		static void UnitDataModel_GetSaveData_Post(UnitDataModel __instance, SaveData __result)
-		{
-			try
-			{
-				var saveDict = __result.GetDictionarySelf();
-				if (OrcTools.GiftAndTitleDic.TryGetValue(__instance.prefixID, out var prefixLorId) && prefixLorId != __instance.prefixID)
-				{
-					saveDict[UnitDataModel.save_prefixID] = new SaveData(0);
-					saveDict.Add("BasemodPrefixID", prefixLorId.GetSaveData());
-				}
-				if (OrcTools.GiftAndTitleDic.TryGetValue(__instance.postfixID, out var postfixLorId) && postfixLorId != __instance.postfixID)
-				{
-					saveDict[UnitDataModel.save_postfixID] = new SaveData(0);
-					saveDict.Add("BasemodPostfixID", postfixLorId.GetSaveData());
-				}
-			}
-			catch (Exception ex)
-			{
-				File.WriteAllText(Application.dataPath + "/Mods/SaveCustomTitleerror.txt", ex.Message + Environment.NewLine + ex.StackTrace);
-			}
-		}
-		*/
-		//load custom title
+		//load custom title (old save compatibility)
 		[HarmonyPatch(typeof(UnitDataModel), nameof(UnitDataModel.LoadFromSaveData))]
 		[HarmonyPostfix]
 		static void UnitDataModel_LoadFromSaveData_Post(UnitDataModel __instance, SaveData data)
@@ -1135,68 +982,6 @@ namespace BaseMod
 			}
 			return result;
 		}
-		/*
-		//防止被动过多炸UI，存在字体问题待解决
-		[HarmonyPatch(typeof(BattleUnitInformationUI_PassiveList), nameof(BattleUnitInformationUI_PassiveList.SetData))]
-		[HarmonyPrefix]
-		static void BattleUnitInformationUI_PassiveList_SetData_Pre(BattleUnitInformationUI_PassiveList __instance, List<PassiveAbilityBase> passivelist)
-		{
-			try
-			{
-				int unhidden = passivelist.Count(passive => !passive.isHide) + 1;
-				if (__instance.passiveSlotList.Count < unhidden)
-				{
-					__instance.passiveSlotList.Capacity = unhidden;
-					var copyHelper = __instance.passiveSlotList[0].Rect.GetComponent<BattleUnitInformationPassiveSlotCopyHelper>();
-					if (copyHelper == null)
-					{
-						copyHelper = __instance.passiveSlotList[0].Rect.gameObject.AddComponent<BattleUnitInformationPassiveSlotCopyHelper>();
-						copyHelper.Init(__instance.passiveSlotList[0]);
-					}
-					for (int i = __instance.passiveSlotList.Count; i < unhidden; i++)
-					{
-						__instance.passiveSlotList.Add(copyHelper.CopyThis());
-					}
-				}
-			}
-			catch (Exception ex)
-			{
-				File.WriteAllText(Application.dataPath + "/Mods/BUIUIPSerror.log", ex.Message + Environment.NewLine + ex.StackTrace);
-			}
-		}
-		private class BattleUnitInformationPassiveSlotCopyHelper : MonoBehaviour
-		{
-			public TextMeshProUGUI txt_PassiveDesc;
-
-			public Image img_Icon;
-
-			public Image img_IconGlow;
-
-			public RectTransform Rect;
-
-			public void Init(BattleUnitInformationUI_PassiveList.BattleUnitInformationPassiveSlot origin)
-			{
-				txt_PassiveDesc = origin.txt_PassiveDesc;
-				img_Icon = origin.img_Icon;
-				img_IconGlow = origin.img_IconGlow;
-				Rect = origin.Rect;
-			}
-
-			public BattleUnitInformationUI_PassiveList.BattleUnitInformationPassiveSlot CopyThis()
-			{
-				var helperCopy = Instantiate(this, transform.parent);
-				helperCopy.gameObject.SetActive(false);
-				var result = new BattleUnitInformationUI_PassiveList.BattleUnitInformationPassiveSlot
-				{
-					Rect = helperCopy.Rect,
-					txt_PassiveDesc = helperCopy.txt_PassiveDesc,
-					img_Icon = helperCopy.img_Icon,
-					img_IconGlow = helperCopy.img_IconGlow
-				};
-				return result;
-			}
-		}
-		*/
 		//Card
 		//CardName
 		[HarmonyPatch(typeof(BattleDiceCardModel), nameof(BattleDiceCardModel.GetName))]
@@ -1345,207 +1130,6 @@ namespace BaseMod
 			}
 			return cardArtwork;
 		}
-		//If has script and is not creating a new playingcard,return _script
-		/*[HarmonyPatch(typeof(BattleDiceCardModel), nameof(BattleDiceCardModel.CreateDiceCardSelfAbilityScript))]
-		[HarmonyPrefix]
-		static bool BattleDiceCardModel_CreateDiceCardSelfAbilityScript_Pre(BattleDiceCardModel __instance, ref DiceCardSelfAbilityBase __result)
-		{
-			try
-			{
-				if (__instance._script != null)
-				{
-					System.Diagnostics.StackTrace stackTrace = new System.Diagnostics.StackTrace();
-					string name = stackTrace.GetFrame(2).GetMethod().Name;
-					if (!name.Contains("AddCard") && !name.Contains("AllowTargetChanging"))
-					{
-						__result = __instance._script;
-						return false;
-					}
-				}
-			}
-			catch (Exception ex)
-			{
-				File.WriteAllText(Application.dataPath + "/Mods/ScriptFixPreerror.txt", ex.Message + Environment.NewLine + ex.StackTrace);
-			}
-			return true;
-		}*/
-		//as it turns out, unconditionally persisting the original script causes issues with more than one thing
-		//(pinocchio playing cards as wrong owner, wolf ego stacking without resetting, and probably others)
-		//to not completely ruin compatibility going forwards, persisting must be disabled
-		//however, type-checking is okay, and so is creating fake cards for scripts to not null-reference, so this is still done
-		//if anything still needs persistent data, the "main" script can now be accessed as "card.card._script"
-		// PATCH REMOVED FOR OPTIMIZATION DUE TO BEING DUPLICATED IN ASSORTEDFIXES
-		/*
-		[HarmonyPatch(typeof(BattleDiceCardModel), nameof(BattleDiceCardModel.CreateDiceCardSelfAbilityScript))]
-		[HarmonyPostfix]
-		static void BattleDiceCardModel_CreateDiceCardSelfAbilityScript_Post(BattleDiceCardModel __instance, ref DiceCardSelfAbilityBase __result)
-		{
-			try
-			{
-				if (__result == null)
-				{
-					__instance._script = null;
-					return;
-				}
-				if (__instance._script == null || __instance._script.GetType() != __result.GetType())
-				{
-					__instance._script = __result;
-				}
-				else
-				{
-					FixScriptCard(__instance, __instance._script);
-				}
-				FixScriptCard(__instance, __result);
-			}
-			catch (Exception ex)
-			{
-				File.WriteAllText(Application.dataPath + "/Mods/ScriptFixPosterror.txt", ex.Message + Environment.NewLine + ex.StackTrace);
-			}
-		}
-		static void FixScriptCard(BattleDiceCardModel card, DiceCardSelfAbilityBase script)
-		{
-			if (script.card == null)
-			{
-				script.card = new BattlePlayingCardDataInUnitModel
-				{
-					owner = card.owner,
-					card = card,
-					cardAbility = script
-				};
-			}
-			else
-			{
-				if (!script.card.isKeepedCard)
-				{
-					script.card.cardAbility = script;
-				}
-				if (script.card.owner == null)
-				{
-					script.card.owner = card.owner;
-				}
-			}
-		}
-		*/
-
-		//Apply owner for personal card
-		/*
-		[HarmonyPatch(typeof(BattlePersonalEgoCardDetail), nameof(BattlePersonalEgoCardDetail.AddCard), new Type[] { typeof(LorId) })]
-		[HarmonyPrefix]
-		static bool BattlePersonalEgoCardDetail_AddCard_Pre(BattlePersonalEgoCardDetail __instance, LorId cardId)
-		{
-			try
-			{
-				DiceCardXmlInfo cardItem = ItemXmlDataList.instance.GetCardItem(cardId, false);
-				if (cardItem == null)
-				{
-					return false;
-				}
-				if (!cardItem.IsPersonal())
-				{
-					return false;
-				}
-				if (__instance._cardsAll.FindAll((BattleDiceCardModel x) => x.GetID() == cardId).Count == 0)
-				{
-					BattleDiceCardModel battleDiceCardModel = BattleDiceCardModel.CreatePlayingCard(cardItem);
-					battleDiceCardModel.owner = __instance._self;
-					__instance._cardsAll.Add(battleDiceCardModel);
-					__instance._cardInHand.Add(battleDiceCardModel);
-					if (battleDiceCardModel.XmlData.IsEgo())
-					{
-						battleDiceCardModel.ResetCoolTime();
-						battleDiceCardModel.SetMaxCooltime();
-						battleDiceCardModel.SetCurrentCostMax();
-					}
-				}
-				return false;
-			}
-			catch (Exception ex)
-			{
-				File.WriteAllText(Application.dataPath + "/Mods/PersonalEGOAddCarderror.log", ex.Message + Environment.NewLine + ex.StackTrace);
-			}
-			return true;
-		}
-		*/
-		/*
-		[HarmonyPatch(typeof(BattlePersonalEgoCardDetail), nameof(BattlePersonalEgoCardDetail.AddCard), new Type[] { typeof(LorId) })]
-		[HarmonyTranspiler]
-		static IEnumerable<CodeInstruction> BattlePersonalEgoCardDetail_AddCard_In(IEnumerable<CodeInstruction> instructions)
-		{
-			var method = Method(typeof(BattleDiceCardModel), nameof(BattleDiceCardModel.CreatePlayingCard));
-			foreach (var instruction in instructions)
-			{
-				yield return instruction;
-				if (instruction.Is(Call, method))
-				{
-					yield return new CodeInstruction(Dup);
-					yield return new CodeInstruction(Ldarg_0);
-					yield return new CodeInstruction(Ldfld, Field(typeof(BattlePersonalEgoCardDetail), nameof(BattlePersonalEgoCardDetail._self)));
-					yield return new CodeInstruction(Stfld, Field(typeof(BattleDiceCardModel), nameof(BattleDiceCardModel.owner)));
-				}
-			}
-		}
-		//CardSelfAbilityKeywords
-		[HarmonyPatch(typeof(BattleCardAbilityDescXmlList), nameof(BattleCardAbilityDescXmlList.GetAbilityKeywords_byScript))]
-		[HarmonyPrefix]
-		[HarmonyPriority(Priority.HigherThanNormal)]
-		static void BattleCardAbilityDescXmlList_GetAbilityKeywords_byScript_Pre(BattleCardAbilityDescXmlList __instance, string scriptName)
-		{
-			if (!__instance._dictionaryKeywordCache.ContainsKey(scriptName))
-			{
-				try
-				{
-					if (AssemblyManager.Instance.CreateInstance_DiceCardAbility(scriptName) is DiceCardAbilityBase cardAbility)
-					{
-						__instance._dictionaryKeywordCache[scriptName] = cardAbility.Keywords.ToList();
-						return;
-					}
-				}
-				catch (Exception ex)
-				{
-					File.WriteAllText(Application.dataPath + "/Mods/KeywordsbyScripterror.log", ex.Message + Environment.NewLine + ex.StackTrace);
-				}
-				try
-				{
-					if (AssemblyManager.Instance.CreateInstance_DiceCardSelfAbility(scriptName) is DiceCardSelfAbilityBase cardSelfAbility)
-					{
-						__instance._dictionaryKeywordCache[scriptName] = cardSelfAbility.Keywords.ToList();
-						return;
-					}
-				}
-				catch (Exception ex)
-				{
-					File.WriteAllText(Application.dataPath + "/Mods/KeywordsbyScripterror.log", ex.Message + Environment.NewLine + ex.StackTrace);
-				}
-				__instance._dictionaryKeywordCache[scriptName] = new List<string>();
-			}
-		}
-		*/
-
-		//RangeSpecial - DISABLED; SpecialRangeUX used instead
-		/*
-		[HarmonyPatch(typeof(UISpriteDataManager), nameof(UISpriteDataManager.GetRangeIconSprite))]
-		[HarmonyPrefix]
-		static bool UISpriteDataManager_GetRangeIconSprite_Pre(ref Sprite __result, CardRange range)
-		{
-			try
-			{
-				if (ArtWorks == null)
-				{
-					GetArtWorks();
-				}
-				if (range == CardRange.Special)
-				{
-					__result = ArtWorks["CommonPage_RightTop_Type_SpecialAttack"];
-					return false;
-				}
-			}
-			catch (Exception ex)
-			{
-				File.WriteAllText(Application.dataPath + "/Mods/SpecialRangeIconerror.log", ex.Message + Environment.NewLine + ex.StackTrace);
-			}
-			return true;
-		}
-		*/
 		//CardBufIcon
 		[HarmonyPatch(typeof(BattleDiceCardBuf), nameof(BattleDiceCardBuf.GetBufIcon))]
 		[HarmonyPrefix]
@@ -1572,189 +1156,6 @@ namespace BaseMod
 			}
 			return true;
 		}
-		//costtozero real
-		/*
-		[HarmonyPatch(typeof(BattleDiceCardModel), nameof(BattleDiceCardModel.GetCost))]
-		[HarmonyPrefix]
-		static bool BattleDiceCardModel_GetCost_Pre(ref int __result, BattleDiceCardModel __instance)
-		{
-			try
-			{
-				if (__instance._script != null && __instance._script.IsFixedCost())
-				{
-					__result = __instance._xmlData.Spec.Cost;
-					return false;
-				}
-				int baseCost = __instance._curCost;
-				foreach (BattleDiceCardBuf battleDiceCardBuf in __instance._bufList)
-				{
-					baseCost = battleDiceCardBuf.GetCost(baseCost);
-				}
-				int abilityCostAdder = 0;
-				if (__instance.owner != null)
-				{
-					if (!__instance.XmlData.IsPersonal())
-					{
-						abilityCostAdder += __instance.owner.emotionDetail.GetCardCostAdder(__instance);
-						abilityCostAdder += __instance.owner.bufListDetail.GetCardCostAdder(__instance);
-					}
-					if (__instance._script != null)
-					{
-						abilityCostAdder += __instance._script.GetCostAdder(__instance.owner, __instance);
-					}
-				}
-				int finalCost = baseCost + __instance._costAdder + abilityCostAdder;
-				if (__instance._costZero)
-				{
-					finalCost = 0;
-				}
-				if (__instance.owner != null && __instance._script != null && __instance._script != null)
-				{
-					finalCost = __instance._script.GetCostLast(__instance.owner, __instance, finalCost);
-				}
-				__result = Mathf.Max(0, finalCost);
-				return false;
-			}
-			catch (Exception ex)
-			{
-				File.WriteAllText(Application.dataPath + "/Mods/GetCostRemakeerror.log", ex.Message + Environment.NewLine + ex.StackTrace);
-			}
-			return true;
-		}
-		*/
-		/*
-		 * REMOVED FOR OPTIMIZATION DUE TO BEING DUPLICATED IN ASSORTEDFIXES
-		//costtozero real
-		//also apply script GetCostAdder and GetCostLast for personal/ego
-		[HarmonyPatch(typeof(BattleDiceCardModel), nameof(BattleDiceCardModel.GetCost))]
-		[HarmonyTranspiler]
-		static IEnumerable<CodeInstruction> BattleDiceCardModel_GetCost_In(IEnumerable<CodeInstruction> instructions, ILGenerator ilgen)
-		{
-			var codes = instructions.ToList();
-			CodeInstruction jump = null;
-			var ownerField = Field(typeof(BattleDiceCardModel), nameof(BattleDiceCardModel.owner));
-			var scriptField = Field(typeof(BattleDiceCardModel), nameof(BattleDiceCardModel._script));
-			var fixMethod = Method(typeof(Harmony_Patch), nameof(BattleDiceCardModel_GetCost_TryFixOwnerForScript));
-			int i = 0;
-			for (; i < codes.Count; i++)
-			{
-				if (codes[i].Is(Ldfld, ownerField) && codes[i + 1].Branches(out var label))
-				{
-					codes.InsertRange(i + 1, new CodeInstruction[]
-					{
-						new CodeInstruction(Ldarg_0),
-						new CodeInstruction(Call, fixMethod)
-					});
-					jump = new CodeInstruction(Brtrue, label);
-					codes.InsertRange(i + 4, new CodeInstruction[]
-					{
-						new CodeInstruction(Ldarg_0),
-						new CodeInstruction(Call, Method(typeof(Harmony_Patch), nameof(BattleDiceCardModel_GetCost_IsOnlySelfScript))),
-						jump
-					});
-
-					for (i += 7; i < codes.Count; i++)
-					{
-						if (codes[i].opcode == Ldarg_0 && codes[i + 1].Is(Ldfld, scriptField))
-						{
-							var newLabel = ilgen.DefineLabel();
-							codes[i].labels.Add(newLabel);
-							jump.operand = newLabel;
-							i += 2;
-							break;
-						}
-					}
-					break;
-				}
-			}
-			bool checkZero = true;
-			for (; i < codes.Count; i++)
-			{
-				if (checkZero && codes[i].opcode == Add && codes[i + 1].opcode == Stloc_2)
-				{
-					codes.InsertRange(i + 2, new CodeInstruction[]
-					{
-						new CodeInstruction(Ldloca, 2),
-						new CodeInstruction(Ldarg_0),
-						new CodeInstruction(Call, Method(typeof(Harmony_Patch), nameof(BattleDiceCardModel_GetCost_CheckZero)))
-					});
-					checkZero = false;
-				}
-				else if (codes[i].Is(Ldfld, ownerField))
-				{
-					codes.InsertRange(i + 1, new CodeInstruction[]
-					{
-						new CodeInstruction(Ldarg_0),
-						new CodeInstruction(Call, fixMethod)
-					});
-				}
-			}
-			return codes;
-		}
-		static void BattleDiceCardModel_GetCost_CheckZero(ref int cost, BattleDiceCardModel card)
-		{
-			if (card._costZero)
-			{
-				cost = 0;
-			}
-		}
-		static bool BattleDiceCardModel_GetCost_IsOnlySelfScript(BattleDiceCardModel card)
-		{
-			return card.XmlData.IsEgo() || card.XmlData.IsPersonal() || card.owner == null;
-		}
-		static BattleUnitModel BattleDiceCardModel_GetCost_TryFixOwnerForScript(BattleUnitModel owner, BattleDiceCardModel card)
-		{
-			return owner ?? card?._script?.card?.owner;
-		}
-
-
-		//set script owner for floor ego and other unusual cards (so that cost scripts can work for them too)
-		[HarmonyPatch(typeof(BattleUnitCardsInHandUI), nameof(BattleUnitCardsInHandUI.UpdateCardList))]
-		[HarmonyPostfix]
-		[HarmonyPriority(Priority.VeryLow)]
-		static void BattleUnitCardsInHandUI_UpdateCardList_Post(BattleUnitCardsInHandUI __instance)
-		{
-			try
-			{
-				bool reload = false;
-				var owner = __instance.SelectedModel ?? __instance.HOveredModel;
-				if (owner == null)
-				{
-					return;
-				}
-				foreach (var card in __instance._activatedCardList)
-				{
-					var bcard = card.CardModel?._script?.card;
-					if (bcard != null && bcard.owner != owner)
-					{
-						bcard.owner = owner;
-						reload = true;
-					}
-				}
-				if (reload && !reloadGuard)
-				{
-					reloadGuard = true;
-					try
-					{
-						__instance.UpdateCardList();
-					}
-					catch { }
-					reloadGuard = false;
-				}
-			}
-			catch { }
-		}
-		static bool reloadGuard = false;
-
-		//BattleDiceBehavior ignorepower lead to dicevalue zero
-		[HarmonyPatch(typeof(BattleDiceBehavior), nameof(BattleDiceBehavior.UpdateDiceFinalValue))]
-		[HarmonyPrefix]
-		[HarmonyPriority(Priority.Last)]
-		static void BattleDiceBehavior_UpdateDiceFinalValue_Pre(BattleDiceBehavior __instance)
-		{
-			__instance._diceFinalResultValue = Math.Max(1, __instance._diceResultValue);
-		}
-		*/
 
 		//Passive
 		//PassiveName
@@ -1794,79 +1195,6 @@ namespace BaseMod
 
 		//BattleUnitBuff
 		//ReadyBuf
-		/*
-		[HarmonyPatch(typeof(BattleUnitBufListDetail), nameof(BattleUnitBufListDetail.OnRoundStart))]
-		[HarmonyPrefix]
-		static bool BattleUnitBufListDetail_OnRoundStart_Pre(BattleUnitBufListDetail __instance)
-		{
-			try
-			{
-				foreach (BattleUnitBuf ReadyBuf in __instance._readyBufList)
-				{
-					if (!ReadyBuf.IsDestroyed())
-					{
-						BattleUnitBuf buf = __instance._bufList.Find((BattleUnitBuf x) => x.GetType() == ReadyBuf.GetType() && !x.IsDestroyed());
-						if (buf != null && !ReadyBuf.independentBufIcon && buf.GetBufIcon() != null)
-						{
-							buf.stack += ReadyBuf.stack;
-							buf.OnAddBuf(ReadyBuf.stack);
-						}
-						else
-						{
-							__instance.AddBuf(ReadyBuf);
-							ReadyBuf.OnAddBuf(ReadyBuf.stack);
-						}
-					}
-				}
-				__instance._readyBufList.Clear();
-				foreach (BattleUnitBuf ReadyReadyBuf in __instance._readyReadyBufList)
-				{
-					if (!ReadyReadyBuf.IsDestroyed())
-					{
-						BattleUnitBuf rbuf = __instance._readyBufList.Find((BattleUnitBuf x) => x.GetType() == ReadyReadyBuf.GetType() && !x.IsDestroyed());
-						if (rbuf != null && !ReadyReadyBuf.independentBufIcon && rbuf.GetBufIcon() != null)
-						{
-							rbuf.stack += ReadyReadyBuf.stack;
-							rbuf.OnAddBuf(ReadyReadyBuf.stack);
-						}
-						else
-						{
-							__instance._readyBufList.Add(ReadyReadyBuf);
-							ReadyReadyBuf.OnAddBuf(ReadyReadyBuf.stack);
-						}
-					}
-				}
-				__instance._readyReadyBufList.Clear();
-				if (__instance._self.faction == Faction.Player && StageController.Instance.GetStageModel().ClassInfo.chapter == 3)
-				{
-					int kewordBufStack = __instance.GetKewordBufStack(KeywordBuf.Endurance);
-					__instance._self.UnitData.historyInStage.maxEndurance = Mathf.Max(__instance._self.UnitData.historyInStage.maxEndurance, kewordBufStack);
-				}
-				foreach (BattleUnitBuf battleUnitBuf3 in __instance._bufList.ToArray())
-				{
-					try
-					{
-						if (!battleUnitBuf3.IsDestroyed())
-						{
-							battleUnitBuf3.OnRoundStart();
-						}
-					}
-					catch (Exception exception)
-					{
-						Debug.LogException(exception);
-					}
-				}
-				__instance.CheckDestroyedBuf();
-				__instance.CheckAchievements();
-				return false;
-			}
-			catch (Exception ex)
-			{
-				File.WriteAllText(Application.dataPath + "/Mods/ReadyBufFixerror.log", ex.Message + Environment.NewLine + ex.StackTrace);
-			}
-			return true;
-		}
-		*/
 		[HarmonyPatch(typeof(BattleUnitBufListDetail), nameof(BattleUnitBufListDetail.OnRoundStart))]
 		[HarmonyTranspiler]
 		static IEnumerable<CodeInstruction> BattleUnitBufListDetail_OnRoundStart_In(IEnumerable<CodeInstruction> instructions, ILGenerator ilgen)
@@ -1979,58 +1307,6 @@ namespace BaseMod
 
 		//EmotionCard
 		//EmotionCardAbilityApply
-		/*
-		[HarmonyPatch(typeof(BattleEmotionCardModel), MethodType.Constructor, new Type[] { typeof(EmotionCardXmlInfo), typeof(BattleUnitModel) })]
-		[HarmonyPostfix]
-		static void BattleEmotionCardModel_ctor_Post(BattleEmotionCardModel __instance, EmotionCardXmlInfo xmlInfo, BattleUnitModel owner)
-		{
-			try
-			{
-				if (__instance._xmlInfo == null)
-				{
-					__instance._xmlInfo = xmlInfo;
-				}
-				if (__instance._owner == null)
-				{
-					__instance._owner = owner;
-				}
-				if (__instance._abilityList == null)
-				{
-					__instance._abilityList = new List<EmotionCardAbilityBase>();
-				}
-				foreach (string text in xmlInfo.Script)
-				{
-					EmotionCardAbilityBase emotionCardAbilityBase = FindEmotionCardAbility(text.Trim());
-					if (emotionCardAbilityBase != null)
-					{
-						emotionCardAbilityBase.SetEmotionCard(__instance);
-						__instance._abilityList.RemoveAll(x => x.GetType().Name.Substring("EmotionCardAbility_".Length).Trim() == text);
-						__instance._abilityList.Add(emotionCardAbilityBase);
-					}
-				}/*
-				List<string> list = new List<string>();
-				list.AddRange(xmlInfo.Script);
-				foreach (EmotionCardAbilityBase emotionCardAbility in __instance._abilityList)
-				{
-					list.Remove(emotionCardAbility.GetType().Name.Substring("EmotionCardAbility_".Length).Trim());
-				}
-				foreach (string text in list)
-				{
-					EmotionCardAbilityBase emotionCardAbilityBase = FindEmotionCardAbility(text.Trim());
-					if (emotionCardAbilityBase != null)
-					{
-						emotionCardAbilityBase.SetEmotionCard(__instance);
-						__instance._abilityList.Add(emotionCardAbilityBase);
-					}
-				}/
-			}
-			catch (Exception ex)
-			{
-				File.WriteAllText(Application.dataPath + "/Mods/SetEmotionAbilityerror.log", ex.Message + Environment.NewLine + ex.StackTrace);
-			}
-		}
-		*/
-
 		[HarmonyPatch(typeof(BattleEmotionCardModel), MethodType.Constructor, new Type[] { typeof(EmotionCardXmlInfo), typeof(BattleUnitModel) })]
 		[HarmonyPriority(Priority.Low)]
 		[HarmonyTranspiler]
@@ -2252,73 +1528,6 @@ namespace BaseMod
 			}
 			return true;
 		}
-		//EGOData
-		//moved to BaseBridge via integration
-		/*
-		[HarmonyPatch(typeof(EmotionEgoXmlList), nameof(EmotionEgoXmlList.GetData), new Type[] { typeof(LorId) })]
-		[HarmonyPrefix]
-		static bool EmotionEgoXmlList_GetData_Pre(LorId id, ref EmotionEgoXmlInfo __result)
-		{
-			try
-			{
-				OrcTools.CheckReverseEgoDic();
-				if (OrcTools.ReverseEgoDic.TryGetValue(id, out var xml))
-				{
-					__result = xml;
-					return false;
-				}
-			}
-			catch (Exception ex)
-			{
-				ModContentManager.Instance.AddErrorLog(ex.Message + Environment.NewLine + ex.StackTrace);
-				File.WriteAllText(Application.dataPath + "/Mods/EgoCardIderror.log", ex.Message + Environment.NewLine + ex.StackTrace);
-			}
-			return true;
-		}
-		//EGODataById
-		[HarmonyPatch(typeof(EmotionEgoXmlList), nameof(EmotionEgoXmlList.GetData), new Type[] { typeof(LorId), typeof(SephirahType) })]
-		[HarmonyPrefix]
-		static bool EmotionEgoXmlList_GetData_2_Pre(LorId id, SephirahType sephirah, ref EmotionEgoXmlInfo __result)
-		{
-			try
-			{
-				if (OrcTools.CustomEmotionEgo.TryGetValue(sephirah, out var subdict) && subdict.TryGetValue(id, out var xml))
-				{
-					__result = xml;
-					return false;
-				}
-			}
-			catch (Exception ex)
-			{
-				ModContentManager.Instance.AddErrorLog(ex.Message + Environment.NewLine + ex.StackTrace);
-				File.WriteAllText(Application.dataPath + "/Mods/EgoCardIderror.log", ex.Message + Environment.NewLine + ex.StackTrace);
-			}
-			return true;
-		}
-		//EGOName
-		[HarmonyPatch(typeof(EmotionEgoCardUI), nameof(EmotionEgoCardUI.Init))]
-		[HarmonyPrefix]
-		static bool EmotionEgoCardUI_Init_Pre(EmotionEgoCardUI __instance, EmotionEgoXmlInfo card)
-		{
-			try
-			{
-				if (OrcTools.EgoDic.TryGetValue(card, out var id))
-				{
-					__instance._card = card;
-					DiceCardXmlInfo cardItem = ItemXmlDataList.instance.GetCardItem(id, false);
-					__instance._cardName.text = cardItem.Name;
-					__instance.gameObject.SetActive(true);
-					return false;
-				}
-			}
-			catch (Exception ex)
-			{
-				ModContentManager.Instance.AddErrorLog(ex.Message + Environment.NewLine + ex.StackTrace);
-				File.WriteAllText(Application.dataPath + "/Mods/EgoCardUIIniterror.log", ex.Message + Environment.NewLine + ex.StackTrace);
-			}
-			return true;
-		}
-		*/
 
 		//custom quest script
 		[HarmonyPatch(typeof(QuestMissionModel), MethodType.Constructor, new Type[] { typeof(QuestModel), typeof(QuestMissionXmlInfo) })]
@@ -3139,138 +2348,7 @@ namespace BaseMod
 				}
 			}
 		}
-		//UIEquipPageScrollList
-		/*
-		[HarmonyPatch(typeof(UIEquipPageScrollList), nameof(UIEquipPageScrollList.SetData))]
-		[HarmonyPrefix]
-		static bool UIEquipPageScrollList_SetData_Pre(UIEquipPageScrollList __instance, List<BookModel> books, UnitDataModel unit, bool init = false)
-		{
-			try
-			{
-				if (init)
-				{
-					__instance.CurrentSelectedBook = null;
-					__instance.currentslotcount = 0;
-				}
-				__instance._selectedUnit = unit;
-				__instance._originBookModelList.Clear();
-				__instance.currentBookModelList.Clear();
-				__instance.isActiveScrollBar = false;
-				__instance._originBookModelList.AddRange(books);
-				__instance.currentBookModelList.AddRange(books);
-				__instance.currentBookModelList = __instance.FilterBookModels(__instance.currentBookModelList);
-				__instance.totalkeysdata.Clear();
-				__instance.CurrentSelectedBook = null;
-				__instance.heightdatalist.Clear();
-				__instance.currentStoryBooksDic.Clear();
-				foreach (BookModel bookModel in __instance.currentBookModelList)
-				{
-					string bookIcon = bookModel.ClassInfo.BookIcon;
-					UIStoryKeyData uistoryKeyData;
-					if (bookModel.IsWorkshop || !Enum.IsDefined(typeof(UIStoryLine), bookIcon))
-					{
-						if (bookModel.ClassInfo is BookXmlInfo_New bookNew)
-						{
-							var storyline = GetModEpMatch(bookNew.LorEpisode);
-							uistoryKeyData = __instance.totalkeysdata.Find((UIStoryKeyData x) => x.workshopId == bookModel.ClassInfo.id.packageId && x.chapter == bookModel.ClassInfo.Chapter && x.StoryLine == ModEpMatch[bookNew.LorEpisode]);
-							if (uistoryKeyData == null)
-							{
-								uistoryKeyData = new UIStoryKeyData(bookModel.ClassInfo.Chapter, bookModel.ClassInfo.id.packageId)
-								{
-									StoryLine = storyline
-								};
-								__instance.totalkeysdata.Add(uistoryKeyData);
-							}
-						}
-						else
-						{
-							uistoryKeyData = __instance.totalkeysdata.Find((UIStoryKeyData x) => x.chapter == bookModel.ClassInfo.Chapter && x.workshopId == bookModel.ClassInfo.workshopID);
-							if (uistoryKeyData == null)
-							{
-								uistoryKeyData = new UIStoryKeyData(bookModel.ClassInfo.Chapter, bookModel.ClassInfo.id.packageId);
-								__instance.totalkeysdata.Add(uistoryKeyData);
-							}
-						}
-					}
-					else
-					{
-						if (!Enum.IsDefined(typeof(UIStoryLine), bookIcon))
-						{
-							Debug.LogError(bookIcon + "스토리 string enum 변환 오류");
-							continue;
-						}
-						UIStoryLine storyLine = (UIStoryLine)Enum.Parse(typeof(UIStoryLine), bookIcon);
-						uistoryKeyData = __instance.totalkeysdata.Find((UIStoryKeyData x) => x.chapter == bookModel.ClassInfo.Chapter && x.StoryLine == storyLine);
-						if (uistoryKeyData == null)
-						{
-							uistoryKeyData = new UIStoryKeyData(bookModel.ClassInfo.Chapter, storyLine);
-							__instance.totalkeysdata.Add(uistoryKeyData);
-						}
-					}
-					if (!__instance.currentStoryBooksDic.ContainsKey(uistoryKeyData))
-					{
-						List<BookModel> list = new List<BookModel>
-							{
-								bookModel
-							};
-						__instance.currentStoryBooksDic.Add(uistoryKeyData, list);
-					}
-					else
-					{
-						__instance.currentStoryBooksDic[uistoryKeyData].Add(bookModel);
-					}
-				}
-				__instance.totalkeysdata.Sort(delegate (UIStoryKeyData x, UIStoryKeyData y)
-				{
-					if (x.chapter == -1 && y.chapter == -1)
-					{
-						return 0;
-					}
-					if (x.chapter < y.chapter)
-					{
-						return -1;
-					}
-					if (x.chapter > y.chapter)
-					{
-						return 1;
-					}
-					int comparenum = x.workshopId.CompareTo(y.workshopId);
-					if (comparenum > 0)
-					{
-						return -1;
-					}
-					if (comparenum < 0)
-					{
-						return 1;
-					}
-					if (x.StoryLine < y.StoryLine)
-					{
-						return -1;
-					}
-					if (x.StoryLine > y.StoryLine)
-					{
-						return 1;
-					}
-					return 0;
-				});
-				__instance.totalkeysdata.Reverse();
-				__instance.CalculateSlotsHeight();
-				__instance.UpdateSlotList();
-				__instance.SetScrollBar();
-				__instance.isClickedUpArrow = false;
-				__instance.isClickedDownArrow = false;
-				LayoutRebuilder.ForceRebuildLayoutImmediate(__instance.rect_slotListRoot);
-				UIOriginEquipPageSlot saveFirstChild = __instance._equipPagesPanelSlotList[0].EquipPageSlotList[0];
-				__instance.SetSaveFirstChild(saveFirstChild);
-				return false;
-			}
-			catch (Exception ex)
-			{
-				File.WriteAllText(Application.dataPath + "/Mods/EPSLSDerror.log", ex.Message + Environment.NewLine + ex.StackTrace);
-			}
-			return true;
-		}
-		*/
+		//UIEquipPageScrollList + UISettingEquipPageScrollList
 		[HarmonyPatch(typeof(UISettingEquipPageScrollList), nameof(UISettingEquipPageScrollList.SetData))]
 		[HarmonyPatch(typeof(UIEquipPageScrollList), nameof(UIEquipPageScrollList.SetData))]
 		[HarmonyTranspiler]
@@ -3337,144 +2415,6 @@ namespace BaseMod
 			}
 			return ModEpMatch[episodeId];
 		}
-		//UISettingEquipPageScrollList
-		/*
-		[HarmonyPatch(typeof(UISettingEquipPageScrollList), nameof(UISettingEquipPageScrollList.SetData))]
-		[HarmonyPrefix]
-		static bool UISettingEquipPageScrollList_SetData_Pre(UISettingEquipPageScrollList __instance, List<BookModel> books, UnitDataModel unit, bool init = false)
-		{
-			try
-			{
-				ModEpMatch = new Dictionary<LorId, UIStoryLine>();
-				if (init)
-				{
-					__instance.CurrentSelectedBook = null;
-					__instance.currentslotcount = 0;
-				}
-				__instance._selectedUnit = unit;
-				__instance._originBookModelList.Clear();
-				__instance.currentBookModelList.Clear();
-				__instance.isActiveScrollBar = false;
-				__instance._originBookModelList.AddRange(books);
-				__instance.currentBookModelList.AddRange(books);
-				__instance.currentBookModelList = __instance.FilterBookModels(__instance.currentBookModelList);
-				__instance.totalkeysdata.Clear();
-				__instance.CurrentSelectedBook = null;
-				__instance.heightdatalist.Clear();
-				__instance.currentStoryBooksDic.Clear();
-				int num = 200;
-				foreach (BookModel bookModel in __instance.currentBookModelList)
-				{
-					string bookIcon = bookModel.ClassInfo.BookIcon;
-					UIStoryKeyData uistoryKeyData;
-					if (bookModel.IsWorkshop || !Enum.IsDefined(typeof(UIStoryLine), bookIcon))
-					{
-						if (bookModel.ClassInfo is BookXmlInfo_New)
-						{
-							if (!ModEpMatch.ContainsKey((bookModel.ClassInfo as BookXmlInfo_New).LorEpisode))
-							{
-								num++;
-								ModEpMatch.Add((bookModel.ClassInfo as BookXmlInfo_New).LorEpisode, (UIStoryLine)num);
-								uistoryKeyData = new UIStoryKeyData(bookModel.ClassInfo.Chapter, bookModel.ClassInfo.id.packageId)
-								{
-									StoryLine = (UIStoryLine)num
-								};
-								__instance.totalkeysdata.Add(uistoryKeyData);
-							}
-							else
-							{
-								uistoryKeyData = __instance.totalkeysdata.Find((UIStoryKeyData x) => x.workshopId == bookModel.ClassInfo.id.packageId && x.chapter == bookModel.ClassInfo.Chapter && x.StoryLine == ModEpMatch[(bookModel.ClassInfo as BookXmlInfo_New).LorEpisode]);
-							}
-						}
-						else
-						{
-							uistoryKeyData = __instance.totalkeysdata.Find((UIStoryKeyData x) => x.chapter == bookModel.ClassInfo.Chapter && x.workshopId == bookModel.ClassInfo.workshopID);
-							if (uistoryKeyData == null)
-							{
-								uistoryKeyData = new UIStoryKeyData(bookModel.ClassInfo.Chapter, bookModel.ClassInfo.id.packageId);
-								__instance.totalkeysdata.Add(uistoryKeyData);
-							}
-						}
-					}
-					else
-					{
-						if (!Enum.IsDefined(typeof(UIStoryLine), bookIcon))
-						{
-							Debug.LogError(bookIcon + "스토리 string enum 변환 오류");
-							continue;
-						}
-						UIStoryLine storyLine = (UIStoryLine)Enum.Parse(typeof(UIStoryLine), bookIcon);
-						uistoryKeyData = __instance.totalkeysdata.Find((UIStoryKeyData x) => x.chapter == bookModel.ClassInfo.Chapter && x.StoryLine == storyLine);
-						if (uistoryKeyData == null)
-						{
-							uistoryKeyData = new UIStoryKeyData(bookModel.ClassInfo.Chapter, storyLine);
-							__instance.totalkeysdata.Add(uistoryKeyData);
-						}
-					}
-					if (!__instance.currentStoryBooksDic.ContainsKey(uistoryKeyData))
-					{
-						List<BookModel> list = new List<BookModel>
-							{
-								bookModel
-							};
-						__instance.currentStoryBooksDic.Add(uistoryKeyData, list);
-					}
-					else
-					{
-						__instance.currentStoryBooksDic[uistoryKeyData].Add(bookModel);
-					}
-				}
-				__instance.totalkeysdata.Sort(delegate (UIStoryKeyData x, UIStoryKeyData y)
-				{
-					if (x.chapter == -1 && y.chapter == -1)
-					{
-						return 0;
-					}
-					if (x.chapter < y.chapter)
-					{
-						return -1;
-					}
-					if (x.chapter > y.chapter)
-					{
-						return 1;
-					}
-					int comparenum = x.workshopId.CompareTo(y.workshopId);
-					if (comparenum > 0)
-					{
-						return -1;
-					}
-					if (comparenum < 0)
-					{
-						return 1;
-					}
-					if (x.StoryLine < y.StoryLine)
-					{
-						return -1;
-					}
-					if (x.StoryLine > y.StoryLine)
-					{
-						return 1;
-					}
-					return 0;
-				});
-				__instance.totalkeysdata.Reverse();
-				__instance.CalculateSlotsHeight();
-				__instance.UpdateSlotList();
-				__instance.SetScrollBar();
-				__instance.isClickedUpArrow = false;
-				__instance.isClickedDownArrow = false;
-				LayoutRebuilder.ForceRebuildLayoutImmediate(__instance.rect_slotListRoot);
-				UIOriginEquipPageSlot saveFirstChild = __instance._equipPagesPanelSlotList[0].EquipPageSlotList[0];
-				__instance.SetSaveFirstChild(saveFirstChild);
-				return false;
-			}
-			catch (Exception ex)
-			{
-				File.WriteAllText(Application.dataPath + "/Mods/SEPSLSDerror.log", ex.Message + Environment.NewLine + ex.StackTrace);
-			}
-			return true;
-		}
-		*/
 		//UISettingInvenEquipPageListSlot
 		[HarmonyPatch(typeof(UISettingInvenEquipPageListSlot), nameof(UISettingInvenEquipPageListSlot.SetBooksData))]
 		[HarmonyPostfix]
@@ -3564,101 +2504,6 @@ namespace BaseMod
 
 		//CustomMapManager
 		//InitCustomMap
-		/*
-		[HarmonyPatch(typeof(StageController), nameof(StageController.InitializeMap))]
-		[HarmonyPrefix]
-		static bool StageController_InitializeMap_Pre(StageController __instance)
-		{
-			try
-			{
-				if (__instance.stageType != StageType.Invitation)
-				{
-					return true;
-				}
-				else
-				{
-					BattleSceneRoot.Instance.HideAllFloorMap();
-					List<string> mapInfo = __instance.GetStageModel().ClassInfo.mapInfo;
-					if (mapInfo != null && mapInfo.Count > 0)
-					{
-						try
-						{
-							foreach (string text in mapInfo)
-							{
-								if (string.IsNullOrWhiteSpace(text))
-								{
-									continue;
-								}
-								string[] array = text.Split(new char[]
-								{
-									'_'
-								});
-								if (array[0].ToLower() == "custom")
-								{
-									string mapName = text.Substring("custom_".Length).Trim();
-									string resourcePath = ModContentManager.Instance.GetModPath(__instance.GetStageModel().ClassInfo.workshopID) + "/CustomMap_" + mapName;
-									if (CustomMapManager.TryGetValue(mapName + "MapManager", out Type mapmanager))
-									{
-										Debug.Log("Find MapManager:" + mapName);
-										if (mapmanager == null)
-										{
-											return true;
-										}
-										GameObject gameObject = Util.LoadPrefab("LibraryMaps/KETHER_Map", BattleSceneRoot.Instance.transform);
-										GameObject borderFrame = gameObject.GetComponent<MapManager>().borderFrame;
-										GameObject backgroundRoot = gameObject.GetComponent<MapManager>().backgroundRoot;
-										UnityEngine.Object.Destroy(gameObject.GetComponent<MapManager>());
-										gameObject.name = "InvitationMap_" + text;
-										MapManager mapManager = (MapManager)gameObject.AddComponent(mapmanager);
-										mapManager.borderFrame = borderFrame;
-										mapManager.backgroundRoot = backgroundRoot;
-										if (mapManager is CustomMapManager)
-										{
-											(mapManager as CustomMapManager).CustomInit();
-										}
-										BattleSceneRoot.Instance.InitInvitationMap(mapManager);
-									}
-									else if (Directory.Exists(resourcePath))
-									{
-										Debug.Log("Find SimpleMap:" + resourcePath);
-										GameObject gameObject = Util.LoadPrefab("LibraryMaps/KETHER_Map", BattleSceneRoot.Instance.transform);
-										GameObject borderFrame = gameObject.GetComponent<MapManager>().borderFrame;
-										GameObject backgroundRoot = gameObject.GetComponent<MapManager>().backgroundRoot;
-										UnityEngine.Object.Destroy(gameObject.GetComponent<MapManager>());
-										gameObject.name = "InvitationMap_" + text;
-										SimpleMapManager simpleMapManager = (SimpleMapManager)gameObject.AddComponent(typeof(SimpleMapManager));
-										simpleMapManager.borderFrame = borderFrame;
-										simpleMapManager.backgroundRoot = backgroundRoot;
-										simpleMapManager.SimpleInit(resourcePath, mapName);
-										simpleMapManager.CustomInit();
-										BattleSceneRoot.Instance.InitInvitationMap(simpleMapManager);
-									}
-								}
-								else
-								{
-									GameObject gameObject2 = Util.LoadPrefab("InvitationMaps/InvitationMap_" + text, BattleSceneRoot.Instance.transform);
-									gameObject2.name = "InvitationMap_" + text;
-									BattleSceneRoot.Instance.InitInvitationMap(gameObject2.GetComponent<MapManager>());
-								}
-							}
-						}
-						catch (Exception ex)
-						{
-							File.WriteAllText(Application.dataPath + "/Mods/stageerror.log", ex.Message + Environment.NewLine + ex.StackTrace);
-							BattleSceneRoot.Instance.InitFloorMap(__instance.CurrentFloor);
-						}
-					}
-				}
-				BattleSceneRoot.Instance.InitFloorMap(__instance.CurrentFloor);
-				return false;
-			}
-			catch (Exception ex)
-			{
-				File.WriteAllText(Application.dataPath + "/Mods/InitializeMaperror.log", ex.Message + Environment.NewLine + ex.StackTrace);
-			}
-			return true;
-		}
-		*/
 		[HarmonyPatch(typeof(StageController), nameof(StageController.InitializeMap))]
 		[HarmonyTranspiler]
 		static IEnumerable<CodeInstruction> StageController_InitializeMap_In(IEnumerable<CodeInstruction> instructions)
@@ -3758,82 +2603,6 @@ namespace BaseMod
 			return gameObject.GetComponents<MapManager>().LastOrDefault();
 		}
 		//EgoMap
-		/*
-		[HarmonyPatch(typeof(BattleSceneRoot), nameof(BattleSceneRoot.ChangeToEgoMap))]
-		[HarmonyPrefix]
-		static bool BattleSceneRoot_ChangeToEgoMap_Pre(string mapName)
-		{
-			try
-			{
-				MapChangeFilter mapChangeFilter = BattleSceneRoot.Instance._mapChangeFilter;
-				GameObject gameObject = null;
-				string[] array = mapName.Split(new char[]
-				{
-			'_'
-				});
-				if (array[0].ToLower() == "custom" && CustomMapManager.TryGetValue(mapName.Substring("custom_".Length).Trim() + "MapManager", out Type mapmanager))
-				{
-					if (mapmanager == null)
-					{
-						return true;
-					}
-					gameObject = Util.LoadPrefab("LibraryMaps/KETHER_Map", BattleSceneRoot.Instance.transform);
-					GameObject borderFrame = gameObject.GetComponent<MapManager>().borderFrame;
-					GameObject backgroundRoot = gameObject.GetComponent<MapManager>().backgroundRoot;
-					try
-					{
-						UnityEngine.Object.Destroy(gameObject.GetComponent<MapManager>());
-					}
-					catch { }
-					gameObject.name = "EGO_CardMap_" + mapName;
-					MapManager mapManager = (MapManager)gameObject.AddComponent(mapmanager);
-					mapManager.borderFrame = borderFrame;
-					mapManager.backgroundRoot = backgroundRoot;
-					if (mapManager is CustomMapManager)
-					{
-						(mapManager as CustomMapManager).CustomInit();
-					}
-					if (gameObject != null)
-					{
-						mapChangeFilter.StartMapChangingEffect(Direction.RIGHT, true);
-						MapManager component = gameObject.GetComponent<MapManager>();
-						gameObject.name = "CreatureMap_" + mapName;
-						component.isBossPhase = false;
-						component.isEgo = true;
-						if (BattleSceneRoot.Instance.currentMapObject.isCreature)
-						{
-							UnityEngine.Object.Destroy(BattleSceneRoot.Instance.currentMapObject.gameObject);
-						}
-						else
-						{
-							BattleSceneRoot.Instance.currentMapObject.EnableMap(false);
-						}
-						if (component != null)
-						{
-							if (BattleSceneRoot.Instance.currentMapObject != null && BattleSceneRoot.Instance.currentMapObject.isCreature)
-							{
-								UnityEngine.Object.Destroy(BattleSceneRoot.Instance.currentMapObject.gameObject);
-								BattleSceneRoot.Instance.currentMapObject = null;
-							}
-							BattleSceneRoot.Instance.currentMapObject = component;
-							BattleSceneRoot.Instance.currentMapObject.ActiveMap(true);
-							BattleSceneRoot.Instance.currentMapObject.InitializeMap();
-							return false;
-						}
-						else
-						{
-							Debug.LogError("Ego map not found");
-						}
-					}
-				}
-			}
-			catch (Exception ex)
-			{
-				File.WriteAllText(Application.dataPath + "/Mods/ChangeToEgoMaperror.log", ex.Message + Environment.NewLine + ex.StackTrace);
-			}
-			return true;
-		}
-		*/
 		[HarmonyPatch(typeof(BattleSceneRoot), nameof(BattleSceneRoot.ChangeToEgoMap))]
 		[HarmonyTranspiler]
 		static IEnumerable<CodeInstruction> BattleSceneRoot_ChangeToEgoMap_In(IEnumerable<CodeInstruction> instructions)
@@ -3972,9 +2741,9 @@ namespace BaseMod
 			{
 				try
 				{
-					gameObject = Util.LoadPrefab("InvitationMaps/InvitationMap_" + name, BattleSceneRoot.Instance.transform);
+					gameObject = Util.LoadPrefab($"InvitationMaps/InvitationMap_{name}", BattleSceneRoot.Instance.transform);
 				}
-				catch (Exception)
+				catch
 				{
 					gameObject = null;
 				}
@@ -3983,23 +2752,25 @@ namespace BaseMod
 			{
 				try
 				{
-					gameObject = Util.LoadPrefab("CreatureMaps/CreatureMap_" + name, BattleSceneRoot.Instance.transform);
+					gameObject = Util.LoadPrefab($"CreatureMaps/CreatureMap_{name}", BattleSceneRoot.Instance.transform);
 				}
-				catch (Exception)
+				catch
 				{
 					gameObject = null;
 				}
 			}
-			GameObject result;
-			if (gameObject != null)
+			if (gameObject == null)
 			{
-				result = gameObject;
+				try
+				{
+					gameObject = Util.LoadPrefab($"LibraryMaps/{name.ToUpper()}_Map", BattleSceneRoot.Instance.transform);
+				}
+				catch
+				{
+					gameObject = null;
+				}
 			}
-			else
-			{
-				result = null;
-			}
-			return result;
+			return gameObject ? gameObject : null;
 		}
 
 		//Others
@@ -4103,93 +2874,183 @@ namespace BaseMod
 			}
 			return true;
 		}
-		/* handled by SerializeField already
-		static void InitUIBattleSettingWaveSlot(UIBattleSettingWaveSlot slot, UIBattleSettingWaveList list)
-		{
-			slot.panel = list;
-			var rect = slot.transform as RectTransform;
-			slot.rect = rect;
-			var waveIcon = rect.Find("[Rect]WaveIcon");
-			var circle = waveIcon.Find("[Image]CircleFrame");
-			var circleGlow = waveIcon.Find("[Image]CircleFrameGlow");
-			var icon = waveIcon.Find("[Image]Icon");
-			var iconGlow = waveIcon.Find("[Image]IconGlow");
-			slot.img_circle = circle.GetComponent<Image>();
-			slot.hsv_Circle = circle.GetComponent<_2dxFX_HSV>();
-			slot.img_circleglow = circleGlow.GetComponent<Image>();
-			slot.hsv_CircleGlow = circleGlow.GetComponent<_2dxFX_HSV>();
-			slot.img_Icon = icon.GetComponent<Image>();
-			slot.hsv_Icon = icon.GetComponent<_2dxFX_HSV>();
-			slot.img_IconGlow = iconGlow.GetComponent<Image>();
-			slot.hsv_IconGlow = iconGlow.GetComponent<_2dxFX_HSV>();
-			var text = rect.Find("[Text]AlarmText");
-			slot.txt_Alarm = text.GetComponent<TextMeshProUGUI>();
-			slot.materialsetter_txtAlarm = text.GetComponent<TextMeshProMaterialSetter>();
-			slot.arrow = rect.Find("[Image]Arrow (1)").GetComponent<Image>();
-			slot.defeatColor = new Color(0.454902f, 0.1098039f, 0f, 1f);
-			slot.anim = slot.GetComponent<Animator>();
-			slot.cg = slot.GetComponent<CanvasGroup>();
-			slot.transform.localPosition = new Vector2(120f, 0f);
-			slot.gameObject.SetActive(false);
-		}
-		*/
+
 		//over 999 dicevalue
+		class BattleSimpleActionUI_Dice_ExtraNumbers : MonoBehaviour
+		{
+			public void Init(BattleSimpleActionUI_Dice originUI)
+			{
+				this.originUI = originUI;
+				UpdateLists();
+			}
+
+			public void SetDiceValue(int diceValue)
+			{
+				if (diceValue < 0)
+				{
+					diceValue = 0;
+					Debug.LogError("Vanilla값이 0아래로 들어옴");
+				}
+
+				UpdateLists();
+
+				int digitCount = 0;
+				int uncounted = diceValue;
+				do
+				{
+					digitCount++;
+					uncounted /= 10;
+				}
+				while (uncounted > 0);
+				ExtendNumberPlaces(digitCount);
+
+				List<Sprite> battleDice_NumberAutoSlice = UISpriteDataManager.instance.BattleDice_NumberAutoSlice;
+				List<Sprite> battleDice_numberAutoSliceBg = UISpriteDataManager.instance.BattleDice_numberAutoSliceBg;
+				int place = 0;
+				for (; place < digitCount; place++)
+				{
+					int digit = diceValue % 10;
+					Image digitPlace = img_numbers[place];
+					digitPlace.sprite = battleDice_NumberAutoSlice[digit];
+					digitPlace.SetNativeSize();
+					digitPlace.gameObject.SetActive(true);
+					Image digitPlaceBg = img_numberbgs[place];
+					digitPlaceBg.sprite = battleDice_numberAutoSliceBg[digit];
+					digitPlaceBg.SetNativeSize();
+					digitPlaceBg.gameObject.SetActive(true);
+					diceValue /= 10;
+				}
+				for (; place < img_numbers.Count; place++)
+				{
+					img_numbers[place].gameObject.SetActive(false);
+					img_numberbgs[place].gameObject.SetActive(false);
+				}
+				LayoutRebuilder.ForceRebuildLayoutImmediate((RectTransform)originUI.layout_numbers);
+				for (int k = 0; k < digitCount; k++)
+				{
+					img_numberbgs[k].rectTransform.anchoredPosition = img_numbers[k].rectTransform.anchoredPosition;
+				}
+			}
+
+			public void OffDiceValue()
+			{
+				for (int i = 3; i < img_numbers.Count; i++)
+				{
+					img_numbers[i].gameObject.SetActive(false);
+					img_numberbgs[i].gameObject.SetActive(false);
+				}
+			}
+
+			public void SetValueColor()
+			{
+				for (int i = 3; i < img_numbers.Count; i++)
+				{
+					img_numbers[i].color = img_numbers[2].color;
+					img_numberbgs[i].color = img_numberbgs[2].color;
+					hsv_numbers[i]._HueShift = hsv_numbers[2]._HueShift;
+					hsv_numbers[i]._Saturation = hsv_numbers[2]._Saturation;
+					hsv_numbers[i]._ValueBrightness = hsv_numbers[2]._ValueBrightness;
+					hsv_numbers[i].CallUpdate();
+				}
+			}
+
+			void Update()
+			{
+				for (int i = 3; i < img_numbers.Count; i++)
+				{
+					img_numbers[i].transform.localScale = img_numbers[2].transform.localScale;
+					img_numberbgs[i].transform.localScale = img_numberbgs[2].transform.localScale;
+				}
+			}
+
+			void OnEnable()
+			{
+				Update();
+			}
+
+			void UpdateLists()
+			{
+				int imgCount = originUI.layout_numbers.childCount;
+				if (img_numbers.Count < imgCount)
+				{
+					for (int i = img_numbers.Count; i < imgCount; i++)
+					{
+						var child = originUI.layout_numbers.GetChild(imgCount - 1 - i);
+						img_numbers.Add(child.GetComponent<Image>());
+						hsv_numbers.Add(child.GetComponent<RefineHsv>());
+					}
+				}
+				int bgCount = originUI.layout_numberbgs.childCount;
+				if (img_numberbgs.Count < bgCount)
+				{
+					for (int i = img_numberbgs.Count; i < bgCount; i++)
+					{
+						var child = originUI.layout_numberbgs.GetChild(bgCount - 1 - i);
+						img_numberbgs.Add(child.GetComponent<Image>());
+					}
+				}
+				if (img_numbers.Count < img_numberbgs.Count)
+				{
+					ExtendNumberPlaces(img_numberbgs.Count);
+				}
+			}
+
+			void ExtendNumberPlaces(int placesNeeded)
+			{
+				if (img_numbers.Count < placesNeeded)
+				{
+					for (int i = img_numbers.Count; i < placesNeeded; i++)
+					{
+						var clone = Instantiate(img_numbers[0], originUI.layout_numbers);
+						clone.transform.SetSiblingIndex(0);
+						clone.name = $"[Image]{i + 1}DigitPlace";
+						img_numbers.Add(clone);
+						hsv_numbers.Add(clone.GetComponent<RefineHsv>());
+						clone.gameObject.SetActive(false);
+					}
+				}
+				if (img_numberbgs.Count < placesNeeded)
+				{
+					for (int i = img_numberbgs.Count; i < placesNeeded; i++)
+					{
+						var clone = Instantiate(img_numberbgs[0], originUI.layout_numberbgs);
+						clone.transform.SetSiblingIndex(0);
+						clone.name = $"[Image]{i + 1}DigitPlacebg";
+						img_numberbgs.Add(clone);
+						clone.gameObject.SetActive(false);
+					}
+				}
+			}
+
+			public BattleSimpleActionUI_Dice originUI;
+			public List<Image> img_numbers = new List<Image>();
+			public List<Image> img_numberbgs = new List<Image>();
+			public List<RefineHsv> hsv_numbers = new List<RefineHsv>();
+		}
+
 		[HarmonyPatch(typeof(BattleSimpleActionUI_Dice), nameof(BattleSimpleActionUI_Dice.SetDiceValue))]
 		[HarmonyPrefix]
 		static bool BattleSimpleActionUI_Dice_SetDiceValue_Pre(BattleSimpleActionUI_Dice __instance, bool enable, int diceValue)
 		{
+			if (!enable)
+			{
+				return true;
+			}
+			var extraNumbers = __instance.GetComponent<BattleSimpleActionUI_Dice_ExtraNumbers>();
+			if (!extraNumbers && diceValue <= 999)
+			{
+				return true;
+			}
 			try
 			{
-				int num = 0;
-				int num2 = diceValue;
-				List<GameObject> list = new List<GameObject>();
-				List<GameObject> list2 = new List<GameObject>();
-				for (int i = 0; i < __instance.layout_numbers.childCount; i++)
+				if (!extraNumbers)
 				{
-					list.Add(__instance.layout_numbers.GetChild(i).gameObject);
-					list2.Add(__instance.layout_numberbgs.GetChild(i).gameObject);
-					__instance.layout_numbers.GetChild(i).gameObject.SetActive(false);
-					__instance.layout_numberbgs.GetChild(i).gameObject.SetActive(false);
+					extraNumbers = __instance.gameObject.AddComponent<BattleSimpleActionUI_Dice_ExtraNumbers>();
+					extraNumbers.Init(__instance);
 				}
-				bool flag;
-				do
-				{
-					num++;
-					num2 /= 10;
-					flag = (num2 == 0);
-				}
-				while (!flag);
-				int num3 = num - __instance.layout_numbers.childCount;
-				for (int j = 0; j < num3; j++)
-				{
-					GameObject gameObject = UnityEngine.Object.Instantiate(__instance.layout_numbers.GetChild(0).gameObject, __instance.layout_numbers);
-					list.Add(gameObject);
-					gameObject.gameObject.SetActive(false);
-					GameObject gameObject2 = UnityEngine.Object.Instantiate(__instance.layout_numberbgs.GetChild(0).gameObject, __instance.layout_numberbgs);
-					list2.Add(gameObject2);
-					gameObject2.gameObject.SetActive(false);
-				}
-				if (enable)
-				{
-					List<Sprite> battleDice_NumberAutoSlice = UISpriteDataManager.instance.BattleDice_NumberAutoSlice;
-					List<Sprite> battleDice_numberAutoSliceBg = UISpriteDataManager.instance.BattleDice_numberAutoSliceBg;
-					for (int k = 0; k < num; k++)
-					{
-						int index = diceValue % 10;
-						Sprite sprite = battleDice_NumberAutoSlice[index];
-						Image component = list[list.Count - k - 1].GetComponent<Image>();
-						component.sprite = sprite;
-						component.SetNativeSize();
-						component.gameObject.SetActive(true);
-						Sprite sprite2 = battleDice_numberAutoSliceBg[index];
-						Image component2 = list2[list.Count - k - 1].GetComponent<Image>();
-						component2.sprite = sprite2;
-						component2.SetNativeSize();
-						component2.gameObject.SetActive(true);
-						component2.rectTransform.anchoredPosition = component.rectTransform.anchoredPosition;
-						diceValue /= 10;
-					}
-				}
+
+				extraNumbers.SetDiceValue(diceValue);
+
 				return false;
 			}
 			catch (Exception ex)
@@ -4198,6 +3059,44 @@ namespace BaseMod
 			}
 			return true;
 		}
+		[HarmonyPatch(typeof(BattleSimpleActionUI_Dice), nameof(BattleSimpleActionUI_Dice.OffDiceValue))]
+		[HarmonyPrefix]
+		static void BattleSimpleActionUI_Dice_OffDiceValue_Pre(BattleSimpleActionUI_Dice __instance)
+		{
+			try
+			{
+				var extraNumbers = __instance.GetComponent<BattleSimpleActionUI_Dice_ExtraNumbers>();
+				if (!extraNumbers)
+				{
+					return;
+				}
+				extraNumbers.OffDiceValue();
+			}
+			catch (Exception ex)
+			{
+				File.WriteAllText(Application.dataPath + "/Mods/OffDiceValueerror.log", ex.Message + Environment.NewLine + ex.StackTrace);
+			}
+		}
+		[HarmonyPatch(typeof(BattleSimpleActionUI_Dice), nameof(BattleSimpleActionUI_Dice.SetValueColor))]
+		[HarmonyPostfix]
+		static void BattleSimpleActionUI_Dice_SetValueColor_Post(BattleSimpleActionUI_Dice __instance)
+		{
+			try
+			{
+				var extraNumbers = __instance.GetComponent<BattleSimpleActionUI_Dice_ExtraNumbers>();
+				if (!extraNumbers)
+				{
+					return;
+				}
+				extraNumbers.SetValueColor();
+			}
+			catch (Exception ex)
+			{
+				File.WriteAllText(Application.dataPath + "/Mods/SetValueColorerror.log", ex.Message + Environment.NewLine + ex.StackTrace);
+			}
+		}
+
+
 		//VersionViewer
 		[HarmonyPatch(typeof(VersionViewer), nameof(VersionViewer.Start))]
 		[HarmonyPrefix]
@@ -4206,63 +3105,6 @@ namespace BaseMod
 			__instance.GetComponent<Text>().fontSize = 30;
 			__instance.gameObject.transform.localPosition = new Vector3(-830f, -460f);
 		}
-		/*
-		//CopyCheck
-		[HarmonyPatch(typeof(DiceCardXmlInfo), nameof(DiceCardXmlInfo.Copy))]
-		[HarmonyPostfix]
-		static void DiceCardXmlInfo_Copy_Post(DiceCardXmlInfo __instance, ref DiceCardXmlInfo __result)
-		{
-			__result.Keywords = __instance.Keywords.ToList();
-		}
-		//Mod_Update
-		//Using For Reload
-		[HarmonyPatch(typeof(DebugConsoleScript), nameof(DebugConsoleScript.Update))]
-		[HarmonyPrefix]
-		static void Mod_Update()
-		{
-			try
-			{
-				if (!IsEditing && entryScene != null && Input.GetKeyDown(KeyCode.R))
-				{
-					File.WriteAllText(Application.dataPath + "/Mods/PressSuccess.log", "success");
-					entryScene.OnCompleteInitializePlatform_xboxlive(true);
-				}
-				IsEditing = true;
-			}
-			catch (Exception ex)
-			{
-				ModContentManager.Instance.AddErrorLog(ex.Message + Environment.NewLine + ex.StackTrace);
-				File.WriteAllText(Application.dataPath + "/Mods/Updateerror.log", ex.Message + Environment.NewLine + ex.StackTrace);
-			}
-		}
-		//Using For Reload
-		[HarmonyPatch(typeof(ModContentManager), nameof(ModContentManager.SetActiveContents))]
-		[HarmonyPrefix]
-		static void ModContentManager_SetActiveContents_Pre(ModContentManager __instance)
-		{
-			__instance._loadedContents.Clear();
-		}
-		//Using For Reload
-		[HarmonyPatch(typeof(UIModPopup), nameof(UIModPopup.Close))]
-		[HarmonyPrefix]
-		static void UIModPopup_Close_Post()
-		{
-			try
-			{
-				if (IsEditing)
-				{
-					ReloadModFiles();
-					LoadAssemblyFiles();
-					LoadModFiles();
-				}
-			}
-			catch (Exception ex)
-			{
-				ModContentManager.Instance.AddErrorLog(ex.Message + Environment.NewLine + ex.StackTrace);
-				File.WriteAllText(Application.dataPath + "/Mods/ModSettingerror.log", ex.Message + Environment.NewLine + ex.StackTrace);
-			}
-			IsEditing = false;
-		}*/
 
 		//ModItemSort
 		//BookSort
@@ -4396,145 +3238,8 @@ namespace BaseMod
 				File.WriteAllText(Application.dataPath + "/Mods/SaveFailed.log", ex.Message + Environment.NewLine + ex.StackTrace);
 			}
 		}
-		//RemoveUnknownSaves
-		/*
-		[HarmonyPatch(typeof(GameOpeningController), nameof(GameOpeningController.StopOpening))]
-		[HarmonyPostfix]
-		static void OnLoadMainScene(Scene scene, LoadSceneMode _)
-		{
-			if (scene.name == "Stage_Hod_New")
-			{
-				SceneManager.sceneLoaded -= OnLoadMainScene;
-				GameOpeningController_StopOpening_Post();
-			}
-		}
-		static void GameOpeningController_StopOpening_Post()
-		{
-			try
-			{
-				LoadCoreThumbs();
-				LoadCoreSounds();
-			}
-			catch (Exception ex)
-			{
-				File.WriteAllText(Application.dataPath + "/Mods/LoadFromModSaveDataerror.txt", ex.Message + Environment.NewLine + ex.StackTrace);
-			}
-		}
 		//CustomGift
 		//CreateGiftData
-		/*
-		[HarmonyPatch(typeof(CharacterAppearance), nameof(CharacterAppearance.CreateGiftData))]
-		[HarmonyPrefix]
-		static bool CharacterAppearance_CreateGiftData_Pre(CharacterAppearance __instance, ref GiftAppearance __result, GiftModel gift, string resPath)
-		{
-			try
-			{
-				if (__instance._customAppearance == null)
-				{
-					__result = null;
-					return false;
-				}
-				else
-				{
-					string[] array = resPath.Split(new char[]
-					{
-						'/'
-					});
-					string[] array2 = array[array.Length - 1].Split(new char[]
-					{
-						 '_'
-					});
-					if (array2[1].ToLower() != "custom")
-					{
-						return true;
-					}
-					else
-					{
-						bool flag = false;
-						GiftAppearance giftAppearance = null;
-						Dictionary<GiftPosition, GiftAppearance> dictionary = __instance._giftAppearanceDic;
-						if (dictionary.ContainsKey(gift.ClassInfo.Position))
-						{
-							giftAppearance = dictionary[gift.ClassInfo.Position];
-							if (giftAppearance.ResourceName != resPath)
-							{
-								dictionary.Remove(gift.ClassInfo.Position);
-								UnityEngine.Object.Destroy(giftAppearance.gameObject);
-								flag = true;
-							}
-						}
-						else
-						{
-							flag = true;
-						}
-						if (flag)
-						{
-							giftAppearance = UnityEngine.Object.Instantiate(Resources.Load<GameObject>("Prefabs/Gifts/Gifts_NeedRename/Gift_Challenger"), __instance.transform).GetComponent<GiftAppearance>();
-							SpriteRenderer spriteRenderer = giftAppearance._frontSpriteRenderer;
-							SpriteRenderer spriteRenderer2 = giftAppearance._sideSpriteRenderer;
-							SpriteRenderer spriteRenderer3 = giftAppearance._frontBackSpriteRenderer;
-							SpriteRenderer spriteRenderer4 = giftAppearance._sideBackSpriteRenderer;
-							spriteRenderer.gameObject.transform.localScale = new Vector2(1f, 1f);
-							if (CustomGiftAppearance.GiftArtWork.ContainsKey(array2[2] + "_front"))
-							{
-								spriteRenderer.sprite = CustomGiftAppearance.GiftArtWork[array2[2] + "_front"];
-							}
-							else
-							{
-								spriteRenderer.gameObject.SetActive(false);
-								giftAppearance._frontSpriteRenderer = null;
-							}
-							spriteRenderer2.gameObject.transform.localScale = new Vector2(1f, 1f);
-							if (CustomGiftAppearance.GiftArtWork.ContainsKey(array2[2] + "_side"))
-							{
-								spriteRenderer2.sprite = CustomGiftAppearance.GiftArtWork[array2[2] + "_side"];
-							}
-							else
-							{
-								spriteRenderer2.gameObject.SetActive(false);
-								giftAppearance._sideSpriteRenderer = null;
-							}
-							spriteRenderer3.gameObject.transform.localScale = new Vector2(1f, 1f);
-							if (CustomGiftAppearance.GiftArtWork.ContainsKey(array2[2] + "_frontBack"))
-							{
-								spriteRenderer3.sprite = CustomGiftAppearance.GiftArtWork[array2[2] + "_frontBack"];
-							}
-							else
-							{
-								spriteRenderer3.gameObject.SetActive(false);
-								giftAppearance._frontBackSpriteRenderer = null;
-							}
-							spriteRenderer4.gameObject.transform.localScale = new Vector2(1f, 1f);
-							if (CustomGiftAppearance.GiftArtWork.ContainsKey(array2[2] + "_sideBack"))
-							{
-								spriteRenderer4.sprite = CustomGiftAppearance.GiftArtWork[array2[2] + "_sideBack"];
-							}
-							else
-							{
-								spriteRenderer4.gameObject.SetActive(false);
-								giftAppearance._sideBackSpriteRenderer = null;
-							}
-							dictionary.Add(gift.ClassInfo.Position, giftAppearance);
-						}
-						if (giftAppearance != null)
-						{
-							string layer = __instance._layerName;
-							CharacterMotion motion = __instance._currentMotion;
-							giftAppearance.Init(gift, layer);
-							giftAppearance.RefreshAppearance(__instance.CustomAppearance, motion);
-						}
-						__result = giftAppearance;
-						return false;
-					}
-				}
-			}
-			catch (Exception ex)
-			{
-				File.WriteAllText(Application.dataPath + "/Mods/CACGDerror.log", ex.Message + Environment.NewLine + ex.StackTrace);
-			}
-			return true;
-		}
-		*/
 		[HarmonyPatch(typeof(CharacterAppearance), nameof(CharacterAppearance.CreateGiftData))]
 		[HarmonyTranspiler]
 		static IEnumerable<CodeInstruction> CharacterAppearance_CreateGiftData_In(IEnumerable<CodeInstruction> instructions)
@@ -4602,34 +3307,6 @@ namespace BaseMod
 		}
 
 		//GiftPassive
-		/*
-		[HarmonyPatch(typeof(GiftModel), nameof(GiftModel.CreateScripts))]
-		[HarmonyPrefix]
-		static bool GiftModel_CreateScripts_Pre(GiftModel __instance, ref List<PassiveAbilityBase> __result)
-		{
-			try
-			{
-				List<PassiveAbilityBase> list = new List<PassiveAbilityBase>();
-				foreach (int num in __instance.ClassInfo.ScriptList)
-				{
-					PassiveAbilityBase passiveAbilityBase = FindGiftPassiveAbility(num.ToString().Trim());
-					if (passiveAbilityBase != null)
-					{
-						passiveAbilityBase.name = __instance.GetName();
-						passiveAbilityBase.desc = __instance.GiftDesc;
-						list.Add(passiveAbilityBase);
-					}
-				}
-				__result = list;
-				return false;
-			}
-			catch (Exception ex)
-			{
-				File.WriteAllText(Application.dataPath + "/Mods/GMCSerror.log", ex.Message + Environment.NewLine + ex.StackTrace);
-			}
-			return true;
-		}
-		*/
 		[HarmonyPatch(typeof(GiftModel), nameof(GiftModel.CreateScripts))]
 		[HarmonyPriority(Priority.Low)]
 		[HarmonyTranspiler]
@@ -4772,108 +3449,7 @@ namespace BaseMod
 		{
 			passiveList.InsertRange(0, bookPassiveList);
 		}
-		//GiftDataSlot
-		/*
-		[HarmonyPatch(typeof(UIGiftDataSlot), nameof(UIGiftDataSlot.SetData))]
-		[HarmonyPrefix]
-		static bool UIGiftDataSlot_SetData_Pre(UIGiftDataSlot __instance, GiftModel data)
-		{
-			try
-			{
-				if (data == null)
-				{
-					__instance.gameObject.SetActive(false);
-					return false;
-				}
-				else
-				{
-					string[] array = data.GetResourcePath().Split(new char[]
-					{
-						 '/'
-					});
-					string[] array2 = array[array.Length - 1].Split(new char[]
-					{
-						 '_'
-					});
-					GiftAppearance giftAppearance;
-					if (array2[1].ToLower() != "custom")
-					{
-						return true;
-					}
-					__instance.img_giftImage.enabled = true;
-					__instance.img_xmark.enabled = false;
-					__instance.img_giftMask.enabled = true;
-					__instance.OpenInit();
-					giftAppearance = CustomGiftAppearance.CreateCustomGift(array2);
-					giftAppearance.gameObject.SetActive(false);
-					if (giftAppearance != null)
-					{
-						if (giftAppearance is GiftAppearance_Aura)
-						{
-							__instance.img_giftImage.enabled = true;
-							__instance.img_giftImage.sprite = UISpriteDataManager.instance.GiftAuraIcon;
-							__instance.img_giftImage.rectTransform.localScale = new Vector2(0.8f, 0.8f);
-						}
-						else
-						{
-							__instance.img_giftImage.sprite = giftAppearance.GetGiftPreview();
-							__instance.img_giftImage.rectTransform.localScale = Vector2.one;
-						}
-						if (__instance.img_giftImage.sprite == null)
-						{
-							__instance.img_giftImage.enabled = false;
-						}
-					}
-					else
-					{
-						__instance.img_giftImage.enabled = false;
-						__instance.img_giftMask.enabled = false;
-					}
-					__instance.txt_giftName.text = data.GetName();
-					__instance.txt_giftNameDetail.text = data.GiftDesc;
-					__instance.img_giftImage.gameObject.SetActive(true);
-					string id = "";
-					switch (data.ClassInfo.Position)
-					{
-						case GiftPosition.Eye:
-							id = "ui_gift_eye";
-							break;
-						case GiftPosition.Nose:
-							id = "ui_gift_nose";
-							break;
-						case GiftPosition.Cheek:
-							id = "ui_gift_cheek";
-							break;
-						case GiftPosition.Mouth:
-							id = "ui_gift_mouth";
-							break;
-						case GiftPosition.Ear:
-							id = "ui_gift_ear";
-							break;
-						case GiftPosition.HairAccessory:
-							id = "ui_gift_headdress1";
-							break;
-						case GiftPosition.Hood:
-							id = "ui_gift_headdress2";
-							break;
-						case GiftPosition.Mask:
-							id = "ui_gift_headdress3";
-							break;
-						case GiftPosition.Helmet:
-							id = "ui_gift_headdress4";
-							break;
-					}
-					__instance.txt_giftPartName.text = TextDataModel.GetText(id, Array.Empty<object>());
-					return false;
-				}
-			}
-			catch (Exception ex)
-			{
-				File.WriteAllText(Application.dataPath + "/Mods/GiftSetDataerror.log", ex.Message + Environment.NewLine + ex.StackTrace);
-			}
-			return true;
-		}
-		*/
+		//GiftDataSlot + UIGiftInvenSlot
 		[HarmonyPatch(typeof(UIGiftInvenSlot), nameof(UIGiftInvenSlot.SetData))]
 		[HarmonyPatch(typeof(UIGiftDataSlot), nameof(UIGiftDataSlot.SetData))]
 		[HarmonyTranspiler]
@@ -4929,172 +3505,7 @@ namespace BaseMod
 			}
 			return originalAppearance;
 		}
-		//UIGiftInvenSlot
-		/*
-		[HarmonyPatch(typeof(UIGiftInvenSlot), nameof(UIGiftInvenSlot.SetData))]
-		[HarmonyPrefix]
-		static bool UIGiftInvenSlot_SetData_Pre(UIGiftInvenSlot __instance, GiftModel gift, UIGiftInventory inven)
-		{
-			try
-			{
-				__instance.gameObject.SetActive(true);
-				__instance.giftData = gift;
-				__instance.panel = inven;
-				if (gift == null)
-				{
-					return false;
-				}
-				string id = "";
-				switch (gift.ClassInfo.Position)
-				{
-					case GiftPosition.Eye:
-						id = "ui_gift_eye";
-						break;
-					case GiftPosition.Nose:
-						id = "ui_gift_nose";
-						break;
-					case GiftPosition.Cheek:
-						id = "ui_gift_cheek";
-						break;
-					case GiftPosition.Mouth:
-						id = "ui_gift_mouth";
-						break;
-					case GiftPosition.Ear:
-						id = "ui_gift_ear";
-						break;
-					case GiftPosition.HairAccessory:
-						id = "ui_gift_headdress1";
-						break;
-					case GiftPosition.Hood:
-						id = "ui_gift_headdress2";
-						break;
-					case GiftPosition.Mask:
-						id = "ui_gift_headdress3";
-						break;
-					case GiftPosition.Helmet:
-						id = "ui_gift_headdress4";
-						break;
-				}
-				string[] array = gift.GetResourcePath().Split(new char[]
-				{
-				'/'
-				});
-				string[] array2 = array[array.Length - 1].Split(new char[]
-				{
-				'_'
-				});
-				GiftAppearance giftAppearance;
-				if (array2[1].ToLower() != "custom")
-				{
-					return true;
-				}
-				else
-				{
-					giftAppearance = CustomGiftAppearance.CreateCustomGift(array2);
-					giftAppearance.gameObject.SetActive(false);
-				}
-				__instance.img_Gift.enabled = true;
-				if (giftAppearance != null)
-				{
-					if (giftAppearance is GiftAppearance_Aura)
-					{
-						__instance.img_Gift.sprite = UISpriteDataManager.instance.GiftAuraIcon;
-						__instance.img_Gift.rectTransform.localScale = new Vector2(0.8f, 0.8f);
-					}
-					else
-					{
-						__instance.img_Gift.sprite = giftAppearance.GetGiftPreview();
-						__instance.img_Gift.rectTransform.localScale = new Vector2(1f, 1f);
-					}
-				}
-				if (__instance.img_Gift.sprite == null)
-				{
-					__instance.img_Gift.enabled = false;
-				}
-				__instance.txt_Part.text = TextDataModel.GetText(id, Array.Empty<object>());
-				__instance.txt_Name.text = gift.GetName();
-				__instance.txt_desc.text = gift.GiftDesc;
-				__instance.txt_getcondition.text = gift.GiftAcquireCondition;
-				__instance.conditionTextGameObject.SetActive(true);
-				return false;
-			}
-			catch (Exception ex)
-			{
-				File.WriteAllText(Application.dataPath + "/Mods/GiftInvSetDataerror.log", ex.Message + Environment.NewLine + ex.StackTrace);
-			}
-			return true;
-		}
-		*/
 		//UIGiftPreviewSlot
-		/*
-		[HarmonyPatch(typeof(UIGiftPreviewSlot), nameof(UIGiftPreviewSlot.UpdateSlot))]
-		[HarmonyPrefix]
-		static bool UIGiftPreviewSlot_UpdateSlot_Pre(UIGiftPreviewSlot __instance)
-		{
-			try
-			{
-				if (__instance.Gift != null)
-				{
-					string[] array = __instance.Gift.GetResourcePath().Split(new char[]
-					{
-						'/'
-					});
-					string[] array2 = array[array.Length - 1].Split(new char[]
-					{
-						'_'
-					});
-					GiftAppearance giftAppearance;
-					if (array2[1].ToLower() != "custom")
-					{
-						return true;
-					}
-					else
-					{
-						__instance.txt_GiftName.gameObject.SetActive(true);
-						__instance.txt_GiftName.text = __instance.Gift.GetName();
-						__instance.txt_GiftDesc.text = __instance.Gift.GiftDesc;
-						__instance.img_Gift.gameObject.SetActive(true);
-						__instance.img_Gift.enabled = true;
-						giftAppearance = CustomGiftAppearance.CreateCustomGift(array2);
-						giftAppearance.gameObject.SetActive(false);
-					}
-					if (giftAppearance != null)
-					{
-						if (giftAppearance is GiftAppearance_Aura)
-						{
-							__instance.img_Gift.sprite = UISpriteDataManager.instance.GiftAuraIcon;
-							__instance.img_Gift.rectTransform.localScale = new Vector2(0.8f, 0.8f);
-						}
-						else
-						{
-							__instance.img_Gift.sprite = giftAppearance.GetGiftPreview();
-							__instance.img_Gift.rectTransform.localScale = new Vector2(1f, 1f);
-						}
-					}
-					if (__instance.img_Gift.sprite == null)
-					{
-						__instance.img_Gift.enabled = false;
-					}
-					__instance.detailcRect.SetActive(__instance.panel.giftDetailToggle.isOn);
-				}
-				else
-				{
-					__instance.txt_GiftName.gameObject.SetActive(false);
-					__instance.img_Gift.gameObject.SetActive(false);
-					__instance.detailcRect.SetActive(false);
-				}
-				__instance.SetEyeButton(__instance.isEyeOpen);
-				__instance.SetHighlight(false);
-				__instance.SetEyeHighlight(false);
-				return false;
-			}
-			catch (Exception ex)
-			{
-				File.WriteAllText(Application.dataPath + "/Mods/GiftUpdateSloterror.log", ex.Message + Environment.NewLine + ex.StackTrace);
-			}
-			return true;
-		}
-		*/
 		[HarmonyPatch(typeof(UIGiftPreviewSlot), nameof(UIGiftPreviewSlot.UpdateSlot))]
 		[HarmonyTranspiler]
 		static IEnumerable<CodeInstruction> UIGiftPreviewSlot_UpdateSlot_In(IEnumerable<CodeInstruction> instructions)
@@ -5262,62 +3673,7 @@ namespace BaseMod
 			}
 		}
 
-		//LoadGift
-		//SAFETY PATCH REMOVED DUE TO DUPLICATION WITH ASSORTEDFIXES
-		/*
-		[HarmonyPatch(typeof(GiftInventory), nameof(GiftInventory.LoadFromSaveData))]
-		[HarmonyPrefix]
-		static void GiftInventory_LoadFromSaveData_Pre(SaveData data)
-		{
-			var equipIds = new HashSet<int>();
-			FixGiftSaveList(data, "equipList", returnIds: equipIds);
-			FixGiftSaveList(data, "unequipList");
-			FixGiftSaveList(data, "offList", checkIds: equipIds);
-		}
-		static void FixGiftSaveList(SaveData data, string giftListName, HashSet<int> returnIds = null, HashSet<int> checkIds = null)
-		{
-			var saveData = data.GetData(giftListName);
-			if (saveData == null)
-			{
-				saveData = new SaveData(new List<int>());
-				data.AddData(giftListName, saveData);
-			}
-			else if (saveData._list == null)
-			{
-				saveData._list = new List<SaveData>();
-			}
-			GiftXmlList giftXmlList = GiftXmlList.Instance;
-			if (checkIds == null)
-			{
-				saveData._list.RemoveAll(x =>
-				{
-					try
-					{
-						return giftXmlList.GetData(x.GetIntSelf()) == null;
-					}
-					catch
-					{
-						return true;
-					}
-				});
-			}
-			else
-			{
-				saveData._list.RemoveAll(x =>
-				{
-					try
-					{
-						return !checkIds.Contains(x.GetIntSelf());
-					}
-					catch
-					{
-						return true;
-					}
-				});
-			}
-			returnIds?.UnionWith(saveData._list.ConvertAll(x => x.GetIntSelf()));
-		}
-		*/
+		//LoadGift (old save compatibility)
 		[HarmonyPatch(typeof(GiftInventory), nameof(GiftInventory.LoadFromSaveData))]
 		[HarmonyPostfix]
 		static void GiftInventory_LoadFromSaveData_Post(GiftInventory __instance)
@@ -5397,136 +3753,13 @@ namespace BaseMod
 				}
 			}
 		}
-		//SaveGift
-		//moved to BaseBridge (LoadGift kept for migration from older saves)
-		/*
-		[HarmonyPatch(typeof(GiftInventory), nameof(GiftInventory.GetSaveData))]
-		[HarmonyTranspiler]
-		static IEnumerable<CodeInstruction> GiftInventory_GetSaveData_In(IEnumerable<CodeInstruction> instructions)
-		{
-			var field1 = Field(typeof(GiftInventory), nameof(GiftInventory._equippedList));
-			var field2 = Field(typeof(GiftInventory), nameof(GiftInventory._unequippedList));
-			var helper = Method(typeof(Harmony_Patch), nameof(FilterGiftsForSave));
-			foreach (var instruction in instructions)
-			{
-				yield return instruction;
-				if (instruction.LoadsField(field1) || instruction.LoadsField(field2))
-				{
-					yield return new CodeInstruction(Call, helper);
-				}
-			}
-		}
-		static List<GiftModel> FilterGiftsForSave(List<GiftModel> unfiltered)
-		{
-			return unfiltered.FindAll(gift => !(gift.ClassInfo is GiftXmlInfo_V2 giftNew) || giftNew.dontRemove);
-		}
-
-		[HarmonyPatch(typeof(CustomSaveStorageModel), nameof(CustomSaveStorageModel.GetSaveData))]
-		[HarmonyPrefix]
-		static void CustomSaveStorageModel_GetSaveData_Pre(CustomSaveStorageModel __instance)
-		{
-			var rootSave = __instance.GetStageStorageData("BasemodGift") ?? new SaveData(SaveDataType.Dictionary);
-			foreach (var floor in LibraryModel.Instance._floorList)
-			{
-				UpdateFloorGifts(rootSave, floor);
-			}
-			__instance.SetStageStorgeData("BasemodGift", rootSave);
-		}
-		static void UpdateFloorGifts(SaveData librarySave, LibraryFloorModel floor)
-		{
-			var floorSave = librarySave.GetData(floor.Sephirah.ToString()) ?? new SaveData(SaveDataType.Dictionary);
-			for (int i = 0; i < floor._unitDataList.Count; i++)
-			{
-				UpdateUnitGifts(floorSave, floor._unitDataList[i], i);
-			}
-			librarySave.GetDictionarySelf()[floor.Sephirah.ToString()] = floorSave;
-		}
-		static void UpdateUnitGifts(SaveData floorSave, UnitDataModel unit, int index)
-		{
-			var data = floorSave.GetData(index.ToString()) ?? new SaveData(SaveDataType.Dictionary);
-
-			SaveData eqSave = data.GetData(GiftInventory.save_equipList);
-			SaveData uneqSave = data.GetData(GiftInventory.save_unequipList);
-			SaveData offSave = data.GetData(GiftInventory.save_offList);
-			HashSet<LorId> eqIds = new HashSet<LorId>();
-			HashSet<LorId> uneqIds = new HashSet<LorId>();
-			HashSet<LorId> offIds = new HashSet<LorId>();
-			if (eqSave != null)
-			{
-				foreach (var idSave in eqSave)
-				{
-					var id = LorId.LoadFromSaveData(idSave);
-					eqIds.Add(id);
-				}
-			}
-			if (offSave != null)
-			{
-				foreach (var idSave in offSave)
-				{
-					var id = LorId.LoadFromSaveData(idSave);
-					offIds.Add(id);
-				}
-			}
-			if (uneqSave != null)
-			{
-				foreach (var idSave in uneqSave)
-				{
-					var id = LorId.LoadFromSaveData(idSave);
-					eqIds.Remove(id);
-					uneqIds.Add(id);
-				}
-			}
-			foreach (var gift in unit.giftInventory._equippedList)
-			{
-				if (gift.ClassInfo is GiftXmlInfo_V2 giftNew && !giftNew.dontRemove)
-				{
-					eqIds.Add(giftNew.lorId);
-					if (!gift.isShowEquipGift)
-					{
-						offIds.Add(giftNew.lorId);
-					}
-					uneqIds.Remove(giftNew.lorId);
-				}
-			}
-			foreach (var gift in unit.giftInventory._unequippedList)
-			{
-				if (gift.ClassInfo is GiftXmlInfo_V2 giftNew && !giftNew.dontRemove)
-				{
-					eqIds.Remove(giftNew.lorId);
-					uneqIds.Add(giftNew.lorId);
-				}
-			}
-			offIds.IntersectWith(eqIds);
-
-			eqSave = new SaveData(SaveDataType.List);
-			uneqSave = new SaveData(SaveDataType.List);
-			offSave = new SaveData(SaveDataType.List);
-			foreach (var id in eqIds)
-			{
-				eqSave.AddToList(id.GetSaveData());
-			}
-			foreach (var id in uneqIds)
-			{
-				uneqSave.AddToList(id.GetSaveData());
-			}
-			foreach (var id in offIds)
-			{
-				offSave.AddToList(id.GetSaveData());
-			}
-
-			data.GetDictionarySelf()[GiftInventory.save_equipList] = eqSave;
-			data.GetDictionarySelf()[GiftInventory.save_unequipList] = uneqSave;
-			data.GetDictionarySelf()[GiftInventory.save_offList] = offSave;
-
-			floorSave.GetDictionarySelf()[index.ToString()] = data;
-		}
-		*/
 		[HarmonyPatch(typeof(CustomSaveStorageModel), nameof(CustomSaveStorageModel.GetSaveData))]
 		[HarmonyPrefix]
 		static void CustomSaveStorageModel_GetSaveData_Pre(CustomSaveStorageModel __instance)
 		{
 			__instance._storage.Remove("BasemodGift");
 		}
+
 		//BehaviorAbilityData
 		[HarmonyPatch(typeof(BattleCardBehaviourResult), nameof(BattleCardBehaviourResult.GetAbilityDataAfterRoll))]
 		[HarmonyPostfix]
