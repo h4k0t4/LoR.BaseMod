@@ -539,13 +539,32 @@ namespace BaseMod
 			List<PassiveAbilityBase> sourcer = passiveDetail.PassiveList;
 			for (int i = 0; i < sourcer.Count; i++)
 			{
-				if (list[i] is T x)
+				if (sourcer[i] is T x)
 				{
 					list.Add(x);
 				}
 			}
 			return list;
 		}
+
+		public static T FindPassiveInReady<T>(this BattleUnitPassiveDetail passiveDetail) where T : PassiveAbilityBase
+		{
+			return (T)passiveDetail.ReadyPassiveList.Find(x => x is T);
+		}
+		public static List<T> FindPassivesInReady<T>(this BattleUnitPassiveDetail passiveDetail) where T : PassiveAbilityBase
+		{
+			List<T> list = new List<T>();
+			List<PassiveAbilityBase> sourcer = passiveDetail.ReadyPassiveList;
+			for (int i = 0; i < sourcer.Count; i++)
+			{
+				if (sourcer[i] is T x)
+				{
+					list.Add(x);
+				}
+			}
+			return list;
+		}
+
 		public static T FindActivatedPassive<T>(this BattleUnitPassiveDetail passiveDetail) where T : PassiveAbilityBase
 		{
 			return (T)passiveDetail.PassiveList.Find(x => x is T && x.isActiavted);
@@ -556,7 +575,7 @@ namespace BaseMod
 			List<PassiveAbilityBase> sourcer = passiveDetail.PassiveList;
 			for (int i = 0; i < sourcer.Count; i++)
 			{
-				if (list[i] is T x && x.isActiavted)
+				if (sourcer[i] is T x && x.isActiavted)
 				{
 					list.Add(x);
 				}
