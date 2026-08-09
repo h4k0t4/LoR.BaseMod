@@ -47,29 +47,47 @@ namespace ExtendedLoader
 		static void ReloadWorkshopCustomAppearance()
 		{
 			SetOriginalIndexes();
-			TryFixThatOneHair();
+			FixMouth();
+			FixHair();
 			ReloadExternalData();
 			LoadWorkshopCustomAppearanceFolder(PlatformManager.Instance.GetWorkshopDirPath());
 			ResetIndexes();
 			LoadWorkshopCustomAppearanceFolder(Path.Combine(Application.dataPath, "Mods"));
 		}
-		static void TryFixThatOneHair()
+		static void FixMouth()
 		{
-			if (originalRearHairIndex >= 18)
+			if (CustomizingResourceLoader.Instance._mouthResources.Count < 6)
 			{
-				var rears = CustomizingResourceLoader.Instance._rearHairResources;
-				var thatOneHair = rears[17];
-				if (thatOneHair.Default?.name == "BackHair_Front_2_1" && thatOneHair.Side_Front?.name == "BackHair_FrontLayer_3_0")
-				{
-					var thatOneSprite = thatOneHair.Side_Front;
-					for (int i = 17; i < originalRearHairIndex - 1; i++)
-					{
-						rears[i].Side_Front = rears[i + 1].Side_Front;
-					}
-					rears[originalRearHairIndex - 1].Side_Front = thatOneSprite;
-				}
+				return;
+			}
+			var mouthSet = CustomizingResourceLoader.Instance._mouthResources[5];
+			if (mouthSet.hit && mouthSet.atk_side && mouthSet.hit.name == "Mouth_Front_Damaged_1_5" && mouthSet.atk_side.name == "Mouth_Side_Atk_1_5")
+			{
+				(mouthSet.atk_side, mouthSet.hit) = (mouthSet.hit, mouthSet.atk_side);
 			}
 		}
+
+		static void FixHair()
+		{
+			if (CustomizingResourceLoader.Instance._rearHairResources.Count < 23)
+			{
+				return;
+			}
+
+			var rears = CustomizingResourceLoader.Instance._rearHairResources;
+			var thatOneHair = rears[17];
+			if (thatOneHair.Default?.name == "BackHair_Front_2_1" && thatOneHair.Side_Front?.name == "BackHair_FrontLayer_3_0")
+			{
+				var thatOneSprite = thatOneHair.Side_Front;
+				for (int i = 17; i < 22; i++)
+				{
+					rears[i].Side_Front = rears[i + 1].Side_Front;
+				}
+				rears[22].Side_Front = thatOneSprite;
+			}
+		}
+
+
 		static void LoadWorkshopCustomAppearanceFolder(string path)
 		{
 			if (Directory.Exists(path))

@@ -4,6 +4,7 @@ using System.IO;
 using System.Reflection.Emit;
 using UnityEngine;
 using Workshop;
+using static System.Reflection.Emit.OpCodes;
 
 namespace ExtendedLoader
 {
@@ -14,31 +15,64 @@ namespace ExtendedLoader
 			switch (index)
 			{
 				case 0:
-					if (instruction.opcode == OpCodes.Ldloc_0)
+					if (instruction.opcode == Ldloc_0)
 					{
 						return true;
 					}
 					break;
 				case 1:
-					if (instruction.opcode == OpCodes.Ldloc_1)
+					if (instruction.opcode == Ldloc_1)
 					{
 						return true;
 					}
 					break;
 				case 2:
-					if (instruction.opcode == OpCodes.Ldloc_2)
+					if (instruction.opcode == Ldloc_2)
 					{
 						return true;
 					}
 					break;
 				case 3:
-					if (instruction.opcode == OpCodes.Ldloc_3)
+					if (instruction.opcode == Ldloc_3)
 					{
 						return true;
 					}
 					break;
 			}
-			return (instruction.opcode == OpCodes.Ldloc || instruction.opcode == OpCodes.Ldloc_S) &&
+			return (instruction.opcode == Ldloc || instruction.opcode == Ldloc_S) &&
+				(instruction.operand is IConvertible i && i.ToInt32(null) == index || instruction.operand is LocalBuilder local && local.LocalIndex == index);
+		}
+
+		public static bool IsStloc(this CodeInstruction instruction, int index)
+		{
+			switch (index)
+			{
+				case 0:
+					if (instruction.opcode == Stloc_0)
+					{
+						return true;
+					}
+					break;
+				case 1:
+					if (instruction.opcode == Stloc_1)
+					{
+						return true;
+					}
+					break;
+				case 2:
+					if (instruction.opcode == Stloc_2)
+					{
+						return true;
+					}
+					break;
+				case 3:
+					if (instruction.opcode == Stloc_3)
+					{
+						return true;
+					}
+					break;
+			}
+			return (instruction.opcode == Stloc || instruction.opcode == Stloc_S) &&
 				(instruction.operand is IConvertible i && i.ToInt32(null) == index || instruction.operand is LocalBuilder local && local.LocalIndex == index);
 		}
 

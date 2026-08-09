@@ -474,7 +474,7 @@ namespace ExtendedLoader
 								XmlNodeList giftPivotNodes = actionNode.SelectNodes("GiftPivot");
 								if (giftPivotNodes != null)
 								{
-									foreach (XmlNode giftPivot in additionalPivotNodes)
+									foreach (XmlNode giftPivot in giftPivotNodes)
 									{
 										if (giftPivot.Attributes.GetNamedItem("pos") is XmlNode posNode && Enum.TryParse<GiftPosition>(posNode.InnerText, out var giftPos))
 										{

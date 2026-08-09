@@ -33,18 +33,20 @@ namespace ExtendedLoader
 					harmony.PatchAll(typeof(UnitLimitPatch));
 					harmony.PatchAll(typeof(CardSkinChangePatch));
 					harmony.PatchAll(typeof(FaceFixPatch));
+					LoadCreatureSounds();
 				}
 				else
 				{
 					harmony.PatchAll(Assembly.GetExecutingAssembly());
 					LoadCoreSounds();
-					FixLocalize(harmony);
 					CustomBookUIPatch.IntegrateSearcher();
 					SceneManager.sceneLoaded += DoReversePatches;
 					XLConfig.Load();
 				}
+				FixLocalize(harmony);
 				_ = XLUtilRoot.persistentRoot;
 				LoadCoreThumbs();
+				SephirahHeadPatch.FixSpecialCustomAll();
 				LegacyCompatibilityPatchBasic.PrepareLegacy(harmony);
 			}
 			catch (Exception ex)
@@ -106,6 +108,7 @@ namespace ExtendedLoader
 			{
 				try
 				{
+					CustomBookLabelPatch.SetCustomBookLabel();
 					harmony.PatchAll(typeof(CustomBookLabelPatch));
 				}
 				catch (Exception ex)
@@ -115,13 +118,17 @@ namespace ExtendedLoader
 			}
 		}
 
-		static class CustomBookLabelPatch
+		internal static class CustomBookLabelPatch
 		{
 			[HarmonyPatch(typeof(TextDataModel), nameof(TextDataModel.InitTextData))]
 			[HarmonyPostfix]
 			[HarmonyPriority(Priority.Low)]
 			internal static void SetCustomBookLabel()
 			{
+				if (TextDataModel.CurrentLanguage == "cn")
+				{
+					TextDataModel.textDic["ui_invitation_customtoggle"] = "创意工坊";
+				}
 				TextDataModel.textDic["ui_customcorebook_custommodtoggle"] = $"{TextDataModel.textDic.GetValueSafe("ui_corepage") ?? "Key Page"} ({TextDataModel.textDic.GetValueSafe("ui_invitation_customtoggle") ?? "Workshop"})";
 			}
 		}
@@ -157,6 +164,15 @@ namespace ExtendedLoader
 				{
 					CharacterSound._motionSoundResources.Add(audioClip.name, audioClip);
 				}
+			}
+			LoadCreatureSounds();
+		}
+
+		static void LoadCreatureSounds()
+		{
+			if (CharacterSound._motionSoundResources == null)
+			{
+				CharacterSound._motionSoundResources = new Dictionary<string, AudioClip>();
 			}
 			foreach (AudioClip audioClip in Resources.LoadAll<AudioClip>("Sounds/Creature"))
 			{

@@ -3,36 +3,40 @@ using HarmonyLib;
 
 namespace ExtendedLoader
 {
-	[HarmonyPatch]
 	internal class SephirahHeadPatch
 	{
-		[HarmonyPatch(typeof(CustomizingResourceLoader), nameof(CustomizingResourceLoader.CreateCustomizedAppearance))]
-		[HarmonyPostfix]
-		[HarmonyPriority(Priority.Low)]
-		static void CustomizingResourceLoader_CreateCustomizedAppearance_Postfix(CustomizedAppearance __result)
+		public static void FixSpecialCustomAll()
 		{
-			if (__result is SpecialCustomizedAppearance special && special.list != null)
+			foreach (var value in CustomizingResourceLoader.Instance._specialCustomPrefabDic.Values)
 			{
-				var index = special.list.FindIndex(head => head.detail == ActionDetail.Default);
+				FixSpecialCustom(value);
+			}
+		}
+
+		public static void FixSpecialCustom(SpecialCustomizedAppearance specialAppearance)
+		{
+			if (specialAppearance.list != null)
+			{
+				var index = specialAppearance.list.FindIndex(head => head.detail == ActionDetail.Default);
 				if (index > 0)
 				{
-					var x = special.list[index];
-					special.list.RemoveAt(index);
-					special.list.Insert(0, x);
+					var x = specialAppearance.list[index];
+					specialAppearance.list.RemoveAt(index);
+					specialAppearance.list.Insert(0, x);
 				}
-				switch (special.name)
+				switch (specialAppearance.name)
 				{
-					case "Customized_Gebura(Clone)":
-						FixHeadRedirect(special.list, ActionDetail.Penetrate, ActionDetail.Slash);
+					case "Customized_Gebura":
+						FixHeadRedirect(specialAppearance.list, ActionDetail.Penetrate, ActionDetail.Slash);
 						return;
-					case "Customized_Binah(Clone)":
-						FixHeadRedirect(special.list, ActionDetail.Slash, ActionDetail.Hit);
-						FixHeadRedirect(special.list, ActionDetail.Penetrate, ActionDetail.Hit);
-						FixHeadRedirect(special.list, ActionDetail.Default, ActionDetail.Guard);
-						FixHeadRedirect(special.list, ActionDetail.Evade, ActionDetail.Guard);
+					case "Customized_Binah":
+						FixHeadRedirect(specialAppearance.list, ActionDetail.Slash, ActionDetail.Hit);
+						FixHeadRedirect(specialAppearance.list, ActionDetail.Penetrate, ActionDetail.Hit);
+						FixHeadRedirect(specialAppearance.list, ActionDetail.Default, ActionDetail.Guard);
+						FixHeadRedirect(specialAppearance.list, ActionDetail.Evade, ActionDetail.Guard);
 						return;
-					case "Customized_Angela(Clone)":
-						FixHeadRedirect(special.list, ActionDetail.Slash, ActionDetail.Hit);
+					case "Customized_Angela":
+						FixHeadRedirect(specialAppearance.list, ActionDetail.Slash, ActionDetail.Hit);
 						return;
 				}
 			}

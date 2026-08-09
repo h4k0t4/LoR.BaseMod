@@ -71,7 +71,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Commons\SpriteCompressionConfig.cs" />
+    <Compile Include="Configs\SpriteCompressionConfig.cs" />
     <Compile Include="Patches\CustomSkinPrefabPatch.cs" />
     <Compile Include="Patches\CustomUnitDataSaveLoadPatch.cs" />
     <Compile Include="Patches\EarlyPatches.cs" />
@@ -80,6 +80,7 @@
     <Compile Include="Patches\EditorPatches.cs" />
     <Compile Include="Patches\FaceOverridePatch.cs" />
     <Compile Include="Patches\LegacyCompatibilityPatch.cs" />
+    <Compile Include="Patches\SoundOrderFix.cs" />
     <Compile Include="Tools\InternalExtensions.cs" />
     <Compile Include="Patches\ThumbPatch.cs" />
     <Compile Include="Patches\WorkshopSetterPatch.cs" />

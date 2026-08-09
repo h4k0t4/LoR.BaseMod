@@ -98,7 +98,18 @@ namespace ExtendedLoader
 				case BattleUnitView.SkinState.Default:
 					if (forceChange)
 					{
-						view.ChangeSkin(info.lorName);
+						switch (info.lorName.packageId)
+						{
+							case "EGO":
+								view.ChangeEgoSkin(info.lorName.name);
+								break;
+							case "Creature":
+								view.ChangeCreatureSkin(info.lorName.name);
+								break;
+							default:
+								view.ChangeSkin(info.lorName);
+								break;
+						} 
 					}
 					else
 					{
@@ -112,7 +123,7 @@ namespace ExtendedLoader
 					view.ChangeCreatureSkin(info.lorName);
 					return;
 				case BattleUnitView.SkinState.EGO:
-					view.ChangeEgoSkin(info.lorName, true);
+					view.ChangeEgoSkin(info.lorName);
 					return;
 			}
 		}
