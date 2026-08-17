@@ -703,11 +703,14 @@ namespace BaseMod
 		{
 			try
 			{
-				string dropBookName = TextDataModel.GetText(__instance._targetText, Array.Empty<object>());
-				if (!string.IsNullOrWhiteSpace(dropBookName))
+				if (!string.IsNullOrEmpty(__instance._targetText))
 				{
-					__result = dropBookName;
-					return false;
+					string dropBookName = TextDataModel.GetText(__instance._targetText, Array.Empty<object>());
+					if (!string.IsNullOrWhiteSpace(dropBookName))
+					{
+						__result = dropBookName;
+						return false;
+					}
 				}
 			}
 			catch { }
@@ -2684,7 +2687,7 @@ namespace BaseMod
 		[HarmonyPostfix]
 		static void StageController_IsTwistedArgaliaBattleEnd_Post(ref bool __result)
 		{
-			if (BattleSceneRoot.Instance.currentMapObject is CustomMapManager customMap)
+			if (BattleSceneRoot.Instance is BattleSceneRoot root && root.currentMapObject is CustomMapManager customMap)
 			{
 				var frame = new System.Diagnostics.StackFrame(2);
 				if (frame.GetMethod().Name.Contains("MapByAssimilation"))
