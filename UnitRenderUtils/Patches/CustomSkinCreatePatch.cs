@@ -1,0 +1,652 @@
+﻿using HarmonyLib;
+using LorIdExtensions;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Reflection;
+using System.Reflection.Emit;
+using UI;
+using UnityEngine;
+using Workshop;
+using static HarmonyLib.AccessTools;
+using static System.Reflection.Emit.OpCodes;
+
+namespace ExtendedLoader
+{
+	[HarmonyPatch]
+	internal class CustomSkinCreatePatch
+	{
+		static bool IsBrokenSkin(UnitDataModel unit, string skinName, CharacterAppearance appearance)
+		{
+			if (appearance == null)
+			{
+				Debug.Log("XL: Failed to create CharacterAppearance! Trying to recreate...");
+				return true;
+			}
+			else
+			{
+				var setter = appearance.GetComponent<WorkshopSkinDataSetter>();
+				if (setter == null)
+				{
+					return false;
+				}
+				var appliedSkinData = appearance.GetComponent<WorkshopSkinDataCacher>()?.data;
+				if (appliedSkinData == null)
+				{
+					Debug.Log("XL: Found WorkshopSetter, but no data in WorkshopCacher! Trying to recreate...");
+					return true;
+				}
+				List<WorkshopSkinData> baseSkinDataOptions = new List<WorkshopSkinData>(4);
+				WorkshopSkinData upgradeSkinData = null;
+				var instance = CustomizingBookSkinLoader.Instance;
+				bool optionsFromBooks = false;
+
+				if (string.IsNullOrEmpty(skinName))
+				{
+					if (string.IsNullOrEmpty(unit.workshopSkin) && unit.CustomBookItem.ClassInfo.skinType == "Custom" && (unit.CustomBookItem.IsWorkshop || instance.GetWorkshopBookSkinData("") != null))
+					{
+						upgradeSkinData = SkinTools.GetWorkshopBookSkinData(unit.CustomBookItem.BookId.packageId, unit.CustomBookItem.GetCharacterName(), "_" + unit.appearanceType);
+						optionsFromBooks = true;
+					}
+				}
+				else
+				{
+					upgradeSkinData = SkinTools.GetWorkshopBookSkinData(new LorName(unit.bookItem.BookId.packageId, skinName), "");
+					if (string.IsNullOrEmpty(unit.workshopSkin))
+					{
+						optionsFromBooks = true;
+					}
+					else
+					{
+						baseSkinDataOptions.Add(CustomizingResourceLoader.Instance.GetWorkshopSkinData(unit.workshopSkin));
+					}
+				}
+
+				if (optionsFromBooks)
+				{
+					var customBookSkinName = unit.CustomBookItem.GetCharacterName();
+					var customBookPid = unit.CustomBookItem.BookId.packageId;
+					if (unit.CustomBookItem.ClassInfo.skinType == "Custom" || unit.CustomBookItem.IsWorkshop)
+					{
+						baseSkinDataOptions.Add(instance.GetWorkshopBookSkinData(customBookPid, customBookSkinName));
+
+						var customBookInfoSkinName = unit.CustomBookItem.ClassInfo.GetCharacterSkin();
+						if (customBookSkinName != customBookInfoSkinName)
+						{
+							baseSkinDataOptions.Add(instance.GetWorkshopBookSkinData(customBookPid, customBookInfoSkinName));
+						}
+					}
+
+					if (unit._CustomBookItem != unit.bookItem && (unit.bookItem.ClassInfo.skinType == "Custom" || unit.bookItem.IsWorkshop))
+					{
+						var baseBookSkinName = unit.bookItem.GetCharacterName();
+						var baseBookPid = unit.bookItem.BookId.packageId;
+						baseSkinDataOptions.Add(CustomizingBookSkinLoader.Instance.GetWorkshopBookSkinData(baseBookPid, baseBookSkinName));
+
+						var baseBookInfoSkinName = unit.bookItem.ClassInfo.GetCharacterSkin();
+						if (baseBookSkinName != baseBookInfoSkinName)
+						{
+							baseSkinDataOptions.Add(CustomizingBookSkinLoader.Instance.GetWorkshopBookSkinData(baseBookPid, baseBookInfoSkinName));
+						}
+					}
+				}
+
+				if (appliedSkinData != upgradeSkinData && upgradeSkinData != null)
+				{
+					if (baseSkinDataOptions.Contains(appliedSkinData))
+					{
+						Debug.Log($"XL: Found cached data for {appliedSkinData.dataName} {appliedSkinData.contentFolderIdx} in WorkshopCacher, but also a possible upgrade to {upgradeSkinData.dataName} {upgradeSkinData.contentFolderIdx} (changing to {(skinName ?? "null")}); trying to recreate...");
+						return true;
+					}
+				}
+				return false;
+			}
+		}
+
+		//catch extra index errors
+		[HarmonyPatch(typeof(UICharacterRenderer), nameof(UICharacterRenderer.SetCharacter))]
+		[HarmonyPrefix]
+		[HarmonyPriority(Priority.HigherThanNormal)]
+		static void UICharacterRenderer_SetCharacter_Prefix(UICharacterRenderer __instance, int index, ref UnitDataModel __state)
+		{
+			if (UICRIndexHelpers.GetIndexWithSkip(index) != index)
+			{
+				__state = __instance.characterList[index].unitModel;
+			}
+		}
+
+		[HarmonyPatch(typeof(UICharacterRenderer), nameof(UICharacterRenderer.SetCharacter))]
+		[HarmonyTranspiler]
+		[HarmonyPriority(Priority.LowerThanNormal)]
+		static IEnumerable<CodeInstruction> UICharacterRenderer_SetCharacter_Transpiler(IEnumerable<CodeInstruction> instructions, ILGenerator ilgen)
+		{
+			var bookGetter = PropertyGetter(typeof(UnitDataModel), nameof(UnitDataModel.bookItem));
+			var customBookGetter = PropertyGetter(typeof(UnitDataModel), nameof(UnitDataModel.CustomBookItem));
+			var bookClassInfoGetter = PropertyGetter(typeof(BookModel), nameof(BookModel.ClassInfo));
+			var bookInfoSkinGetter = Method(typeof(BookXmlInfo), nameof(BookXmlInfo.GetCharacterSkin));
+			var setDataMethod = Method(typeof(WorkshopSkinDataSetter), nameof(WorkshopSkinDataSetter.SetData), new Type[] { typeof(WorkshopSkinData) });
+			var unitGenderField = Field(typeof(UnitDataModel), nameof(UnitDataModel.gender));
+			var fixGenderMethods = new MethodInfo[] { Method(typeof(CustomSkinCreatePatch), nameof(TryInjectCreatureGender)), Method(typeof(CustomSkinCreatePatch), nameof(TryInjectEgoGender)) };
+			var isWorkshopGetter = PropertyGetter(typeof(BookModel), nameof(BookModel.IsWorkshop));
+			var checkPseudoCoreMethod = Method(typeof(CustomSkinCreatePatch), nameof(TryCheckPseudoCoreSkins));
+			var tryFixCustomSkinOverride = Method(typeof(CustomSkinCreatePatch), nameof(TryFixCustomSkinOverride));
+			bool obtainedFlag = false;
+			bool insertedTypeFix = false;
+			LocalBuilder lateInitFlagLocal = null;
+			Label defaultSkinRenderLabel = default;
+			var codes = new List<CodeInstruction>(instructions);
+			int genderInjectCounter = 0;
+
+			for (int i = 0; i < codes.Count; i++)
+			{
+				if (codes[i].IsLdloc(8) && codes[i + 1].LoadsConstant(2) && codes[i + 2].Branches(out var maybeLabel))
+				{
+					defaultSkinRenderLabel = maybeLabel.Value;
+					break;
+				}
+			}
+
+			for (int i = 0; i < codes.Count; i++)
+			{
+				if (codes[i].opcode == Ldarg_1)
+				{
+					if (codes[i + 1].Calls(bookGetter) || codes[i + 1].Calls(customBookGetter))
+					{
+						if (codes[i + 2].Calls(bookClassInfoGetter) && codes[i + 3].Calls(bookInfoSkinGetter))
+						{
+							codes[i] = new CodeInstruction(Ldloc_3).MoveLabelsFrom(codes[i]);
+							codes.RemoveRange(i + 1, 3);
+						}
+					}
+				}
+				else if (codes[i].opcode == Callvirt)
+				{
+					var called = codes[i].operand as MethodInfo;
+					if (called == bookGetter)
+					{
+						codes[i].operand = customBookGetter;
+					}
+					else if (called == setDataMethod)
+					{
+						int j;
+						if (!obtainedFlag)
+						{
+							for (j = i + 1; j < codes.Count; j++)
+							{
+								if (codes[j].Branches(out Label? _))
+								{
+									j = codes.Count;
+								}
+								else
+								{
+									if (codes[j].IsStloc())
+									{
+										lateInitFlagLocal = codes[j].operand as LocalBuilder;
+										if (lateInitFlagLocal != null && lateInitFlagLocal.LocalType == typeof(bool))
+										{
+											obtainedFlag = true;
+											break;
+										}
+									}
+								}
+							}
+							if (j == codes.Count)
+							{
+								Debug.Log("Extended Loader: failed to obtain LateInit flag for SetCharacter");
+							}
+						}
+						else
+						{
+							codes.InsertRange(i + 1, new CodeInstruction[]
+							{
+								new CodeInstruction(Ldc_I4_1),
+								new CodeInstruction(Stloc_S, lateInitFlagLocal)
+							});
+							i += 2;
+						}
+					}
+					else if ((MethodInfo)codes[i].operand == isWorkshopGetter)
+					{
+						codes.Insert(i + 1, new CodeInstruction(Call, checkPseudoCoreMethod));
+						i++;
+					}
+				}
+				else if (codes[i].Is(Ldfld, unitGenderField))
+				{
+					if (genderInjectCounter < 2)
+					{
+						codes.InsertRange(i + 1, new CodeInstruction[]
+						{
+							new CodeInstruction(Ldloca, 3),
+							new CodeInstruction(Call, fixGenderMethods[genderInjectCounter])
+						});
+						i += 2;
+						genderInjectCounter++;
+					}
+				}
+				else if (codes[i].IsLdloc(8) && !insertedTypeFix)
+				{
+					codes.InsertRange(i, new CodeInstruction[]
+					{
+						new CodeInstruction(Ldloca, 8).MoveLabelsFrom(codes[i]),
+						new CodeInstruction(Ldloc_3),
+						new CodeInstruction(Call, tryFixCustomSkinOverride)
+					});
+					i += 3;
+					insertedTypeFix = true;
+				}
+				else if (codes[i].IsStloc(out var localIndex) && (localIndex == 9 || localIndex == 10))
+				{
+					if (defaultSkinRenderLabel != default)
+					{
+						codes.InsertRange(i + 1, new CodeInstruction[]
+						{
+							new CodeInstruction(Ldloc_S, (byte)localIndex),
+							new CodeInstruction(Brfalse, defaultSkinRenderLabel)
+						});
+						i += 2;
+					}
+				}
+			}
+			return codes;
+		}
+		static Gender TryInjectEgoGender(Gender original, ref string characterName)
+		{
+			if (characterName.StartsWith("EGO:"))
+			{
+				characterName = characterName.Substring("EGO:".Length);
+				return Gender.EGO;
+			}
+			return original;
+		}
+		static Gender TryInjectCreatureGender(Gender original, ref string characterName)
+		{
+			if (characterName.StartsWith("Creature:"))
+			{
+				characterName = characterName.Substring("Creature:".Length);
+				return Gender.Creature;
+			}
+			return original;
+		}
+		static bool TryCheckPseudoCoreSkins(bool isWorkshop)
+		{
+			return isWorkshop || CustomizingBookSkinLoader.Instance.GetWorkshopBookSkinData("") != null;
+		}
+		static void TryFixCustomSkinOverride(ref int skinType, string characterName)
+		{
+			if (skinType != 0)
+			{
+				return;
+			}
+			if (LorName.IsCompressed(characterName))
+			{
+				skinType = 2;
+			}
+		}
+
+		//catch other mods breaking things
+		[HarmonyPatch(typeof(UICharacterRenderer), nameof(UICharacterRenderer.SetCharacter))]
+		[HarmonyFinalizer]
+		static Exception UICharacterRenderer_SetCharacter_Finalizer(Exception __exception, UICharacterRenderer __instance, UnitDataModel __state, UnitDataModel unit, int index, bool forcelyReload, bool renderRealtime)
+		{
+			if (__exception != null && XLConfig.Instance.logRenderErrors)
+			{
+				Debug.LogException(__exception);
+			}
+			int fixedIndex = UICRIndexHelpers.GetIndexWithSkip(index);
+			if (fixedIndex >= UICharacterRenderer.Instance.characterList.Count)
+			{
+				return null;
+			}
+			var uichar = __instance.characterList[fixedIndex];
+			if (IsBrokenSkin(unit, null, uichar.unitAppearance))
+			{
+				try
+				{
+					ReversePatches.UICharacterRenderer_SetCharacter_Snapshot(__instance, unit, index, true, renderRealtime);
+				}
+				catch (Exception ex)
+				{
+					Debug.LogException(ex);
+				}
+			}
+			if (__state != null)
+			{
+				try
+				{
+					var unfixedUiChar = __instance.characterList[index];
+					if (unfixedUiChar.unitModel != __state || IsBrokenSkin(__state, null, unfixedUiChar.unitAppearance))
+					{
+						ReversePatches.UICharacterRenderer_SetCharacter_Snapshot(__instance, __state, index - 1, true, renderRealtime);
+					}
+				}
+				catch (Exception ex)
+				{
+					Debug.LogException(ex);
+				}
+			}
+			return null;
+		}
+
+		//CreateSkin
+		[HarmonyPatch(typeof(SdCharacterUtil), nameof(SdCharacterUtil.CreateSkin))]
+		[HarmonyTranspiler]
+		[HarmonyPriority(Priority.LowerThanNormal)]
+		static IEnumerable<CodeInstruction> SdCharacterUtil_CreateSkin_Transpiler(IEnumerable<CodeInstruction> instructions, ILGenerator ilgen)
+		{
+			var bookGetter = PropertyGetter(typeof(UnitDataModel), nameof(UnitDataModel.bookItem));
+			var customBookGetter = PropertyGetter(typeof(UnitDataModel), nameof(UnitDataModel.CustomBookItem));
+			var bookClassInfoGetter = PropertyGetter(typeof(BookModel), nameof(BookModel.ClassInfo));
+			var bookInfoSkinField = Field(typeof(BookXmlInfo), nameof(BookXmlInfo.CharacterSkin));
+			var stringListItemGetter = Method(typeof(List<string>), "get_Item");
+			var originalNameGetter = Method(typeof(BookModel), nameof(BookModel.GetOriginalCharcterName));
+			var setDataMethod = Method(typeof(WorkshopSkinDataSetter), nameof(WorkshopSkinDataSetter.SetData), new Type[] { typeof(WorkshopSkinData) });
+			var isWorkshopGetter = PropertyGetter(typeof(BookModel), nameof(BookModel.IsWorkshop));
+			var checkPseudoCoreMethod = Method(typeof(CustomSkinCreatePatch), nameof(TryCheckPseudoCoreSkins));
+			var checkCustomMethod = Method(typeof(CustomSkinCreatePatch), nameof(CheckSkinCustomType));
+			bool obtainedFlag = false;
+			LocalBuilder local = null;
+			var codes = new List<CodeInstruction>(instructions);
+			for (var i = 0; i < codes.Count; i++)
+			{
+				if (codes[i].opcode == Callvirt)
+				{
+					var called = codes[i].operand as MethodInfo;
+					if (called == isWorkshopGetter)
+					{
+						var bookLocal = ilgen.DeclareLocal(typeof(BookModel));
+						codes.InsertRange(i, new CodeInstruction[]
+						{
+							new CodeInstruction(Dup),
+							new CodeInstruction(Stloc, bookLocal)
+						});
+						codes.InsertRange(i + 3, new CodeInstruction[]
+						{
+							new CodeInstruction(Call, checkPseudoCoreMethod),
+							new CodeInstruction(Ldloc, bookLocal),
+							new CodeInstruction(Call, checkCustomMethod)
+						});
+						i += 5;
+					}
+					else if (called == bookGetter)
+					{
+						codes[i].operand = customBookGetter;
+					}
+					else if (called == bookClassInfoGetter)
+					{
+						if (codes[i + 1].LoadsField(bookInfoSkinField) && codes[i + 3].Calls(stringListItemGetter))
+						{
+							codes[i].operand = originalNameGetter;
+							codes.RemoveRange(i + 1, 3);
+						}
+					}
+					else if (called == setDataMethod)
+					{
+						if (!obtainedFlag)
+						{
+							int j;
+							for (j = i + 1; j < codes.Count; j++)
+							{
+								if (codes[j].Branches(out Label? _))
+								{
+									j = codes.Count;
+								}
+								else
+								{
+									if (codes[j].IsStloc())
+									{
+										local = codes[j].operand as LocalBuilder;
+										if (local != null && local.LocalType == typeof(bool))
+										{
+											obtainedFlag = true;
+											break;
+										}
+									}
+								}
+							}
+							if (j == codes.Count)
+							{
+								Debug.Log("Extended Loader: Failed to obtain LateInit flag for CreateSkin");
+							}
+						}
+						else
+						{
+							codes.InsertRange(i + 1, new CodeInstruction[]
+							{
+								new CodeInstruction(Ldc_I4_1),
+								new CodeInstruction(Stloc_S, local)
+							});
+							i += 2;
+						}
+					}
+				}
+			}
+			return codes;
+		}
+		static bool CheckSkinCustomType(bool isWorkshop, BookModel book)
+		{
+			return isWorkshop && book.ClassInfo.skinType == "Custom";
+		}
+
+		//catch other mods breaking things
+		[HarmonyPatch(typeof(SdCharacterUtil), nameof(SdCharacterUtil.CreateSkin))]
+		[HarmonyFinalizer]
+		static Exception SdCharacterUtil_CreateSkin_Finalizer(Exception __exception, ref CharacterAppearance __result, UnitDataModel unit, Faction faction, Transform characterRoot)
+		{
+			if (__exception != null && XLConfig.Instance.logRenderErrors)
+			{
+				Debug.LogException(__exception);
+			}
+			try
+			{
+				if (IsBrokenSkin(unit, null, __result))
+				{
+					var oldres = __result;
+					__result = ReversePatches.SdCharacterUtil_CreateSkin_Snapshot(unit, faction, characterRoot);
+					if (IsBrokenSkin(unit, null, __result))
+					{
+						if (__result != null)
+						{
+							UnityEngine.Object.Destroy(__result.gameObject);
+						}
+						__result = oldres;
+					}
+					else
+					{
+						if (oldres != null)
+						{
+							UnityEngine.Object.Destroy(oldres.gameObject);
+						}
+					}
+				}
+			}
+			catch (Exception ex)
+			{
+				Debug.LogException(ex);
+			}
+			return null;
+		}
+
+		//ChangeSkin
+		[HarmonyPatch(typeof(BattleUnitView), nameof(BattleUnitView.ChangeSkin))]
+		[HarmonyTranspiler]
+		[HarmonyPriority(Priority.Low)]
+		static IEnumerable<CodeInstruction> BattleUnitView_ChangeSkin_Transpiler(IEnumerable<CodeInstruction> instructions)
+		{
+			var componentMethod = Method(typeof(GameObject), nameof(GameObject.GetComponent), Array.Empty<Type>(), new Type[] { typeof(CharacterAppearance) });
+			var codes = instructions.ToList();
+			var index = codes.FindIndex(code => code.Calls(componentMethod));
+			if (index >= 0)
+			{
+				codes.InsertRange(index, new CodeInstruction[]
+				{
+					new CodeInstruction(Dup),
+					new CodeInstruction(Ldarg_0),
+					new CodeInstruction(Ldarg_1),
+					new CodeInstruction(Call, Method(typeof(CustomSkinCreatePatch), nameof(TryApplyWorkshopData)))
+				});
+			}
+			return codes;
+		}
+		static void TryApplyWorkshopData(GameObject appearance, BattleUnitView view, string charName)
+		{
+			var setter = appearance.GetComponent<WorkshopSkinDataSetter>();
+			if (setter != null && (setter.dic == null || setter.dic.Count == 0))
+			{
+				var data = SkinTools.GetWorkshopBookSkinData(view.model.Book.BookId.packageId, charName, "");
+				if (data != null)
+				{
+					setter.SetData(data);
+				}
+			}
+		}
+
+		//catch other mods breaking things
+		[HarmonyPatch(typeof(BattleUnitView), nameof(BattleUnitView.ChangeSkin))]
+		[HarmonyFinalizer]
+		static Exception BattleUnitView_ChangeSkin_Finalizer(Exception __exception, BattleUnitView __instance, string charName)
+		{
+			if (__exception != null && XLConfig.Instance.logRenderErrors)
+			{
+				Debug.LogException(__exception);
+			}
+			try
+			{
+				if (IsBrokenSkin(__instance.model.UnitData.unitData, charName, __instance.charAppearance))
+				{
+					ReversePatches.BattleUnitView_ChangeSkin_Snapshot(__instance, charName);
+				}
+			}
+			catch (Exception ex)
+			{
+				Debug.LogException(ex);
+			}
+			try
+			{
+				if (IsBrokenSkin(__instance.model.UnitData.unitData, charName, __instance.charAppearance) && LorName.IsCompressed(charName))
+				{
+					ReversePatches.BattleUnitView_ChangeSkin_Snapshot(__instance, new LorName(charName).name);
+				}
+			}
+			catch (Exception ex)
+			{
+				Debug.LogException(ex);
+			}
+			return null;
+		}
+
+		//ChangeEgoSkin
+		[HarmonyPatch(typeof(BattleUnitView), nameof(BattleUnitView.ChangeEgoSkin))]
+		[HarmonyTranspiler]
+		[HarmonyPriority(Priority.Low)]
+		static IEnumerable<CodeInstruction> BattleUnitView_ChangeEgoSkin_Transpiler(IEnumerable<CodeInstruction> instructions)
+		{
+			var componentMethod = Method(typeof(GameObject), nameof(GameObject.GetComponent), Array.Empty<Type>(), new Type[] { typeof(CharacterAppearance) });
+			var codes = instructions.ToList();
+			var index = codes.FindIndex(code => code.Calls(componentMethod));
+			if (index >= 0)
+			{
+				codes.InsertRange(index, new CodeInstruction[]
+				{
+					new CodeInstruction(Dup),
+					new CodeInstruction(Ldarg_0),
+					new CodeInstruction(Ldarg_1),
+					new CodeInstruction(Call, Method(typeof(CustomSkinCreatePatch), nameof(TryApplyWorkshopData)))
+				});
+			}
+			return codes;
+		}
+
+		//catch other mods breaking things
+		[HarmonyPatch(typeof(BattleUnitView), nameof(BattleUnitView.ChangeEgoSkin))]
+		[HarmonyFinalizer]
+		static Exception BattleUnitView_ChangeEgoSkin_Finalizer(Exception __exception, BattleUnitView __instance, string egoName, bool bookNameChange)
+		{
+			if (__exception != null && XLConfig.Instance.logRenderErrors)
+			{
+				Debug.LogException(__exception);
+			}
+			try
+			{
+				if (IsBrokenSkin(__instance.model.UnitData.unitData, egoName, __instance.charAppearance))
+				{
+					ReversePatches.BattleUnitView_ChangeEgoSkin_Snapshot(__instance, egoName, bookNameChange);
+				}
+			}
+			catch (Exception ex)
+			{
+				Debug.LogException(ex);
+			}
+			try
+			{
+				if (IsBrokenSkin(__instance.model.UnitData.unitData, egoName, __instance.charAppearance) && LorName.IsCompressed(egoName))
+				{
+					ReversePatches.BattleUnitView_ChangeEgoSkin_Snapshot(__instance, new LorName(egoName).name, bookNameChange);
+				}
+			}
+			catch (Exception ex)
+			{
+				Debug.LogException(ex);
+			}
+			return null;
+		}
+
+		[HarmonyPatch(typeof(WorkshopSkinDataSetter), nameof(WorkshopSkinDataSetter.LateInit))]
+		[HarmonyFinalizer]
+		static Exception WorkshopSkinDataSetter_LateInit_Finalizer(Exception __exception)
+		{
+			if (__exception is NullReferenceException)
+			{
+				return null;
+			}
+			return __exception;
+		}
+
+		[HarmonyPatch(typeof(SdCharacterUtil), nameof(SdCharacterUtil.LoadAppearance))]
+		[HarmonyTranspiler]
+		static IEnumerable<CodeInstruction> SdCharacterUtil_LoadAppearance_Transpiler(IEnumerable<CodeInstruction> instructions)
+		{
+			var bookGetter = PropertyGetter(typeof(UnitDataModel), nameof(UnitDataModel.bookItem));
+			var customBookGetter = PropertyGetter(typeof(UnitDataModel), nameof(UnitDataModel.CustomBookItem));
+			var unitGenderField = Field(typeof(UnitDataModel), nameof(UnitDataModel.gender));
+			var fixGenderMethod = Method(typeof(CustomSkinCreatePatch), nameof(TryInjectAbnormalGender));
+			var codes = new List<CodeInstruction>(instructions);
+			for (var i = 0; i < codes.Count; i++)
+			{
+				if (codes[i].Calls(bookGetter))
+				{
+					yield return new CodeInstruction(Callvirt, customBookGetter);
+				}
+				else if (codes[i].Is(Ldfld, unitGenderField))
+				{
+					yield return codes[i];
+					yield return new CodeInstruction(Ldloca, 1);
+					yield return new CodeInstruction(Call, fixGenderMethod);
+				}
+				else
+				{
+					yield return codes[i];
+				}
+			}
+		}
+		static Gender TryInjectAbnormalGender(Gender original, ref string characterName)
+		{
+			if (characterName.StartsWith("EGO:"))
+			{
+				characterName = characterName.Substring("EGO:".Length);
+				return Gender.EGO;
+			}
+			if (characterName.StartsWith("Creature:"))
+			{
+				characterName = characterName.Substring("Creature:".Length);
+				return Gender.Creature;
+			}
+			return original;
+		}
+	}
+
+	class WorkshopSkinDataCacher : MonoBehaviour
+	{
+		internal WorkshopSkinData data = null;
+	}
+}
