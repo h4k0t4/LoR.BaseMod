@@ -28,44 +28,52 @@ namespace ExtendedLoader
 
 		static void SaveCustomizeLocation(SaveData saveData, CustomizingLookType type, int index, string saveKey)
 		{
-			if (XLRoot.indexesToLocations[type].TryGetValue(index, out var location))
+			if (!XLRoot.indexesToLocations[type].TryGetValue(index, out var location))
 			{
-				saveData.AddData(saveKey, new SaveData(location));
+				location = "";
 			}
+			saveData.AddData(saveKey, new SaveData(location));
 		}
 
 		[HarmonyPatch(typeof(UnitCustomizingData), nameof(UnitCustomizingData.LoadFromSaveData))]
 		[HarmonyPostfix]
 		static void UnitCustomizingData_LoadFromSaveData_Postfix(UnitCustomizingData __instance, SaveData data)
 		{
-			if (data != null)
+			if (data == null)
 			{
-				try
-				{
-					LoadCustomizeLocation(data, CustomizingLookType.FrontHair, ref __instance.frontHairID, frontHairSaveKey);
-					LoadCustomizeLocation(data, CustomizingLookType.BackHair, ref __instance.backHairID, backHairSaveKey);
-					LoadCustomizeLocation(data, CustomizingLookType.Eye, ref __instance.eyeID, eyeSaveKey);
-					LoadCustomizeLocation(data, CustomizingLookType.Brow,	ref __instance.browID, browSaveKey);
-					LoadCustomizeLocation(data, CustomizingLookType.Mouth, ref __instance.mouthID, mouthSaveKey);
-				}
-				catch (Exception ex)
-				{
-					Debug.LogException(ex);
-				}
+				return;
+			}
+			try
+			{
+				LoadCustomizeLocation(data, CustomizingLookType.FrontHair, ref __instance.frontHairID, frontHairSaveKey);
+				LoadCustomizeLocation(data, CustomizingLookType.BackHair, ref __instance.backHairID, backHairSaveKey);
+				LoadCustomizeLocation(data, CustomizingLookType.Eye, ref __instance.eyeID, eyeSaveKey);
+				LoadCustomizeLocation(data, CustomizingLookType.Brow, ref __instance.browID, browSaveKey);
+				LoadCustomizeLocation(data, CustomizingLookType.Mouth, ref __instance.mouthID, mouthSaveKey);
+			}
+			catch (Exception ex)
+			{
+				Debug.LogException(ex);
 			}
 		}
 
 		static void LoadCustomizeLocation(SaveData saveData, CustomizingLookType type, ref int index, string saveKey)
 		{
 			var save = saveData.GetData(saveKey);
-			if (save != null)
+			if (save == null)
 			{
-				var location = save.GetStringSelf();
-				if (XLRoot.locationsToIndexes[type].TryGetValue(location, out var savedIndex))
-				{
-					index = savedIndex;
-				}
+				return;
 			}
+			var location = save.GetStringSelf();
+			if (string.IsNullOrEmpty(location))
+			{
+				return;
+			}
+			if (!XLRoot.locationsToIndexes[type].TryGetValue(location, out var savedIndex))
+			{
+				return;
+			}
+			index = savedIndex;
 		}
 
 		const string frontHairSaveKey = "frontHairLocationXL";
