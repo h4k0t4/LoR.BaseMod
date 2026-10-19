@@ -1,108 +1,222 @@
-﻿using System.Collections.Generic;
+﻿using BaseMod;
+using System;
+using System.Collections.Generic;
 using System.Xml.Serialization;
+using BaseBridge;
 
 //EnemyUnitXml_New for other mods' drop
 namespace GTMDProjectMoon
 {
-    public class EnemyUnitClassRoot
-    {
-        [XmlElement("Pid")]
-        public string workshopID;
+	[XmlType("EnemyUnitClassRoot")]
+	public class EnemyUnitClassRoot_V2 : XmlRoot
+	{
+		[XmlElement("Enemy")]
+		public List<EnemyUnitClassInfo_V2> list;
 
-        [XmlElement("Enemy")]
-        public List<EnemyUnitClassInfo_New> list;
-    }
-    public class EnemyUnitClassInfo_New
-    {
-        [XmlIgnore]
-        public LorId id
-        {
-            get
-            {
-                return new LorId(workshopID, _id);
-            }
-        }
+		[XmlIgnore]
+		public static XmlSerializer Serializer
+		{
+			get
+			{
+				if (_serializer == null)
+				{
+					var ignore = new XmlAttributes
+					{
+						XmlIgnore = true
+					};
+					var overrides = new XmlAttributeOverrides();
+					overrides.Add(typeof(EnemyUnitClassInfo), nameof(EnemyUnitClassInfo.bookId), ignore);
+					overrides.Add(typeof(EnemyUnitClassInfo), nameof(EnemyUnitClassInfo.dropTableList), ignore);
+					overrides.Add(typeof(EnemyUnitClassInfo), nameof(EnemyUnitClassInfo.emotionCardList), ignore);
+					overrides.Add(typeof(EnemyDropItemTable), nameof(EnemyDropItemTable.dropItemList), ignore);
+					overrides.Add(typeof(EnemyUnitClassInfo), nameof(EnemyUnitClassInfo.workshopID), new XmlAttributes { XmlIgnore = false, XmlAttribute = new XmlAttributeAttribute("Pid") });
+					_serializer = new XmlSerializer(typeof(EnemyUnitClassRoot_V2), overrides);
+				}
+				return _serializer;
+			}
+		}
+		static XmlSerializer _serializer;
+	}
+	public class EnemyUnitClassInfo_V2 : EnemyUnitClassInfo
+	{
+		[XmlElement("BookId")]
+		public List<LorIdXml> bookLorIdXml = new List<LorIdXml>();
 
-        [XmlAttribute("ID")]
-        public int _id;
+		[XmlIgnore]
+		public List<LorId> bookLorId = new List<LorId>();
 
-        [XmlIgnore]
-        public string workshopID = "";
+		[XmlElement("DropTable")]
+		public List<EnemyDropItemTable_V2> dropTableListNew = new List<EnemyDropItemTable_V2>();
 
-        [XmlElement("Name")]
-        public string name = string.Empty;
+		[XmlElement("Emotion")]
+		public List<EmotionSetInfo_V2> emotionCardListNew = new List<EmotionSetInfo_V2>();
 
-        [XmlElement("FaceType")]
-        public UnitFaceType faceType;
+		public void InitOldFields(string uniqueId)
+		{
+			workshopID = uniqueId;
+			height = RandomUtil.Range(minHeight, maxHeight);
+			foreach (EnemyDropItemTable_V2 enemyDropItemTable_New in dropTableListNew)
+			{
+				foreach (EnemyDropItem_New dropNew in enemyDropItemTable_New.dropItemListNew)
+				{
+					dropNew.workshopId = Tools.ClarifyWorkshopId("", dropNew.workshopId, uniqueId);
+				}
+			}
+			foreach (var emotion in emotionCardListNew)
+			{
+				emotion.WorkshopId = Tools.ClarifyWorkshopIdLegacy("", emotion.WorkshopId, uniqueId);
+			}
+			LorId.InitializeLorIds(bookLorIdXml, bookLorId, uniqueId);
+			bookId = new List<int>();
+		}
 
-        [XmlElement("NameID")]
-        public int nameId;
+		public void InitInjectedFields()
+		{
+			foreach (var emotion in emotionCardListNew)
+			{
+				if (emotion.lorId.IsBasic())
+				{
+					emotionCardList.Add(emotion);
+				}
+				else if (BridgeManager.Instance.emotionCardBridge.GetEntityByKey(emotion.lorId, SephirahType.None) is EmotionCardXmlInfo injectedCard)
+				{
+					emotion.InjectId(injectedCard.id);
+					emotionCardList.Add(emotion);
+				}
+			}
+		}
+	}
+	public class EnemyDropItemTable_V2 : EnemyDropItemTable
+	{
+		[XmlElement("DropItem")]
+		public List<EnemyDropItem_New> dropItemListNew;
+	}
+	public class EnemyDropItem_New
+	{
+		[XmlText]
+		public int bookId;
 
-        [XmlElement("MinHeight")]
-        public int minHeight;
+		[XmlAttribute("Prob")]
+		public float prob;
 
-        [XmlElement("MaxHeight")]
-        public int maxHeight;
+		[XmlAttribute("Pid")]
+		public string workshopId = "";
 
-        [XmlElement("Unknown")]
-        public bool isUnknown;
+		[XmlIgnore]
+		public LorId bookLorId => new LorId(workshopId, bookId);
+	}
+	public class EmotionSetInfo_V2 : EmotionSetInfo
+	{
+		[XmlIgnore]
+		public LorId lorId
+		{
+			get
+			{
+				return new LorId(WorkshopId, originalEmotionId ?? emotionId);
+			}
+		}
 
-        [XmlElement("Gender")]
-        public Gender gender;
+		[XmlIgnore]
+		int? originalEmotionId = null;
 
-        [XmlElement("Retreat")]
-        public bool retreat;
+		public void InjectId(int injectedId)
+		{
+			if (originalEmotionId == null)
+			{
+				originalEmotionId = emotionId;
+				emotionId = injectedId;
+			}
+		}
 
-        [XmlIgnore]
-        public int height;
+		[XmlAttribute("Pid")]
+		public string WorkshopId = "";
+	}
 
-        [XmlElement("BookId")]
-        public List<int> bookId;
 
-        [XmlElement("BodyId")]
-        public int bodyId;
 
-        [XmlElement("Exp")]
-        public int exp;
+	[Obsolete]
+	public class EnemyUnitClassInfo_New
+	{
+		[XmlIgnore]
+		public LorId id
+		{
+			get
+			{
+				return new LorId(this.workshopID, this._id);
+			}
+		}
 
-        [XmlElement("DropBonus")]
-        public float dropBonus;
+		[XmlAttribute("ID")]
+		public int _id;
 
-        [XmlElement("DropTable")]
-        public List<EnemyDropItemTable_New> dropTableList = new List<EnemyDropItemTable_New>();
+		[XmlIgnore]
+		public string workshopID = "";
 
-        [XmlElement("Emotion")]
-        public List<EmotionSetInfo> emotionCardList = new List<EmotionSetInfo>();
+		[XmlElement("Name")]
+		public string name = string.Empty;
 
-        [XmlElement("AiScript")]
-        public string AiScript = "";
-    }
-    public class EnemyDropItemTable_New
-    {
-        [XmlAttribute("Level")]
-        public int emotionLevel;
+		[XmlElement("FaceType")]
+		public UnitFaceType faceType;
 
-        [XmlElement("DropItem")]
-        public List<EnemyDropItem_New> dropItemList;
+		[XmlElement("NameID")]
+		public int nameId;
 
-        [XmlIgnore]
-        public List<EnemyDropItem_ReNew> dropList = new List<EnemyDropItem_ReNew>();
-    }
-    public class EnemyDropItem_New
-    {
-        [XmlText]
-        public int bookId;
+		[XmlElement("MinHeight")]
+		public int minHeight;
 
-        [XmlAttribute("Prob")]
-        public float prob;
+		[XmlElement("MaxHeight")]
+		public int maxHeight;
 
-        [XmlAttribute("Pid")]
-        public string workshopId = "";
-    }
-    public class EnemyDropItem_ReNew
-    {
-        public LorId bookId;
+		[XmlElement("Unknown")]
+		public bool isUnknown;
 
-        public float prob;
-    }
+		[XmlElement("Gender")]
+		public Gender gender;
+
+		[XmlElement("Retreat")]
+		public bool retreat;
+
+		[XmlIgnore]
+		public int height;
+
+		[XmlElement("BookId")]
+		public List<int> bookId;
+
+		[XmlElement("BodyId")]
+		public int bodyId;
+
+		[XmlElement("Exp")]
+		public int exp;
+
+		[XmlElement("DropBonus")]
+		public float dropBonus;
+
+		[XmlElement("DropTable")]
+		public List<EnemyDropItemTable_New> dropTableList = new List<EnemyDropItemTable_New>();
+
+		[XmlElement("Emotion")]
+		public List<EmotionSetInfo> emotionCardList = new List<EmotionSetInfo>();
+
+		[XmlElement("AiScript")]
+		public string AiScript = "";
+	}
+	[Obsolete]
+	public class EnemyDropItemTable_New
+	{
+		[XmlAttribute("Level")]
+		public int emotionLevel;
+
+		[XmlElement("DropItem")]
+		public List<EnemyDropItem_New> dropItemList;
+
+		[XmlIgnore]
+		public List<EnemyDropItem_ReNew> dropList = new List<EnemyDropItem_ReNew>();
+	}
+	[Obsolete]
+	public class EnemyDropItem_ReNew
+	{
+		public LorId bookId;
+
+		public float prob;
+	}
 }
