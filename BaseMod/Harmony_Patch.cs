@@ -634,7 +634,7 @@ namespace BaseMod
 				{
 					return true;
 				}
-				var soulCardNew = soulCardList.Find((BookSoulCardInfo_New x) => x.emotionLevel == emotionLevel);
+				var soulCardNew = soulCardList.Find(x => x.emotionLevel == emotionLevel);
 				if (soulCardNew == null)
 				{
 					__result = null;
@@ -1206,9 +1206,6 @@ namespace BaseMod
 			var oldBufListLocal = ilgen.DeclareLocal(typeof(BattleUnitBuf));
 			var bufPredicateLocal = ilgen.DeclareLocal(typeof(Predicate<BattleUnitBuf>));
 			var currentBufProperty = PropertyGetter(typeof(List<BattleUnitBuf>.Enumerator), nameof(List<BattleUnitBuf>.Enumerator.Current));
-			var independentIconProperty = PropertyGetter(typeof(BattleUnitBuf), nameof(BattleUnitBuf.independentBufIcon));
-			var iconGetterMethod = Method(typeof(BattleUnitBuf), nameof(BattleUnitBuf.GetBufIcon));
-			var unityEqualityMethod = Method(typeof(UnityEngine.Object), "op_Equality", new Type[] { typeof(UnityEngine.Object), typeof(UnityEngine.Object) });
 			var bufFindMethod = Method(typeof(List<BattleUnitBuf>), nameof(List<BattleUnitBuf>.Find));
 			var helper = Method(typeof(Harmony_Patch), nameof(BattleUnitBufListDetail_OnRoundStart_FindSameTypeBuf));
 			foreach (var instruction in instructions)
@@ -1233,14 +1230,6 @@ namespace BaseMod
 					yield return new CodeInstruction(Dup);
 					yield return new CodeInstruction(Stloc, newBufLocal);
 				}
-				else if (instruction.Is(Callvirt, independentIconProperty))
-				{
-					yield return new CodeInstruction(Ldloc, newBufLocal);
-					yield return new CodeInstruction(Callvirt, iconGetterMethod);
-					yield return new CodeInstruction(Ldnull);
-					yield return new CodeInstruction(Call, unityEqualityMethod);
-					yield return new CodeInstruction(Or);
-				}
 			}
 		}
 		//if matching buf was already found, return it; otherwise do a new search according to the alternative condition
@@ -1250,7 +1239,11 @@ namespace BaseMod
 			{
 				return oldBuf;
 			}
-			return list.Find((BattleUnitBuf x) => x.GetType() == newBuf.GetType() && !x.IsDestroyed());
+			if (!newBuf.GetBufIcon())
+			{
+				return null;
+			}
+			return list.Find(x => x.GetType() == newBuf.GetType() && !x.IsDestroyed() && x.GetBufIcon());
 		}
 		//CanAddBuf Apply owner
 		[HarmonyPatch(typeof(BattleUnitBufListDetail), nameof(BattleUnitBufListDetail.CanAddBuf))]
@@ -2393,7 +2386,7 @@ namespace BaseMod
 			}
 
 			var storyline = GetModEpMatch(epId);
-			var newKey = allKeys.Find((UIStoryKeyData x) => x.workshopId == bookModel.ClassInfo.id.packageId && x.chapter == bookModel.ClassInfo.Chapter && x.StoryLine == storyline);
+			var newKey = allKeys.Find(x => x.workshopId == bookModel.ClassInfo.id.packageId && x.chapter == bookModel.ClassInfo.Chapter && x.StoryLine == storyline);
 			if (newKey == null)
 			{
 				newKey = new UIStoryKeyData(bookModel.ClassInfo.Chapter, bookModel.ClassInfo.id.packageId)
@@ -3157,23 +3150,23 @@ namespace BaseMod
 				cardsByDetailFilterUI.Sort(new Comparison<DiceCardItemModel>(ModCardItemSort));
 				if (__instance._unitdata != null)
 				{
-					Predicate<DiceCardItemModel> cond1 = (DiceCardItemModel x) => true;
+					Predicate<DiceCardItemModel> cond1 = x => true;
 					switch (__instance._unitdata.bookItem.ClassInfo.RangeType)
 					{
 						case EquipRangeType.Melee:
-							cond1 = (DiceCardItemModel x) => x.GetSpec().Ranged != CardRange.Far;
+							cond1 = x => x.GetSpec().Ranged != CardRange.Far;
 							break;
 						case EquipRangeType.Range:
-							cond1 = (DiceCardItemModel x) => x.GetSpec().Ranged != CardRange.Near;
+							cond1 = x => x.GetSpec().Ranged != CardRange.Near;
 							break;
 						case EquipRangeType.Hybrid:
-							cond1 = (DiceCardItemModel x) => true;
+							cond1 = x => true;
 							break;
 					}
 					List<DiceCardXmlInfo> onlyCards = __instance._unitdata.bookItem.GetOnlyCards();
-					Predicate<DiceCardItemModel> cond2 = ((DiceCardItemModel x) => onlyCards.Exists((DiceCardXmlInfo y) => y.id == x.GetID()));
-					__instance._currentCardListForFilter.AddRange(cardsByDetailFilterUI.FindAll((DiceCardItemModel x) => x.ClassInfo.optionList.Contains(CardOption.OnlyPage) ? cond2(x) : cond1(x)));
-					__instance._currentCardListForFilter.AddRange(cardsByDetailFilterUI.FindAll((DiceCardItemModel x) => x.ClassInfo.optionList.Contains(CardOption.OnlyPage) && !cond1(x)));
+					Predicate<DiceCardItemModel> cond2 = (x => onlyCards.Exists(y => y.id == x.GetID()));
+					__instance._currentCardListForFilter.AddRange(cardsByDetailFilterUI.FindAll(x => x.ClassInfo.optionList.Contains(CardOption.OnlyPage) ? cond2(x) : cond1(x)));
+					__instance._currentCardListForFilter.AddRange(cardsByDetailFilterUI.FindAll(x => x.ClassInfo.optionList.Contains(CardOption.OnlyPage) && !cond1(x)));
 				}
 				else
 				{

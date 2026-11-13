@@ -88,17 +88,28 @@ namespace BaseMod
 			{
 				try
 				{
-					List<BattleDiceCardModel> list = cardDetail._cardInDeck;
-					List<BattleDiceCardModel> list2 = cardDetail._cardInDiscarded;
-					list.AddRange(list2);
-					list2.Clear();
-					BattleDiceCardModel battleDiceCardModel = list.Find(match);
-					if (battleDiceCardModel != null)
+
+					List<BattleDiceCardModel> matchedInDeck = cardDetail._cardInDeck.FindAll(match);
+					List<BattleDiceCardModel> matchedInDiscarded = cardDetail._cardInDiscarded.FindAll(match);
+
+					if (matchedInDeck.Count + matchedInDiscarded.Count > 0)
 					{
-						cardDetail.AddCardToHand(battleDiceCardModel, false);
-						list.Remove(battleDiceCardModel);
-						return battleDiceCardModel;
+						if (matchedInDeck.Count > 0)
+						{
+							var card = matchedInDeck[matchedInDeck.Count - 1];
+							cardDetail.AddCardToHand(card);
+							cardDetail._cardInDeck.Remove(card);
+							return card;
+						}
+						else
+						{
+							var card = RandomUtil.SelectOne(matchedInDiscarded);
+							cardDetail.AddCardToHand(card);
+							cardDetail._cardInDiscarded.Remove(card);
+							return card;
+						}
 					}
+					return null;
 				}
 				catch (Exception ex)
 				{
@@ -114,11 +125,11 @@ namespace BaseMod
 			{
 				cardModel._iconAdder = resName;
 				List<BattleDiceCardModel.CardIcon> list = cardModel._addedIcons;
-				if (!list.Exists((BattleDiceCardModel.CardIcon x) => x.Icon == spr))
+				if (!list.Exists(x => x.Icon == spr))
 				{
 					BattleDiceCardModel.CardIcon item = new BattleDiceCardModel.CardIcon(spr, priority);
 					list.Add(item);
-					list.Sort((BattleDiceCardModel.CardIcon x, BattleDiceCardModel.CardIcon y) => y.Priority - x.Priority);
+					list.Sort((x, y) => y.Priority - x.Priority);
 				}
 			}
 		}
@@ -717,7 +728,7 @@ namespace BaseMod
 				return null;
 			}
 			List<BattleUnitBuf> bufList = buf._owner.bufListDetail.FindList(readyType);
-			BattleUnitBuf battleUnitBuf = bufList.Find((BattleUnitBuf targetBuf) => targetBuf.GetType() == buf.GetType() && !targetBuf.IsDestroyed());
+			BattleUnitBuf battleUnitBuf = bufList.Find(targetBuf => targetBuf.GetType() == buf.GetType() && !targetBuf.IsDestroyed());
 			if (battleUnitBuf == null || battleUnitBuf.independentBufIcon)
 			{
 				buf.Init(buf._owner);

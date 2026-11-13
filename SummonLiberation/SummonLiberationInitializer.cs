@@ -195,7 +195,7 @@ namespace SummonLiberation
 					EnemyUnitID = LorId.None;
 				}
 				BattleUnitModel battleUnitModel = null;
-				if (BattleObjectManager.instance.ExistsUnit((BattleUnitModel x) => x.faction == Faction && x.index == Index) && !ForcedlySummon)
+				if (BattleObjectManager.instance.ExistsUnit(x => x.faction == Faction && x.index == Index) && !ForcedlySummon)
 				{
 					return battleUnitModel;
 				}
@@ -328,7 +328,7 @@ namespace SummonLiberation
 					EnemyUnitID = LorId.None;
 				}
 				BattleUnitModel battleUnitModel = null;
-				if (BattleObjectManager.instance.ExistsUnit((BattleUnitModel x) => x.faction == Faction && x.index == Index) && !ForcedlySummon)
+				if (BattleObjectManager.instance.ExistsUnit(x => x.faction == Faction && x.index == Index) && !ForcedlySummon)
 				{
 					return battleUnitModel;
 				}
@@ -444,7 +444,7 @@ namespace SummonLiberation
 					EnemyUnitID = LorId.None;
 				}
 				BattleUnitModel battleUnitModel = null;
-				if (BattleObjectManager.instance.ExistsUnit((BattleUnitModel x) => x.faction == Faction && x.index == Index) && !ForcedlySummon)
+				if (BattleObjectManager.instance.ExistsUnit(x => x.faction == Faction && x.index == Index) && !ForcedlySummon)
 				{
 					return battleUnitModel;
 				}

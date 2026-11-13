@@ -360,7 +360,7 @@ namespace ExtendedLoader
 					{
 						foreach (Grade g in storyGradeFilter)
 						{
-							__instance.filteredBookIdList.AddRange(__instance.originBookIdList.FindAll((int x) => GetModWorkshopBookData(x)?.Chapter == (int)g));
+							__instance.filteredBookIdList.AddRange(__instance.originBookIdList.FindAll(x => GetModWorkshopBookData(x)?.Chapter == (int)g));
 						}
 					}
 					Predicate<BookXmlInfo> match = x => x != null;
@@ -376,7 +376,7 @@ namespace ExtendedLoader
 							match = x => x != null && x.RangeType == EquipRangeType.Hybrid;
 							break;
 					}
-					__instance.filteredBookIdList.Sort((int a, int b) => CompareBooksMod(a, b, match));
+					__instance.filteredBookIdList.Sort((a, b) => CompareBooksMod(a, b, match));
 					int num = __instance.GetMaxRow();
 					__instance.scrollBar.SetScrollRectSize(__instance.column * __instance.slotWidth, (num + __instance.row - 1) * __instance.slotHeight);
 					__instance.scrollBar.SetWindowPosition(0f, 0f);
